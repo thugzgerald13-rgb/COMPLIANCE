@@ -1,0 +1,108 @@
+import { Client, FormStatus, BIRForm, FormReference } from './types';
+
+const generateTIN = () => {
+  return `${Math.floor(100 + Math.random() * 900)}-${Math.floor(100 + Math.random() * 900)}-${Math.floor(100 + Math.random() * 900)}-000`;
+};
+
+export const commonForms: FormReference[] = [
+  { code: '1601-C', description: 'Monthly Remittance Return of Income Taxes Withheld on Compensation', frequency: 'Monthly', deadlineRule: '10th day of the following month' },
+  { code: '0619-E', description: 'Monthly Remittance Form for Creditable Income Taxes Withheld (Expanded)', frequency: 'Monthly', deadlineRule: '10th day of the following month' },
+  { code: '1601-EQ', description: 'Quarterly Remittance Return of Creditable Income Taxes Withheld', frequency: 'Quarterly', deadlineRule: 'Last day of the month following the close of the quarter' },
+  { code: '2550Q', description: 'Quarterly Value-Added Tax Return', frequency: 'Quarterly', deadlineRule: '25th day of the month following the close of the quarter' },
+  { code: '2551Q', description: 'Quarterly Percentage Tax Return', frequency: 'Quarterly', deadlineRule: '25th day of the month following the close of the quarter' },
+  { code: '1701Q', description: 'Quarterly Income Tax Return (Individuals)', frequency: 'Quarterly', deadlineRule: '15th day of the month following the close of the quarter' },
+  { code: '1702Q', description: 'Quarterly Income Tax Return (Corporations)', frequency: 'Quarterly', deadlineRule: '60 days following the close of the quarter' },
+  { code: '1701', description: 'Annual Income Tax Return (Individuals)', frequency: 'Annually', deadlineRule: 'April 15 of the following year' },
+  { code: '1702-RT', description: 'Annual Income Tax Return (Corporations)', frequency: 'Annually', deadlineRule: '15th day of the 4th month following the close of the taxable year' }
+];
+
+const getRelativeDate = (offsetDays: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return d.toISOString().split('T')[0];
+};
+
+export const getRandomForms = (isCorporate: boolean): BIRForm[] => {
+  const forms: BIRForm[] = [];
+  const statuses: FormStatus[] = ['Pending', 'Processing', 'Filed', 'Paid'];
+  
+  // Everyone gets Withholding taxes usually
+  forms.push({
+    id: crypto.randomUUID(),
+    code: '1601-C',
+    description: 'Monthly Remittance Return of Income Taxes Withheld on Compensation',
+    status: statuses[Math.floor(Math.random() * statuses.length)],
+    deadline: getRelativeDate(Math.floor(Math.random() * 20) - 5), // -5 to +15 days
+  });
+
+  forms.push({
+    id: crypto.randomUUID(),
+    code: '0619-E',
+    description: 'Monthly Remittance Form for Creditable Income Taxes Withheld (Expanded)',
+    status: statuses[Math.floor(Math.random() * statuses.length)],
+    deadline: getRelativeDate(Math.floor(Math.random() * 20) - 5),
+  });
+
+  // VAT or Non-VAT
+  const isVat = Math.random() > 0.5;
+  if (isVat) {
+    forms.push({
+      id: crypto.randomUUID(),
+      code: '2550Q',
+      description: 'Quarterly Value-Added Tax Return',
+      status: statuses[Math.floor(Math.random() * statuses.length)],
+      deadline: getRelativeDate(Math.floor(Math.random() * 30) - 10),
+    });
+  } else {
+    forms.push({
+      id: crypto.randomUUID(),
+      code: '2551Q',
+      description: 'Quarterly Percentage Tax Return',
+      status: statuses[Math.floor(Math.random() * statuses.length)],
+      deadline: getRelativeDate(Math.floor(Math.random() * 30) - 10),
+    });
+  }
+
+  // Income Tax
+  if (isCorporate) {
+    forms.push({
+      id: crypto.randomUUID(),
+      code: '1702Q',
+      description: 'Quarterly Income Tax Return (Corporations)',
+      status: statuses[Math.floor(Math.random() * statuses.length)],
+      deadline: getRelativeDate(Math.floor(Math.random() * 40) - 5),
+    });
+  } else {
+    forms.push({
+      id: crypto.randomUUID(),
+      code: '1701Q',
+      description: 'Quarterly Income Tax Return (Individuals)',
+      status: statuses[Math.floor(Math.random() * statuses.length)],
+      deadline: getRelativeDate(Math.floor(Math.random() * 40) - 5),
+    });
+  }
+
+  return forms;
+};
+
+const clientNames = [
+  "Acme Corporation", "TechNova Solutions", "Global Industries", "Starlight Enterprises",
+  "Blue Ocean Trading", "Nexus Dynamics", "Quantum Systems Inc.", "Prime Logistics",
+  "Apex Holdings", "Vertex Consulting", "Juan Dela Cruz", "Maria Clara",
+  "Jose Rizal", "Andres Bonifacio", "Emilio Aguinaldo", "Apolinario Mabini",
+  "Gabriela Silang", "Melchora Aquino", "Marcelo H. del Pilar", "Antonio Luna"
+];
+
+export const generateInitialClients = (): Client[] => {
+  return clientNames.map((name, index) => {
+    const isCorporate = index < 10;
+    return {
+      id: crypto.randomUUID(),
+      name,
+      tin: generateTIN(),
+      rdo: String(Math.floor(20 + Math.random() * 80)).padStart(3, '0'),
+      type: isCorporate ? 'Corporate' : 'Individual',
+      forms: getRandomForms(isCorporate),
+    };
+  });
+};

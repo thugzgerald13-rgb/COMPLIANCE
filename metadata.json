@@ -1,0 +1,6 @@
+{
+  "name": "Compliance Monitoring",
+  "description": "A dashboard to monitor BIR form filings and compliance for 20 clients.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
