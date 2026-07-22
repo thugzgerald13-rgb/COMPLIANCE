@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Client, FormStatus, FormReference } from './types';
+import { Client, FormStatus, FormReference, BIRForm } from './types';
 import { generateInitialClients, commonForms } from './data';
 
 const STORAGE_KEY = 'bir_monitor_clients_v2';
@@ -37,7 +37,13 @@ export function useFormReferences() {
     localStorage.setItem(FORMS_STORAGE_KEY, JSON.stringify(updatedForms));
   };
 
-  return { forms, isLoaded, addFormReference, deleteFormReference };
+  const updateFormReference = (updatedFormRef: FormReference) => {
+    const updatedForms = forms.map(f => f.code === updatedFormRef.code ? updatedFormRef : f);
+    setForms(updatedForms);
+    localStorage.setItem(FORMS_STORAGE_KEY, JSON.stringify(updatedForms));
+  };
+
+  return { forms, isLoaded, addFormReference, deleteFormReference, updateFormReference };
 }
 
 export function useClients() {
@@ -63,13 +69,13 @@ export function useClients() {
     setIsLoaded(true);
   }, []);
 
-  const updateFormStatus = (clientId: string, formId: string, newStatus: FormStatus) => {
+  const updateForm = (clientId: string, formId: string, updates: Partial<BIRForm>) => {
     const updatedClients = clients.map(client => {
       if (client.id === clientId) {
         return {
           ...client,
           forms: client.forms.map(form => 
-            form.id === formId ? { ...form, status: newStatus } : form
+            form.id === formId ? { ...form, ...updates } : form
           )
         };
       }
@@ -92,5 +98,45 @@ export function useClients() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedClients));
   };
 
-  return { clients, isLoaded, updateFormStatus, addClient, deleteClient };
+  const addFormToClient = (clientId: string, formRef: FormReference, deadline?: string) => {
+    const defaultDeadline = deadline || new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0];
+    const newForm: BIRForm = {
+      id: crypto.randomUUID(),
+      code: formRef.code,
+      description: formRef.description,
+      status: 'Pending',
+      deadline: defaultDeadline,
+    };
+    const updatedClients = clients.map(client => {
+      if (client.id === clientId) {
+        // Prevent duplicate codes if needed or allow multiple
+        if (client.forms.some(f => f.code === formRef.code)) {
+          return client;
+        }
+        return {
+          ...client,
+          forms: [...client.forms, newForm]
+        };
+      }
+      return client;
+    });
+    setClients(updatedClients);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedClients));
+  };
+
+  const removeFormFromClient = (clientId: string, formId: string) => {
+    const updatedClients = clients.map(client => {
+      if (client.id === clientId) {
+        return {
+          ...client,
+          forms: client.forms.filter(f => f.id !== formId)
+        };
+      }
+      return client;
+    });
+    setClients(updatedClients);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedClients));
+  };
+
+  return { clients, isLoaded, updateForm, addClient, deleteClient, addFormToClient, removeFormFromClient };
 }

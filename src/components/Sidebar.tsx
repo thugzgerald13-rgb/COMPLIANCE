@@ -4,9 +4,11 @@ import React from 'react';
 interface SidebarProps {
   currentView: 'dashboard' | 'clients' | 'forms';
   onChangeView: (view: 'dashboard' | 'clients' | 'forms') => void;
+  selectedPeriod: string;
+  onChangePeriod: (period: string) => void;
 }
 
-export function Sidebar({ currentView, onChangeView }: SidebarProps) {
+export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePeriod }: SidebarProps) {
   return (
     <div className="w-64 bg-slate-900 text-white min-h-screen flex flex-col">
       <div className="p-6 flex items-center space-x-3">
@@ -15,6 +17,18 @@ export function Sidebar({ currentView, onChangeView }: SidebarProps) {
       </div>
       
       <nav className="flex-1 px-4 py-6 space-y-2">
+        <div className="mb-6 px-4">
+          <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">
+            Period
+          </label>
+          <input
+            type="month"
+            value={selectedPeriod}
+            onChange={(e) => onChangePeriod(e.target.value)}
+            className="w-full bg-slate-800 text-white border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 [color-scheme:dark]"
+          />
+        </div>
+
         <button
           onClick={() => onChangeView('dashboard')}
           className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${

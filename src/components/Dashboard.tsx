@@ -1,14 +1,17 @@
 import React from 'react';
-import { Client } from '../types';
+import { Client, FormReference } from '../types';
 import { Users, FileClock, CheckCircle, AlertCircle, Calendar } from 'lucide-react';
 
 interface DashboardProps {
   clients: Client[];
+  formReferences: FormReference[];
+  selectedPeriod: string;
 }
 
-export function Dashboard({ clients }: DashboardProps) {
+export function Dashboard({ clients, formReferences, selectedPeriod }: DashboardProps) {
   const totalClients = clients.length;
-  const allForms = clients.flatMap(c => c.forms);
+  // Filter forms by whether their deadline falls within the selected period (YYYY-MM)
+  const allForms = clients.flatMap(c => c.forms).filter(f => f.deadline.startsWith(selectedPeriod));
   
   const pendingForms = allForms.filter(f => f.status === 'Pending').length;
   const processingForms = allForms.filter(f => f.status === 'Processing').length;
@@ -36,10 +39,10 @@ export function Dashboard({ clients }: DashboardProps) {
     return { label: `Due in ${diffDays} days`, color: 'text-slate-600 bg-slate-50 border-slate-200', urgency: 'low' };
   };
 
-  // Recently updated or upcoming deadlines
+  // Recently updated or upcoming deadlines within the selected period
   const upcomingDeadlines = clients
     .flatMap(c => c.forms.map(f => ({ ...f, clientName: c.name })))
-    .filter(f => f.status === 'Pending' || f.status === 'Processing')
+    .filter(f => f.deadline.startsWith(selectedPeriod) && (f.status === 'Pending' || f.status === 'Processing'))
     .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
     .slice(0, 8); // show more items
 
@@ -74,6 +77,7 @@ export function Dashboard({ clients }: DashboardProps) {
           ) : (
             upcomingDeadlines.map((item, i) => {
               const deadlineInfo = getDeadlineInfo(item.deadline);
+              const refDesc = formReferences.find(r => r.code === item.code)?.description;
               return (
                 <div key={i} className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-slate-50 transition-colors ${deadlineInfo.urgency === 'high' ? 'bg-red-50/30' : ''}`}>
                   <div className="flex items-center space-x-4 mb-3 sm:mb-0">
@@ -82,7 +86,7 @@ export function Dashboard({ clients }: DashboardProps) {
                     </div>
                     <div>
                       <p className="font-medium text-slate-900">{item.clientName}</p>
-                      <p className="text-sm text-slate-500">{item.description}</p>
+                      <p className="text-sm text-slate-500">{refDesc || item.description}</p>
                     </div>
                   </div>
                   <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center">

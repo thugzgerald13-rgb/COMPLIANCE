@@ -7,8 +7,12 @@ import { useClients, useFormReferences } from './store';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<'dashboard' | 'clients' | 'forms'>('dashboard');
-  const { clients, isLoaded, updateFormStatus, addClient, deleteClient } = useClients();
-  const { forms, isLoaded: formsLoaded, addFormReference, deleteFormReference } = useFormReferences();
+  const [selectedPeriod, setSelectedPeriod] = useState(() => {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const { clients, isLoaded, updateForm, addClient, deleteClient, addFormToClient, removeFormFromClient } = useClients();
+  const { forms, isLoaded: formsLoaded, addFormReference, deleteFormReference, updateFormReference } = useFormReferences();
 
   if (!isLoaded || !formsLoaded) {
     return (
@@ -20,19 +24,28 @@ export default function App() {
 
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans">
-      <Sidebar currentView={currentView} onChangeView={setCurrentView} />
+      <Sidebar 
+        currentView={currentView} 
+        onChangeView={setCurrentView} 
+        selectedPeriod={selectedPeriod}
+        onChangePeriod={setSelectedPeriod}
+      />
       
       <main className="flex-1 overflow-auto">
         {currentView === 'dashboard' && (
-          <Dashboard clients={clients} />
+          <Dashboard clients={clients} formReferences={forms} selectedPeriod={selectedPeriod} />
         )}
         
         {currentView === 'clients' && (
           <ClientList 
             clients={clients} 
-            onUpdateStatus={updateFormStatus} 
+            formReferences={forms}
+            onUpdateForm={updateForm} 
             onAddClient={addClient}
             onDeleteClient={deleteClient}
+            onAddFormToClient={addFormToClient}
+            onRemoveFormFromClient={removeFormFromClient}
+            selectedPeriod={selectedPeriod}
           />
         )}
 
@@ -40,7 +53,8 @@ export default function App() {
           <FormsDirectory 
             forms={forms} 
             onAddFormReference={addFormReference} 
-            onDeleteFormReference={deleteFormReference} 
+            onDeleteFormReference={deleteFormReference}
+            onUpdateFormReference={updateFormReference}
           />
         )}
       </main>

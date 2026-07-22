@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, BookOpen, Clock, Calendar, Plus, Trash2 } from 'lucide-react';
+import { Search, BookOpen, Clock, Calendar, Plus, Trash2, Edit2 } from 'lucide-react';
 import { FormReference } from '../types';
 import { AddReferenceModal } from './AddReferenceModal';
 
@@ -7,16 +7,36 @@ interface FormsDirectoryProps {
   forms: FormReference[];
   onAddFormReference: (form: FormReference) => void;
   onDeleteFormReference: (code: string) => void;
+  onUpdateFormReference: (form: FormReference) => void;
 }
 
-export function FormsDirectory({ forms, onAddFormReference, onDeleteFormReference }: FormsDirectoryProps) {
+export function FormsDirectory({ forms, onAddFormReference, onDeleteFormReference, onUpdateFormReference }: FormsDirectoryProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingForm, setEditingForm] = useState<FormReference | null>(null);
 
   const filteredForms = forms.filter(form => 
     form.code.toLowerCase().includes(searchTerm.toLowerCase()) || 
     form.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleEditClick = (form: FormReference) => {
+    setEditingForm(form);
+  };
+
+  const handleCloseModal = () => {
+    setIsAddModalOpen(false);
+    setEditingForm(null);
+  };
+
+  const handleSaveForm = (form: FormReference) => {
+    if (editingForm) {
+      onUpdateFormReference(form);
+    } else {
+      onAddFormReference(form);
+    }
+    handleCloseModal();
+  };
 
   return (
     <div className="p-8">
@@ -55,13 +75,22 @@ export function FormsDirectory({ forms, onAddFormReference, onDeleteFormReferenc
                   <span className="inline-block px-3 py-1 bg-slate-100 text-slate-700 font-bold rounded-lg text-sm">
                     {form.code}
                   </span>
-                  <button
-                    onClick={() => onDeleteFormReference(form.code)}
-                    className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-red-50"
-                    title="Delete Reference"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => handleEditClick(form)}
+                      className="text-slate-400 hover:text-blue-500 p-1 rounded hover:bg-blue-50"
+                      title="Edit Reference"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => onDeleteFormReference(form.code)}
+                      className="text-slate-400 hover:text-red-500 p-1 rounded hover:bg-red-50"
+                      title="Delete Reference"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
                 <h3 className="font-semibold text-slate-900 line-clamp-2" title={form.description}>
                   {form.description}
@@ -90,9 +119,10 @@ export function FormsDirectory({ forms, onAddFormReference, onDeleteFormReferenc
       )}
 
       <AddReferenceModal 
-        isOpen={isAddModalOpen} 
-        onClose={() => setIsAddModalOpen(false)} 
-        onAdd={onAddFormReference} 
+        isOpen={isAddModalOpen || !!editingForm} 
+        onClose={handleCloseModal} 
+        onAdd={handleSaveForm}
+        initialData={editingForm || undefined}
       />
     </div>
   );

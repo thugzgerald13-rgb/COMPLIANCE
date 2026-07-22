@@ -8,6 +8,9 @@ export interface BIRForm {
   description: string;
   status: FormStatus;
   deadline: string;
+  dateFiled?: string;
+  datePaid?: string;
+  taxStatus?: 'With Payable' | 'W/O Payable';
 }
 
 export interface FormReference {

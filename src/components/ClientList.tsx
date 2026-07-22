@@ -1,19 +1,34 @@
 import React, { useState } from 'react';
-import { Client, FormStatus } from '../types';
-import { Search, ChevronDown, ChevronRight, FileText, Plus, Trash2 } from 'lucide-react';
+import { Client, FormStatus, FormReference } from '../types';
+import { Search, ChevronDown, ChevronRight, FileText, Plus, Trash2, XCircle } from 'lucide-react';
 import { AddClientModal } from './AddClientModal';
+import { isFormAllowedForTaxpayerType, calculateDeadline } from '../utils';
 
 interface ClientListProps {
   clients: Client[];
-  onUpdateStatus: (clientId: string, formId: string, status: FormStatus) => void;
+  formReferences: FormReference[];
+  onUpdateForm: (clientId: string, formId: string, updates: Partial<import('../types').BIRForm>) => void;
   onAddClient: (client: Client) => void;
   onDeleteClient: (clientId: string) => void;
+  onAddFormToClient: (clientId: string, formRef: FormReference, deadline?: string) => void;
+  onRemoveFormFromClient: (clientId: string, formId: string) => void;
+  selectedPeriod: string;
 }
 
-export function ClientList({ clients, onUpdateStatus, onAddClient, onDeleteClient }: ClientListProps) {
+export function ClientList({ 
+  clients, 
+  formReferences, 
+  onUpdateForm, 
+  onAddClient, 
+  onDeleteClient,
+  onAddFormToClient,
+  onRemoveFormFromClient,
+  selectedPeriod
+}: ClientListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedClient, setExpandedClient] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [selectedRefToAdd, setSelectedRefToAdd] = useState<{ [clientId: string]: string }>({});
 
   const filteredClients = clients.filter(c => 
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -43,6 +58,17 @@ export function ClientList({ clients, onUpdateStatus, onAddClient, onDeleteClien
     if (diffDays === 0) return { label: 'Due Today', color: 'text-red-600 font-semibold' };
     if (diffDays <= 7) return { label: `Due in ${diffDays} ${diffDays === 1 ? 'day' : 'days'}`, color: 'text-amber-600 font-medium' };
     return { label: `Due in ${diffDays} days`, color: 'text-slate-500' };
+  };
+
+  const handleAddForm = (clientId: string) => {
+    const code = selectedRefToAdd[clientId];
+    if (!code) return;
+    const ref = formReferences.find(f => f.code === code);
+    if (ref) {
+      const deadline = calculateDeadline(selectedPeriod, ref.frequency, ref.deadlineRule);
+      onAddFormToClient(clientId, ref, deadline);
+      setSelectedRefToAdd(prev => ({ ...prev, [clientId]: '' }));
+    }
   };
 
   return (
@@ -81,7 +107,9 @@ export function ClientList({ clients, onUpdateStatus, onAddClient, onDeleteClien
         <div className="divide-y divide-slate-100">
           {filteredClients.map((client) => {
             const isExpanded = expandedClient === client.id;
-            const pendingCount = client.forms.filter(f => f.status === 'Pending' || f.status === 'Processing').length;
+            const visibleForms = client.forms.filter(f => f.deadline.startsWith(selectedPeriod));
+            const pendingCount = visibleForms.filter(f => f.status === 'Pending' || f.status === 'Processing').length;
+            const availableRefs = formReferences.filter(r => isFormAllowedForTaxpayerType(r.code, client.type) && !visibleForms.some(f => f.code === r.code));
 
             return (
               <div key={client.id} className="transition-colors hover:bg-slate-50/50">
@@ -123,39 +151,132 @@ export function ClientList({ clients, onUpdateStatus, onAddClient, onDeleteClien
                 </div>
 
                 {isExpanded && (
-                  <div className="bg-slate-50 p-4 border-t border-slate-100 pl-10">
-                    <h4 className="text-sm font-semibold text-slate-900 mb-3 flex items-center">
-                      <FileText className="w-4 h-4 mr-2" /> Current Filing Period Forms
-                    </h4>
+                  <div className="bg-slate-50 p-4 border-t border-slate-100 pl-10 space-y-4">
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                      <h4 className="text-sm font-semibold text-slate-900 flex items-center">
+                        <FileText className="w-4 h-4 mr-2" /> Assigned Compliance Forms
+                      </h4>
+                      
+                      {/* Add Form Reference selector */}
+                      <div className="flex items-center space-x-2">
+                        <select
+                          value={selectedRefToAdd[client.id] || ''}
+                          onChange={(e) => setSelectedRefToAdd({ ...selectedRefToAdd, [client.id]: e.target.value })}
+                          className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-[200px]"
+                        >
+                          <option value="">+ Select Compliances</option>
+                          {availableRefs.map(ref => (
+                            <option key={ref.code} value={ref.code}>
+                              {ref.code} - {ref.description}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => handleAddForm(client.id)}
+                          disabled={!selectedRefToAdd[client.id]}
+                          className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Add Form
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="grid gap-3">
-                      {client.forms.map((form) => {
-                        const deadlineInfo = getDeadlineInfo(form.deadline);
-                        return (
-                        <div key={form.id} className="flex items-center justify-between bg-white p-3 rounded-lg border border-slate-200">
-                          <div>
-                            <div className="flex items-center space-x-2">
-                              <span className="font-bold text-slate-900">{form.code}</span>
-                              <span className="text-sm text-slate-500 hidden sm:inline">- {form.description}</span>
-                            </div>
-                            <div className="text-xs mt-1 flex items-center space-x-2">
-                              <span className="text-slate-500">Deadline: {new Date(form.deadline).toLocaleDateString()}</span>
-                              <span className={deadlineInfo.color}>
-                                ({deadlineInfo.label})
-                              </span>
-                            </div>
-                          </div>
-                          <select
-                            value={form.status}
-                            onChange={(e) => onUpdateStatus(client.id, form.id, e.target.value as FormStatus)}
-                            className={`text-sm font-medium rounded-full px-3 py-1 border-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none ${getStatusColor(form.status)}`}
-                          >
-                            <option value="Pending">Pending</option>
-                            <option value="Processing">Processing</option>
-                            <option value="Filed">Filed</option>
-                            <option value="Paid">Paid</option>
-                          </select>
+                      {visibleForms.length === 0 ? (
+                        <div className="p-4 bg-white rounded-lg border border-slate-200 text-slate-400 text-xs text-center">
+                          No compliance forms assigned to this client for the selected period. Select a reference above to add one.
                         </div>
-                      )})}
+                      ) : (
+                        visibleForms.map((form) => {
+                          const deadlineInfo = getDeadlineInfo(form.deadline);
+                          const refDesc = formReferences.find(r => r.code === form.code)?.description;
+                          return (
+                            <div key={form.id} className="flex items-center justify-between bg-white p-3 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors">
+                              <div className="flex-1 pr-4">
+                                <div className="flex items-center space-x-2">
+                                  <span className="font-bold text-slate-900 text-sm">{form.code}</span>
+                                  <span className="text-sm text-slate-500 hidden sm:inline">- {refDesc || form.description}</span>
+                                </div>
+                                <div className="text-xs mt-1 flex items-center space-x-2">
+                                  <span className="text-slate-500">Deadline: {new Date(form.deadline).toLocaleDateString()}</span>
+                                  <span className={deadlineInfo.color}>
+                                    ({deadlineInfo.label})
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-3">
+                                {(form.status === 'Filed' || form.status === 'Paid') && (
+                                  <div className="flex flex-col items-end mr-2">
+                                    <div className="flex items-center space-x-2">
+                                      <span className="text-[10px] text-slate-500 w-8 text-right">Filed:</span>
+                                      <input 
+                                        type="date" 
+                                        className="text-[10px] border border-slate-200 rounded px-1 py-0.5 text-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500 h-5"
+                                        value={form.dateFiled || ''}
+                                        onChange={(e) => onUpdateForm(client.id, form.id, { dateFiled: e.target.value })}
+                                      />
+                                    </div>
+                                    {form.status === 'Paid' && form.taxStatus !== 'W/O Payable' && (
+                                      <div className="flex items-center space-x-2 mt-1">
+                                        <span className="text-[10px] text-slate-500 w-8 text-right">Paid:</span>
+                                        <input 
+                                          type="date" 
+                                          className="text-[10px] border border-slate-200 rounded px-1 py-0.5 text-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500 h-5"
+                                          value={form.datePaid || ''}
+                                          onChange={(e) => onUpdateForm(client.id, form.id, { datePaid: e.target.value })}
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                                <select
+                                  value={form.taxStatus || ''}
+                                  onChange={(e) => {
+                                    const newTaxStatus = e.target.value as 'With Payable' | 'W/O Payable';
+                                    const updates: Partial<import('../types').BIRForm> = { taxStatus: newTaxStatus };
+                                    if (newTaxStatus === 'W/O Payable' && form.status === 'Paid') {
+                                      updates.status = 'Filed';
+                                      updates.datePaid = undefined;
+                                    }
+                                    onUpdateForm(client.id, form.id, updates);
+                                  }}
+                                  className="text-xs font-medium rounded-full px-3 py-1 border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none"
+                                >
+                                  {!form.taxStatus && <option value="" disabled className="hidden"></option>}
+                                  <option value="With Payable">With Payable</option>
+                                  <option value="W/O Payable">W/O Payable</option>
+                                </select>
+                                <select
+                                  value={form.status}
+                                  onChange={(e) => {
+                                    const newStatus = e.target.value as import('../types').FormStatus;
+                                    const updates: Partial<import('../types').BIRForm> = { status: newStatus };
+                                    if (newStatus === 'Filed' && !form.dateFiled) updates.dateFiled = new Date().toISOString().split('T')[0];
+                                    if (newStatus === 'Paid') {
+                                      if (!form.dateFiled) updates.dateFiled = new Date().toISOString().split('T')[0];
+                                      if (!form.datePaid) updates.datePaid = new Date().toISOString().split('T')[0];
+                                    }
+                                    onUpdateForm(client.id, form.id, updates);
+                                  }}
+                                  className={`text-xs font-medium rounded-full px-3 py-1 border-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none ${getStatusColor(form.status)}`}
+                                >
+                                  <option value="Pending">Pending</option>
+                                  <option value="Processing">Processing</option>
+                                  <option value="Filed">Filed</option>
+                                  {form.taxStatus !== 'W/O Payable' && <option value="Paid">Paid</option>}
+                                </select>
+                                <button
+                                  onClick={() => onRemoveFormFromClient(client.id, form.id)}
+                                  className="text-slate-400 hover:text-red-500 p-1 rounded hover:bg-red-50 transition-colors"
+                                  title="Remove Form from Client"
+                                >
+                                  <XCircle className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
                     </div>
                   </div>
                 )}
@@ -174,7 +295,9 @@ export function ClientList({ clients, onUpdateStatus, onAddClient, onDeleteClien
       <AddClientModal 
         isOpen={isAddModalOpen} 
         onClose={() => setIsAddModalOpen(false)} 
-        onAdd={onAddClient} 
+        onAdd={onAddClient}
+        formReferences={formReferences}
+        selectedPeriod={selectedPeriod}
       />
     </div>
   );
