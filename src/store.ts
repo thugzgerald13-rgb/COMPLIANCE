@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { Client, FormStatus, FormReference, BIRForm } from './types';
 import { generateInitialClients, commonForms } from './data';
 
-const STORAGE_KEY = 'bir_monitor_clients_v4';
-const FORMS_STORAGE_KEY = 'bir_monitor_forms_v1';
+const STORAGE_KEY = 'bir_monitor_clients_v5';
+const FORMS_STORAGE_KEY = 'bir_monitor_forms_v2';
 
 export function useFormReferences() {
   const [forms, setForms] = useState<FormReference[]>([]);
@@ -69,15 +69,34 @@ export function useClients() {
     setIsLoaded(true);
   }, []);
 
-  const updateForm = (clientId: string, formId: string, updates: Partial<BIRForm>) => {
+  const updateForm = (
+    clientId: string, 
+    formId: string, 
+    updates: Partial<BIRForm>, 
+    formMeta?: { code: string; description: string; deadline: string; period: string }
+  ) => {
     const updatedClients = clients.map(client => {
       if (client.id === clientId) {
-        return {
-          ...client,
-          forms: client.forms.map(form => 
-            form.id === formId ? { ...form, ...updates } : form
-          )
-        };
+        const existingIndex = client.forms.findIndex(f => 
+          f.id === formId || (formMeta && f.code === formMeta.code && f.period === formMeta.period)
+        );
+
+        if (existingIndex >= 0) {
+          const newForms = [...client.forms];
+          newForms[existingIndex] = { ...newForms[existingIndex], ...updates };
+          return { ...client, forms: newForms };
+        } else if (formMeta) {
+          const newForm: BIRForm = {
+            id: formId,
+            code: formMeta.code,
+            description: formMeta.description,
+            status: 'Pending',
+            deadline: formMeta.deadline,
+            period: formMeta.period,
+            ...updates,
+          };
+          return { ...client, forms: [...client.forms, newForm] };
+        }
       }
       return client;
     });
@@ -110,14 +129,7 @@ export function useClients() {
     };
     const updatedClients = clients.map(client => {
       if (client.id === clientId) {
-        // Prevent duplicate codes in the same period
-        const isDuplicate = client.forms.some(f => {
-          if (f.code !== formRef.code) return false;
-          if (period && f.period) {
-            return f.period === period;
-          }
-          return f.deadline === defaultDeadline;
-        });
+        const isDuplicate = client.forms.some(f => f.code === formRef.code);
         if (isDuplicate) {
           return client;
         }
@@ -135,9 +147,17 @@ export function useClients() {
   const removeFormFromClient = (clientId: string, formId: string) => {
     const updatedClients = clients.map(client => {
       if (client.id === clientId) {
+        const targetForm = client.forms.find(f => f.id === formId);
+        let targetCode = targetForm?.code;
+        if (!targetCode && formId.includes('-')) {
+          const parts = formId.split('-');
+          if (parts.length >= 2) {
+            targetCode = parts[1];
+          }
+        }
         return {
           ...client,
-          forms: client.forms.filter(f => f.id !== formId)
+          forms: client.forms.filter(f => f.id !== formId && f.code !== targetCode)
         };
       }
       return client;

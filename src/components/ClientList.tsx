@@ -1,13 +1,18 @@
 import React, { useState } from 'react';
-import { Client, FormStatus, FormReference } from '../types';
+import { Client, FormStatus, FormReference, BIRForm } from '../types';
 import { Search, ChevronDown, ChevronRight, FileText, Plus, Trash2, XCircle } from 'lucide-react';
 import { AddClientModal } from './AddClientModal';
-import { isFormAllowedForTaxpayerType, calculateDeadline, isFormVisibleForPeriod, getEffectiveDeadline, getComplianceStatusInfo } from '../utils';
+import { isFormAllowedForTaxpayerType, calculateDeadline, isFormVisibleForPeriod, getEffectiveDeadline, getComplianceStatusInfo, getComplianceDeadlineForPeriod, getFormsForClientAndPeriod } from '../utils';
 
 interface ClientListProps {
   clients: Client[];
   formReferences: FormReference[];
-  onUpdateForm: (clientId: string, formId: string, updates: Partial<import('../types').BIRForm>) => void;
+  onUpdateForm: (
+    clientId: string, 
+    formId: string, 
+    updates: Partial<BIRForm>, 
+    formMeta?: { code: string; description: string; deadline: string; period: string }
+  ) => void;
   onAddClient: (client: Client) => void;
   onDeleteClient: (clientId: string) => void;
   onAddFormToClient: (clientId: string, formRef: FormReference, deadline?: string, period?: string) => void;
@@ -50,15 +55,10 @@ export function ClientList({
     if (!code) return;
     const ref = formReferences.find(f => f.code === code);
     if (ref) {
-      const lowerRule = (ref.deadlineRule || '').toLowerCase();
-      let targetPeriod = selectedPeriod;
-      if (lowerRule.includes('following') || lowerRule.includes('next')) {
-        const [y, m] = selectedPeriod.split('-').map(Number);
-        const prevD = new Date(y, m - 2, 1);
-        targetPeriod = `${prevD.getFullYear()}-${String(prevD.getMonth() + 1).padStart(2, '0')}`;
-      }
-      const deadline = calculateDeadline(targetPeriod, ref.frequency, ref.deadlineRule);
-      onAddFormToClient(clientId, ref, deadline, targetPeriod);
+      const info = getComplianceDeadlineForPeriod(ref, selectedPeriod);
+      const deadline = info.deadline || calculateDeadline(selectedPeriod, ref.frequency, ref.deadlineRule);
+      const period = info.period || selectedPeriod;
+      onAddFormToClient(clientId, ref, deadline, period);
       setSelectedRefToAdd(prev => ({ ...prev, [clientId]: '' }));
     }
   };
@@ -99,9 +99,9 @@ export function ClientList({
         <div className="divide-y divide-slate-100">
           {filteredClients.map((client) => {
             const isExpanded = expandedClient === client.id;
-            const visibleForms = client.forms.filter(f => isFormVisibleForPeriod(f, selectedPeriod, formReferences));
+            const visibleForms = getFormsForClientAndPeriod(client, selectedPeriod, formReferences);
             const pendingCount = visibleForms.filter(f => f.status === 'Pending' || f.status === 'Processing').length;
-            const availableRefs = formReferences.filter(r => isFormAllowedForTaxpayerType(r.code, client.type) && !visibleForms.some(f => f.code === r.code));
+            const availableRefs = formReferences.filter(r => isFormAllowedForTaxpayerType(r.code, client.type) && !client.forms.some(f => f.code === r.code));
 
             return (
               <div key={client.id} className="transition-colors hover:bg-slate-50/50">
@@ -185,6 +185,12 @@ export function ClientList({
                           const statusInfo = getComplianceStatusInfo(form, effectiveDeadline);
                           const refDesc = formRef?.description || form.description;
                           const deadlineRule = formRef?.deadlineRule;
+                          const formMeta = {
+                            code: form.code,
+                            description: refDesc,
+                            deadline: effectiveDeadline,
+                            period: form.period || selectedPeriod
+                          };
                           return (
                             <div key={form.id} className="flex items-center justify-between bg-white p-3 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors">
                               <div className="flex-1 pr-4">
@@ -211,7 +217,7 @@ export function ClientList({
                                         type="date" 
                                         className="text-[10px] border border-slate-200 rounded px-1 py-0.5 text-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500 h-5"
                                         value={form.dateFiled || ''}
-                                        onChange={(e) => onUpdateForm(client.id, form.id, { dateFiled: e.target.value })}
+                                        onChange={(e) => onUpdateForm(client.id, form.id, { dateFiled: e.target.value }, formMeta)}
                                       />
                                     </div>
                                     {form.status === 'Paid' && form.taxStatus !== 'W/O Payable' && (
@@ -221,7 +227,7 @@ export function ClientList({
                                           type="date" 
                                           className="text-[10px] border border-slate-200 rounded px-1 py-0.5 text-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500 h-5"
                                           value={form.datePaid || ''}
-                                          onChange={(e) => onUpdateForm(client.id, form.id, { datePaid: e.target.value })}
+                                          onChange={(e) => onUpdateForm(client.id, form.id, { datePaid: e.target.value }, formMeta)}
                                         />
                                       </div>
                                     )}
@@ -236,7 +242,7 @@ export function ClientList({
                                       updates.status = 'Filed';
                                       updates.datePaid = undefined;
                                     }
-                                    onUpdateForm(client.id, form.id, updates);
+                                    onUpdateForm(client.id, form.id, updates, formMeta);
                                   }}
                                   className="text-xs font-medium rounded-full px-3 py-1 border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none"
                                 >
@@ -254,7 +260,7 @@ export function ClientList({
                                       if (!form.dateFiled) updates.dateFiled = new Date().toISOString().split('T')[0];
                                       if (!form.datePaid) updates.datePaid = new Date().toISOString().split('T')[0];
                                     }
-                                    onUpdateForm(client.id, form.id, updates);
+                                    onUpdateForm(client.id, form.id, updates, formMeta);
                                   }}
                                   className={`text-xs font-medium rounded-full px-3 py-1 border-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none ${getStatusColor(form.status)}`}
                                 >

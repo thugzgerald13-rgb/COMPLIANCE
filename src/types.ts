@@ -7,7 +7,7 @@ export interface BIRForm {
   code: string;
   description: string;
   status: FormStatus;
-  deadline: string;
+  deadline?: string;
   period?: string;
   dateFiled?: string;
   datePaid?: string;

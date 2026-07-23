@@ -23,7 +23,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50 font-sans">
+    <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
       <Sidebar 
         currentView={currentView} 
         onChangeView={setCurrentView} 
@@ -31,7 +31,7 @@ export default function App() {
         onChangePeriod={setSelectedPeriod}
       />
       
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 h-full overflow-y-auto">
         {currentView === 'dashboard' && (
           <Dashboard clients={clients} formReferences={forms} selectedPeriod={selectedPeriod} />
         )}

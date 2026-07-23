@@ -1,7 +1,7 @@
 import React from 'react';
 import { Client, FormReference } from '../types';
 import { Users, FileClock, CheckCircle, AlertCircle, Calendar } from 'lucide-react';
-import { isFormVisibleForPeriod, getEffectiveDeadline, getComplianceStatusInfo } from '../utils';
+import { getEffectiveDeadline, getComplianceStatusInfo, getFormsForClientAndPeriod } from '../utils';
 
 interface DashboardProps {
   clients: Client[];
@@ -11,8 +11,14 @@ interface DashboardProps {
 
 export function Dashboard({ clients, formReferences, selectedPeriod }: DashboardProps) {
   const totalClients = clients.length;
-  // Filter forms by selected period
-  const allForms = clients.flatMap(c => c.forms).filter(f => isFormVisibleForPeriod(f, selectedPeriod, formReferences));
+  
+  // Filter forms by selected period using getFormsForClientAndPeriod
+  const allForms = clients.flatMap(c => 
+    getFormsForClientAndPeriod(c, selectedPeriod, formReferences).map(f => ({
+      ...f,
+      clientName: c.name
+    }))
+  );
   
   const pendingForms = allForms.filter(f => f.status === 'Pending').length;
   const processingForms = allForms.filter(f => f.status === 'Processing').length;
@@ -26,14 +32,10 @@ export function Dashboard({ clients, formReferences, selectedPeriod }: Dashboard
   ];
 
   // Recently updated or upcoming deadlines within the selected period
-  const upcomingDeadlines = clients
-    .flatMap(c => c.forms.map(f => {
-      const effDeadline = getEffectiveDeadline(f, formReferences, selectedPeriod);
-      return { ...f, deadline: effDeadline, clientName: c.name };
-    }))
-    .filter(f => isFormVisibleForPeriod(f, selectedPeriod, formReferences) && (f.status === 'Pending' || f.status === 'Processing'))
-    .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
-    .slice(0, 8); // show more items
+  const upcomingDeadlines = allForms
+    .filter(f => f.status === 'Pending' || f.status === 'Processing')
+    .sort((a, b) => new Date(a.deadline || '').getTime() - new Date(b.deadline || '').getTime())
+    .slice(0, 8);
 
   return (
     <div className="p-8">
