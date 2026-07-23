@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Client, FormStatus, FormReference, BIRForm } from './types';
 import { generateInitialClients, commonForms } from './data';
 
-const STORAGE_KEY = 'bir_monitor_clients_v2';
+const STORAGE_KEY = 'bir_monitor_clients_v4';
 const FORMS_STORAGE_KEY = 'bir_monitor_forms_v1';
 
 export function useFormReferences() {
@@ -98,7 +98,7 @@ export function useClients() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedClients));
   };
 
-  const addFormToClient = (clientId: string, formRef: FormReference, deadline?: string) => {
+  const addFormToClient = (clientId: string, formRef: FormReference, deadline?: string, period?: string) => {
     const defaultDeadline = deadline || new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0];
     const newForm: BIRForm = {
       id: crypto.randomUUID(),
@@ -106,11 +106,19 @@ export function useClients() {
       description: formRef.description,
       status: 'Pending',
       deadline: defaultDeadline,
+      period: period,
     };
     const updatedClients = clients.map(client => {
       if (client.id === clientId) {
-        // Prevent duplicate codes if needed or allow multiple
-        if (client.forms.some(f => f.code === formRef.code)) {
+        // Prevent duplicate codes in the same period
+        const isDuplicate = client.forms.some(f => {
+          if (f.code !== formRef.code) return false;
+          if (period && f.period) {
+            return f.period === period;
+          }
+          return f.deadline === defaultDeadline;
+        });
+        if (isDuplicate) {
           return client;
         }
         return {

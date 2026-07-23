@@ -1,6 +1,7 @@
 import React from 'react';
 import { Client, FormReference } from '../types';
 import { Users, FileClock, CheckCircle, AlertCircle, Calendar } from 'lucide-react';
+import { isFormVisibleForPeriod, getEffectiveDeadline, getComplianceStatusInfo } from '../utils';
 
 interface DashboardProps {
   clients: Client[];
@@ -10,8 +11,8 @@ interface DashboardProps {
 
 export function Dashboard({ clients, formReferences, selectedPeriod }: DashboardProps) {
   const totalClients = clients.length;
-  // Filter forms by whether their deadline falls within the selected period (YYYY-MM)
-  const allForms = clients.flatMap(c => c.forms).filter(f => f.deadline.startsWith(selectedPeriod));
+  // Filter forms by selected period
+  const allForms = clients.flatMap(c => c.forms).filter(f => isFormVisibleForPeriod(f, selectedPeriod, formReferences));
   
   const pendingForms = allForms.filter(f => f.status === 'Pending').length;
   const processingForms = allForms.filter(f => f.status === 'Processing').length;
@@ -24,25 +25,13 @@ export function Dashboard({ clients, formReferences, selectedPeriod }: Dashboard
     { title: 'Filed & Paid', value: filedForms, icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-100' },
   ];
 
-  const getDeadlineInfo = (deadline: string) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const deadDate = new Date(deadline);
-    deadDate.setHours(0, 0, 0, 0);
-    
-    const diffTime = deadDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays < 0) return { label: 'Overdue', color: 'text-red-700 bg-red-50 border-red-200', urgency: 'high' };
-    if (diffDays === 0) return { label: 'Due Today', color: 'text-red-700 bg-red-50 border-red-200', urgency: 'high' };
-    if (diffDays <= 7) return { label: `Due in ${diffDays} ${diffDays === 1 ? 'day' : 'days'}`, color: 'text-amber-700 bg-amber-50 border-amber-200', urgency: 'medium' };
-    return { label: `Due in ${diffDays} days`, color: 'text-slate-600 bg-slate-50 border-slate-200', urgency: 'low' };
-  };
-
   // Recently updated or upcoming deadlines within the selected period
   const upcomingDeadlines = clients
-    .flatMap(c => c.forms.map(f => ({ ...f, clientName: c.name })))
-    .filter(f => f.deadline.startsWith(selectedPeriod) && (f.status === 'Pending' || f.status === 'Processing'))
+    .flatMap(c => c.forms.map(f => {
+      const effDeadline = getEffectiveDeadline(f, formReferences, selectedPeriod);
+      return { ...f, deadline: effDeadline, clientName: c.name };
+    }))
+    .filter(f => isFormVisibleForPeriod(f, selectedPeriod, formReferences) && (f.status === 'Pending' || f.status === 'Processing'))
     .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
     .slice(0, 8); // show more items
 
@@ -76,7 +65,7 @@ export function Dashboard({ clients, formReferences, selectedPeriod }: Dashboard
             <div className="p-6 text-center text-slate-500">No upcoming deadlines!</div>
           ) : (
             upcomingDeadlines.map((item, i) => {
-              const deadlineInfo = getDeadlineInfo(item.deadline);
+              const deadlineInfo = getComplianceStatusInfo(item, item.deadline);
               const refDesc = formReferences.find(r => r.code === item.code)?.description;
               return (
                 <div key={i} className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-slate-50 transition-colors ${deadlineInfo.urgency === 'high' ? 'bg-red-50/30' : ''}`}>
@@ -90,7 +79,7 @@ export function Dashboard({ clients, formReferences, selectedPeriod }: Dashboard
                     </div>
                   </div>
                   <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center">
-                    <div className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-medium border ${deadlineInfo.color}`}>
+                    <div className={`inline-flex items-center px-2.5 py-1 rounded text-xs border ${deadlineInfo.color}`}>
                       {deadlineInfo.label} ({new Date(item.deadline).toLocaleDateString()})
                     </div>
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${

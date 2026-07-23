@@ -1,4 +1,5 @@
 import { Client, FormStatus, BIRForm, FormReference } from './types';
+import { calculateDeadline } from './utils';
 
 const generateTIN = () => {
   return `${Math.floor(100 + Math.random() * 900)}-${Math.floor(100 + Math.random() * 900)}-${Math.floor(100 + Math.random() * 900)}-000`;
@@ -25,14 +26,22 @@ const getRelativeDate = (offsetDays: number) => {
 export const getRandomForms = (isCorporate: boolean): BIRForm[] => {
   const forms: BIRForm[] = [];
   const statuses: FormStatus[] = ['Pending', 'Processing', 'Filed', 'Paid'];
+  const today = new Date();
   
-  // Everyone gets Withholding taxes usually
+  // Create period strings for previous month (due in current month) and current month (due in next month)
+  const prevMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const prevPeriod = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, '0')}`;
+  
+  const currentPeriod = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+
+  // 1. Monthly forms for PREVIOUS period (Deadline falls in CURRENT month)
   forms.push({
     id: crypto.randomUUID(),
     code: '1601-C',
     description: 'Monthly Remittance Return of Income Taxes Withheld on Compensation',
     status: statuses[Math.floor(Math.random() * statuses.length)],
-    deadline: getRelativeDate(Math.floor(Math.random() * 20) - 5), // -5 to +15 days
+    deadline: calculateDeadline(prevPeriod, 'Monthly', '10th day of the following month'),
+    period: prevPeriod,
   });
 
   forms.push({
@@ -40,10 +49,21 @@ export const getRandomForms = (isCorporate: boolean): BIRForm[] => {
     code: '0619-E',
     description: 'Monthly Remittance Form for Creditable Income Taxes Withheld (Expanded)',
     status: statuses[Math.floor(Math.random() * statuses.length)],
-    deadline: getRelativeDate(Math.floor(Math.random() * 20) - 5),
+    deadline: calculateDeadline(prevPeriod, 'Monthly', '10th day of the following month'),
+    period: prevPeriod,
   });
 
-  // VAT or Non-VAT
+  // 2. Monthly forms for CURRENT period (Deadline falls in NEXT month)
+  forms.push({
+    id: crypto.randomUUID(),
+    code: '1601-C',
+    description: 'Monthly Remittance Return of Income Taxes Withheld on Compensation',
+    status: 'Pending',
+    deadline: calculateDeadline(currentPeriod, 'Monthly', '10th day of the following month'),
+    period: currentPeriod,
+  });
+
+  // 3. VAT or Non-VAT quarterly forms for previous quarter close (Deadline in current month)
   const isVat = Math.random() > 0.5;
   if (isVat) {
     forms.push({
@@ -51,7 +71,8 @@ export const getRandomForms = (isCorporate: boolean): BIRForm[] => {
       code: '2550Q',
       description: 'Quarterly Value-Added Tax Return',
       status: statuses[Math.floor(Math.random() * statuses.length)],
-      deadline: getRelativeDate(Math.floor(Math.random() * 30) - 10),
+      deadline: calculateDeadline(prevPeriod, 'Quarterly', '25th day of the month following the close of the quarter'),
+      period: prevPeriod,
     });
   } else {
     forms.push({
@@ -59,18 +80,20 @@ export const getRandomForms = (isCorporate: boolean): BIRForm[] => {
       code: '2551Q',
       description: 'Quarterly Percentage Tax Return',
       status: statuses[Math.floor(Math.random() * statuses.length)],
-      deadline: getRelativeDate(Math.floor(Math.random() * 30) - 10),
+      deadline: calculateDeadline(prevPeriod, 'Quarterly', '25th day of the month following the close of the quarter'),
+      period: prevPeriod,
     });
   }
 
-  // Income Tax
+  // 4. Income Tax
   if (isCorporate) {
     forms.push({
       id: crypto.randomUUID(),
       code: '1702Q',
       description: 'Quarterly Income Tax Return (Corporations)',
       status: statuses[Math.floor(Math.random() * statuses.length)],
-      deadline: getRelativeDate(Math.floor(Math.random() * 40) - 5),
+      deadline: calculateDeadline(prevPeriod, 'Quarterly', '60 days following the close of the quarter'),
+      period: prevPeriod,
     });
   } else {
     forms.push({
@@ -78,7 +101,8 @@ export const getRandomForms = (isCorporate: boolean): BIRForm[] => {
       code: '1701Q',
       description: 'Quarterly Income Tax Return (Individuals)',
       status: statuses[Math.floor(Math.random() * statuses.length)],
-      deadline: getRelativeDate(Math.floor(Math.random() * 40) - 5),
+      deadline: calculateDeadline(prevPeriod, 'Quarterly', '15th day of the month following the close of the quarter'),
+      period: prevPeriod,
     });
   }
 

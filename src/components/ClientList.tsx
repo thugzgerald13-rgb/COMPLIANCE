@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Client, FormStatus, FormReference } from '../types';
 import { Search, ChevronDown, ChevronRight, FileText, Plus, Trash2, XCircle } from 'lucide-react';
 import { AddClientModal } from './AddClientModal';
-import { isFormAllowedForTaxpayerType, calculateDeadline } from '../utils';
+import { isFormAllowedForTaxpayerType, calculateDeadline, isFormVisibleForPeriod, getEffectiveDeadline, getComplianceStatusInfo } from '../utils';
 
 interface ClientListProps {
   clients: Client[];
@@ -10,7 +10,7 @@ interface ClientListProps {
   onUpdateForm: (clientId: string, formId: string, updates: Partial<import('../types').BIRForm>) => void;
   onAddClient: (client: Client) => void;
   onDeleteClient: (clientId: string) => void;
-  onAddFormToClient: (clientId: string, formRef: FormReference, deadline?: string) => void;
+  onAddFormToClient: (clientId: string, formRef: FormReference, deadline?: string, period?: string) => void;
   onRemoveFormFromClient: (clientId: string, formId: string) => void;
   selectedPeriod: string;
 }
@@ -45,28 +45,20 @@ export function ClientList({
     }
   };
 
-  const getDeadlineInfo = (deadline: string) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const deadDate = new Date(deadline);
-    deadDate.setHours(0, 0, 0, 0);
-    
-    const diffTime = deadDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays < 0) return { label: 'Overdue', color: 'text-red-600 font-semibold' };
-    if (diffDays === 0) return { label: 'Due Today', color: 'text-red-600 font-semibold' };
-    if (diffDays <= 7) return { label: `Due in ${diffDays} ${diffDays === 1 ? 'day' : 'days'}`, color: 'text-amber-600 font-medium' };
-    return { label: `Due in ${diffDays} days`, color: 'text-slate-500' };
-  };
-
   const handleAddForm = (clientId: string) => {
     const code = selectedRefToAdd[clientId];
     if (!code) return;
     const ref = formReferences.find(f => f.code === code);
     if (ref) {
-      const deadline = calculateDeadline(selectedPeriod, ref.frequency, ref.deadlineRule);
-      onAddFormToClient(clientId, ref, deadline);
+      const lowerRule = (ref.deadlineRule || '').toLowerCase();
+      let targetPeriod = selectedPeriod;
+      if (lowerRule.includes('following') || lowerRule.includes('next')) {
+        const [y, m] = selectedPeriod.split('-').map(Number);
+        const prevD = new Date(y, m - 2, 1);
+        targetPeriod = `${prevD.getFullYear()}-${String(prevD.getMonth() + 1).padStart(2, '0')}`;
+      }
+      const deadline = calculateDeadline(targetPeriod, ref.frequency, ref.deadlineRule);
+      onAddFormToClient(clientId, ref, deadline, targetPeriod);
       setSelectedRefToAdd(prev => ({ ...prev, [clientId]: '' }));
     }
   };
@@ -107,7 +99,7 @@ export function ClientList({
         <div className="divide-y divide-slate-100">
           {filteredClients.map((client) => {
             const isExpanded = expandedClient === client.id;
-            const visibleForms = client.forms.filter(f => f.deadline.startsWith(selectedPeriod));
+            const visibleForms = client.forms.filter(f => isFormVisibleForPeriod(f, selectedPeriod, formReferences));
             const pendingCount = visibleForms.filter(f => f.status === 'Pending' || f.status === 'Processing').length;
             const availableRefs = formReferences.filter(r => isFormAllowedForTaxpayerType(r.code, client.type) && !visibleForms.some(f => f.code === r.code));
 
@@ -188,20 +180,26 @@ export function ClientList({
                         </div>
                       ) : (
                         visibleForms.map((form) => {
-                          const deadlineInfo = getDeadlineInfo(form.deadline);
-                          const refDesc = formReferences.find(r => r.code === form.code)?.description;
+                          const formRef = formReferences.find(r => r.code === form.code);
+                          const effectiveDeadline = getEffectiveDeadline(form, formReferences, selectedPeriod);
+                          const statusInfo = getComplianceStatusInfo(form, effectiveDeadline);
+                          const refDesc = formRef?.description || form.description;
+                          const deadlineRule = formRef?.deadlineRule;
                           return (
                             <div key={form.id} className="flex items-center justify-between bg-white p-3 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors">
                               <div className="flex-1 pr-4">
                                 <div className="flex items-center space-x-2">
                                   <span className="font-bold text-slate-900 text-sm">{form.code}</span>
-                                  <span className="text-sm text-slate-500 hidden sm:inline">- {refDesc || form.description}</span>
+                                  <span className="text-sm text-slate-500 hidden sm:inline">- {refDesc}</span>
                                 </div>
-                                <div className="text-xs mt-1 flex items-center space-x-2">
-                                  <span className="text-slate-500">Deadline: {new Date(form.deadline).toLocaleDateString()}</span>
-                                  <span className={deadlineInfo.color}>
-                                    ({deadlineInfo.label})
+                                <div className="text-xs mt-1 flex flex-wrap items-center gap-2">
+                                  <span className="font-semibold text-slate-700">Deadline: {new Date(effectiveDeadline).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                                  <span className={`px-2 py-0.5 rounded text-[11px] border ${statusInfo.color}`}>
+                                    ({statusInfo.label})
                                   </span>
+                                  {deadlineRule && (
+                                    <span className="text-slate-500 text-[11px]">[{deadlineRule}]</span>
+                                  )}
                                 </div>
                               </div>
                               <div className="flex items-center space-x-3">

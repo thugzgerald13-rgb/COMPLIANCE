@@ -8,6 +8,7 @@ export interface BIRForm {
   description: string;
   status: FormStatus;
   deadline: string;
+  period?: string;
   dateFiled?: string;
   datePaid?: string;
   taxStatus?: 'With Payable' | 'W/O Payable';
