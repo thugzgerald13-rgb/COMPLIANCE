@@ -29,7 +29,7 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
         {!isCollapsed && (
           <div className="flex items-center space-x-3 overflow-hidden">
             <FileText className="w-7 h-7 text-blue-400 flex-shrink-0" />
-            <span className="text-lg font-bold tracking-tight truncate">Compliance</span>
+            <span className="text-lg font-bold tracking-tight truncate">BIZ-COMPLY</span>
           </div>
         )}
         {isCollapsed && (
