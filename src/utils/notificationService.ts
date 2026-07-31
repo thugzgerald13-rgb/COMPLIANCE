@@ -16,8 +16,8 @@ export const defaultNotificationSettings: NotificationSettings = {
   autoDispatchOnLoad: true,
   soundEnabled: true,
   browserNotificationsEnabled: true,
-  defaultNotificationEmail: 'compliance@bizcomply.ph',
-  defaultNotificationPhone: '+639171234567',
+  defaultNotificationEmail: '',
+  defaultNotificationPhone: '',
 };
 
 // Play audio chime using Web Audio API synthesizer
@@ -88,17 +88,43 @@ export function saveNotificationLogs(logs: NotificationLog[]) {
   }
 }
 
-export function loadNotificationSettings(): NotificationSettings {
+export function loadNotificationSettings(userEmail?: string): NotificationSettings {
   try {
-    const stored = localStorage.getItem(SETTINGS_STORAGE_KEY);
-    return stored ? { ...defaultNotificationSettings, ...JSON.parse(stored) } : defaultNotificationSettings;
+    const userKey = userEmail ? `${SETTINGS_STORAGE_KEY}_${userEmail}` : SETTINGS_STORAGE_KEY;
+    const stored = localStorage.getItem(userKey) || localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      const email = (parsed.defaultNotificationEmail && parsed.defaultNotificationEmail !== 'compliance@bizcomply.ph')
+        ? parsed.defaultNotificationEmail
+        : (userEmail || '');
+      const phone = (parsed.defaultNotificationPhone && parsed.defaultNotificationPhone !== '+639171234567')
+        ? parsed.defaultNotificationPhone
+        : '';
+      return {
+        ...defaultNotificationSettings,
+        ...parsed,
+        defaultNotificationEmail: email,
+        defaultNotificationPhone: phone,
+      };
+    }
+    return {
+      ...defaultNotificationSettings,
+      defaultNotificationEmail: userEmail || '',
+      defaultNotificationPhone: '',
+    };
   } catch {
-    return defaultNotificationSettings;
+    return {
+      ...defaultNotificationSettings,
+      defaultNotificationEmail: userEmail || '',
+      defaultNotificationPhone: '',
+    };
   }
 }
 
-export function saveNotificationSettings(settings: NotificationSettings) {
+export function saveNotificationSettings(settings: NotificationSettings, userEmail?: string) {
   try {
+    const userKey = userEmail ? `${SETTINGS_STORAGE_KEY}_${userEmail}` : SETTINGS_STORAGE_KEY;
+    localStorage.setItem(userKey, JSON.stringify(settings));
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
   } catch (e) {
     console.warn('Failed to save notification settings:', e);

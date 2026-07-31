@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Client, FormReference, BIRForm, NotificationLog } from '../types';
 import { 
   X, Bell, Mail, Phone, Send, CheckCircle2, AlertTriangle, 
@@ -15,6 +15,7 @@ import {
   playNotificationChime,
   triggerBrowserNotification
 } from '../utils/notificationService';
+import { useAuth } from '../context/AuthContext';
 
 interface NotificationHubModalProps {
   isOpen: boolean;
@@ -40,17 +41,32 @@ export function NotificationHubModal({
   onUpdateForm,
   selectedPeriod
 }: NotificationHubModalProps) {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'alerts' | 'logs' | 'settings'>('alerts');
   const [logs, setLogs] = useState<NotificationLog[]>(loadNotificationLogs());
   const [isDispatching, setIsDispatching] = useState(false);
   const [dispatchSuccessMsg, setDispatchSuccessMsg] = useState<string | null>(null);
 
+  // Initial user-bound email default
+  const resolvedEmail = settings.defaultNotificationEmail && settings.defaultNotificationEmail !== 'compliance@bizcomply.ph'
+    ? settings.defaultNotificationEmail
+    : (user?.email || '');
+  const resolvedPhone = settings.defaultNotificationPhone && settings.defaultNotificationPhone !== '+639171234567'
+    ? settings.defaultNotificationPhone
+    : '';
+
   // Settings form state
   const [autoLoad, setAutoLoad] = useState(settings.autoDispatchOnLoad);
   const [sound, setSound] = useState(settings.soundEnabled);
   const [browserNotif, setBrowserNotif] = useState(settings.browserNotificationsEnabled);
-  const [defaultEmail, setDefaultEmail] = useState(settings.defaultNotificationEmail);
-  const [defaultPhone, setDefaultPhone] = useState(settings.defaultNotificationPhone);
+  const [defaultEmail, setDefaultEmail] = useState(resolvedEmail);
+  const [defaultPhone, setDefaultPhone] = useState(resolvedPhone);
+
+  useEffect(() => {
+    if (user?.email && (!defaultEmail || defaultEmail === 'compliance@bizcomply.ph')) {
+      setDefaultEmail(user.email);
+    }
+  }, [user?.email]);
 
   if (!isOpen) return null;
 
@@ -59,7 +75,12 @@ export function NotificationHubModal({
     setDispatchSuccessMsg(null);
 
     setTimeout(() => {
-      const result = dispatchAutomatedNotifications(dueItems, settings);
+      const activeSettings: NotificationSettings = {
+        ...settings,
+        defaultNotificationEmail: defaultEmail || user?.email || '',
+        defaultNotificationPhone: defaultPhone,
+      };
+      const result = dispatchAutomatedNotifications(dueItems, activeSettings);
       setLogs(result.logs);
       setIsDispatching(false);
 
@@ -86,11 +107,11 @@ export function NotificationHubModal({
       autoDispatchOnLoad: autoLoad,
       soundEnabled: sound,
       browserNotificationsEnabled: browserNotif,
-      defaultNotificationEmail: defaultEmail,
+      defaultNotificationEmail: defaultEmail || user?.email || '',
       defaultNotificationPhone: defaultPhone,
     };
     onUpdateSettings(updated);
-    saveNotificationSettings(updated);
+    saveNotificationSettings(updated, user?.email);
     setDispatchSuccessMsg('Notification settings updated successfully!');
     setTimeout(() => setDispatchSuccessMsg(null), 3000);
   };
@@ -375,26 +396,29 @@ export function NotificationHubModal({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Default Dispatch Email</label>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Default Dispatch Email <span className="text-slate-400 font-normal">(User Account)</span>
+                    </label>
                     <input 
                       type="email" 
                       required
                       value={defaultEmail}
                       onChange={e => setDefaultEmail(e.target.value)}
                       className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="compliance@bizcomply.ph"
+                      placeholder={user?.email || "registered.user@email.com"}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Default Phone SMS Gateway</label>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Default Phone SMS Gateway <span className="text-slate-400 font-normal">(Optional)</span>
+                    </label>
                     <input 
                       type="tel" 
-                      required
                       value={defaultPhone}
                       onChange={e => setDefaultPhone(e.target.value)}
                       className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="+639171234567"
+                      placeholder="e.g. +639170000000 (blank by default)"
                     />
                   </div>
                 </div>

@@ -9,6 +9,7 @@ import {
   NotificationSettings 
 } from '../utils/notificationService';
 import { NotificationHubModal } from './NotificationHubModal';
+import { useAuth } from '../context/AuthContext';
 
 interface DashboardProps {
   clients: Client[];
@@ -29,10 +30,19 @@ interface SelectedDashboardForm extends BIRForm {
 }
 
 export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateForm }: DashboardProps) {
+  const { user } = useAuth();
   const [filterStatus, setFilterStatus] = useState<'all' | 'Pending' | 'Processing'>('all');
   const [editingForm, setEditingForm] = useState<SelectedDashboardForm | null>(null);
   const [isNotificationHubOpen, setIsNotificationHubOpen] = useState(false);
-  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(loadNotificationSettings());
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(() => 
+    loadNotificationSettings(user?.email)
+  );
+
+  useEffect(() => {
+    if (user?.email) {
+      setNotificationSettings(loadNotificationSettings(user.email));
+    }
+  }, [user?.email]);
 
   // Calculate unfiled forms due today or overdue
   const dueItems = getDueFormsForNotification(clients, formReferences, selectedPeriod);
