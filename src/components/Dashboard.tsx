@@ -1,7 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Client, FormReference, FormStatus, BIRForm } from '../types';
-import { Users, FileClock, CheckCircle, AlertCircle, Calendar, Edit3, X, Save, FileText, Building, Check } from 'lucide-react';
+import { Users, FileClock, CheckCircle, AlertCircle, Calendar, Edit3, X, Save, FileText, Building, Check, Bell, Mail, Phone, Send, ShieldAlert } from 'lucide-react';
 import { getComplianceStatusInfo, getFormsForClientAndPeriod } from '../utils';
+import { 
+  getDueFormsForNotification, 
+  loadNotificationSettings, 
+  dispatchAutomatedNotifications,
+  NotificationSettings 
+} from '../utils/notificationService';
+import { NotificationHubModal } from './NotificationHubModal';
 
 interface DashboardProps {
   clients: Client[];
@@ -24,6 +31,18 @@ interface SelectedDashboardForm extends BIRForm {
 export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateForm }: DashboardProps) {
   const [filterStatus, setFilterStatus] = useState<'all' | 'Pending' | 'Processing'>('all');
   const [editingForm, setEditingForm] = useState<SelectedDashboardForm | null>(null);
+  const [isNotificationHubOpen, setIsNotificationHubOpen] = useState(false);
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(loadNotificationSettings());
+
+  // Calculate unfiled forms due today or overdue
+  const dueItems = getDueFormsForNotification(clients, formReferences, selectedPeriod);
+
+  // Auto-dispatch on mount or when period / clients change
+  useEffect(() => {
+    if (notificationSettings.autoDispatchOnLoad && dueItems.length > 0) {
+      dispatchAutomatedNotifications(dueItems, notificationSettings);
+    }
+  }, [selectedPeriod, clients.length]);
 
   // Form edit modal state
   const [editStatus, setEditStatus] = useState<FormStatus>('Pending');
@@ -158,6 +177,28 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
           <h1 className="text-2xl font-bold text-slate-900">Dashboard Overview</h1>
           <p className="text-xs text-slate-500 mt-0.5">Click any pending or in-processing reference below to update its compliance status & details</p>
         </div>
+
+        {/* Automated Email & Phone Notification Trigger Hub Button */}
+        <button
+          onClick={() => setIsNotificationHubOpen(true)}
+          className={`flex items-center space-x-2.5 px-4 py-2.5 rounded-xl border transition-all cursor-pointer shadow-sm text-xs font-bold ${
+            dueItems.length > 0 
+              ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-400 shadow-amber-500/20 animate-pulse' 
+              : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+          }`}
+        >
+          <Bell className="w-4 h-4" />
+          <span>Automated Email & Phone Dispatcher</span>
+          {dueItems.length > 0 ? (
+            <span className="bg-red-600 text-white text-[10px] px-2 py-0.5 rounded-full font-extrabold">
+              {dueItems.length} DUE ALERTS
+            </span>
+          ) : (
+            <span className="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-medium">
+              Active
+            </span>
+          )}
+        </button>
       </div>
       
       {/* Stat Cards */}
@@ -461,6 +502,17 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
           </div>
         </div>
       )}
+
+      {/* Notification Hub Modal */}
+      <NotificationHubModal
+        isOpen={isNotificationHubOpen}
+        onClose={() => setIsNotificationHubOpen(false)}
+        dueItems={dueItems}
+        settings={notificationSettings}
+        onUpdateSettings={setNotificationSettings}
+        onUpdateForm={onUpdateForm}
+        selectedPeriod={selectedPeriod}
+      />
     </div>
   );
 }

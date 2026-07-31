@@ -39,5 +39,25 @@ export interface Client {
   tin: string;
   rdo: string;
   type: TaxPayerType;
+  email?: string;
+  phone?: string;
+  notifyEmail?: boolean;
+  notifyPhone?: boolean;
   forms: BIRForm[];
+}
+
+export interface NotificationLog {
+  id: string;
+  clientId: string;
+  clientName: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  formCode: string;
+  formDescription: string;
+  deadline: string;
+  type: 'Email' | 'Phone (SMS)' | 'Both';
+  status: 'Sent' | 'Delivered' | 'Failed';
+  timestamp: string;
+  message: string;
+  isOverdue?: boolean;
 }
