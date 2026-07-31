@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Client, FormStatus, FormReference, BIRForm } from './types';
-import { generateInitialClients, commonForms } from './data';
+import { commonForms } from './data';
+import { useAuth } from './context/AuthContext';
 
-const STORAGE_KEY = 'bir_monitor_clients_v5';
 const FORMS_STORAGE_KEY = 'bir_monitor_forms_v2';
 
 export function useFormReferences() {
@@ -47,27 +47,41 @@ export function useFormReferences() {
 }
 
 export function useClients() {
+  const { user } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  const userKey = user ? `bir_monitor_clients_u_${user.id}` : 'bir_monitor_clients_guest';
+
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!user) {
+      setClients([]);
+      setIsLoaded(true);
+      return;
+    }
+
+    const stored = localStorage.getItem(userKey);
     if (stored) {
       try {
         setClients(JSON.parse(stored));
       } catch (e) {
-        console.error("Failed to parse stored clients", e);
-        const initial = generateInitialClients();
-        setClients(initial);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
+        setClients([]);
+        localStorage.setItem(userKey, JSON.stringify([]));
       }
     } else {
-      const initial = generateInitialClients();
-      setClients(initial);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
+      // New user registration or login starts with NO example clients (empty list)
+      setClients([]);
+      localStorage.setItem(userKey, JSON.stringify([]));
     }
     setIsLoaded(true);
-  }, []);
+  }, [user?.id, userKey]);
+
+  const saveClients = (updated: Client[]) => {
+    setClients(updated);
+    if (userKey) {
+      localStorage.setItem(userKey, JSON.stringify(updated));
+    }
+  };
 
   const updateForm = (
     clientId: string, 
@@ -104,20 +118,21 @@ export function useClients() {
       return client;
     });
     
-    setClients(updatedClients);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedClients));
+    saveClients(updatedClients);
   };
 
   const addClient = (client: Client) => {
     const updatedClients = [client, ...clients];
-    setClients(updatedClients);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedClients));
+    saveClients(updatedClients);
   };
 
   const deleteClient = (clientId: string) => {
     const updatedClients = clients.filter(c => c.id !== clientId);
-    setClients(updatedClients);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedClients));
+    saveClients(updatedClients);
+  };
+
+  const clearAllClients = () => {
+    saveClients([]);
   };
 
   const addFormToClient = (
@@ -151,8 +166,7 @@ export function useClients() {
       }
       return client;
     });
-    setClients(updatedClients);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedClients));
+    saveClients(updatedClients);
   };
 
   const removeFormFromClient = (clientId: string, formId: string) => {
@@ -173,9 +187,9 @@ export function useClients() {
       }
       return client;
     });
-    setClients(updatedClients);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedClients));
+    saveClients(updatedClients);
   };
 
-  return { clients, isLoaded, updateForm, addClient, deleteClient, addFormToClient, removeFormFromClient };
+  return { clients, isLoaded, updateForm, addClient, deleteClient, clearAllClients, addFormToClient, removeFormFromClient };
 }
+

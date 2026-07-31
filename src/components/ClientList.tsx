@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Client, FormStatus, FormReference, BIRForm } from '../types';
-import { Search, ChevronDown, ChevronRight, FileText, Plus, Trash2, XCircle } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, FileText, Plus, Trash2, XCircle, Users } from 'lucide-react';
 import { AddClientModal } from './AddClientModal';
 import { isFormAllowedForTaxpayerType, calculateDeadline, isFormVisibleForPeriod, getEffectiveDeadline, getComplianceStatusInfo, getComplianceDeadlineForPeriod, getFormsForClientAndPeriod } from '../utils';
 
@@ -15,6 +15,7 @@ interface ClientListProps {
   ) => void;
   onAddClient: (client: Client) => void;
   onDeleteClient: (clientId: string) => void;
+  onClearAllClients?: () => void;
   onAddFormToClient: (clientId: string, formRef: FormReference, deadline?: string, period?: string, assignedPeriod?: string) => void;
   onRemoveFormFromClient: (clientId: string, formId: string) => void;
   selectedPeriod: string;
@@ -26,6 +27,7 @@ export function ClientList({
   onUpdateForm, 
   onAddClient, 
   onDeleteClient,
+  onClearAllClients,
   onAddFormToClient,
   onRemoveFormFromClient,
   selectedPeriod
@@ -66,35 +68,68 @@ export function ClientList({
   return (
     <div className="p-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-        <h1 className="text-2xl font-bold text-slate-900">My Clients</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">My Clients</h1>
+          <p className="text-xs text-slate-500 mt-0.5">Manage your active taxpayer clients and compliance deadlines</p>
+        </div>
         <div className="flex items-center space-x-3 w-full sm:w-auto">
+          {clients.length > 0 && onClearAllClients && (
+            <button
+              onClick={() => {
+                if (window.confirm('Are you sure you want to clear all clients from your account?')) {
+                  onClearAllClients();
+                }
+              }}
+              className="text-xs text-slate-500 hover:text-red-600 px-3 py-2 border border-slate-200 hover:border-red-200 rounded-lg transition-colors bg-white shadow-sm cursor-pointer"
+            >
+              Clear All Clients
+            </button>
+          )}
           <div className="relative flex-1 sm:flex-none">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
             <input 
               type="text" 
               placeholder="Search clients or TIN..." 
-              className="pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
+              className="pl-9 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64 text-xs"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <button 
             onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-xs font-medium cursor-pointer shadow-sm"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-4 h-4" />
             <span className="hidden sm:inline font-medium">Add Client</span>
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="grid grid-cols-12 gap-4 p-4 border-b border-slate-100 bg-slate-50 font-medium text-slate-500 text-sm">
-          <div className="col-span-4">Client Name</div>
-          <div className="col-span-3">TIN</div>
-          <div className="col-span-2">Type</div>
-          <div className="col-span-3 text-right">Status</div>
+      {clients.length === 0 ? (
+        <div className="p-12 text-center bg-white rounded-xl border border-slate-100 shadow-sm">
+          <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Users className="w-8 h-8" />
+          </div>
+          <h3 className="text-lg font-semibold text-slate-900 mb-1">No Clients Added Yet</h3>
+          <p className="text-slate-500 text-xs max-w-md mx-auto mb-6">
+            Your client workspace is currently empty. Click the button below to add your first client and assign tax compliance forms.
+          </p>
+          <button 
+            onClick={() => setIsAddModalOpen(true)}
+            className="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors shadow-sm text-xs cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Your First Client</span>
+          </button>
         </div>
+      ) : (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+          <div className="grid grid-cols-12 gap-4 p-4 border-b border-slate-100 bg-slate-50 font-medium text-slate-500 text-sm">
+            <div className="col-span-4">Client Name</div>
+            <div className="col-span-3">TIN</div>
+            <div className="col-span-2">Type</div>
+            <div className="col-span-3 text-right">Status</div>
+          </div>
 
         <div className="divide-y divide-slate-100">
           {filteredClients.map((client) => {
@@ -289,12 +324,13 @@ export function ClientList({
           })}
           
           {filteredClients.length === 0 && (
-            <div className="p-8 text-center text-slate-500">
+            <div className="p-8 text-center text-slate-500 text-xs">
               No clients found matching your search.
             </div>
           )}
         </div>
       </div>
+      )}
 
       <AddClientModal 
         isOpen={isAddModalOpen} 

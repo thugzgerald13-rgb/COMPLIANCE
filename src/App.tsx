@@ -14,7 +14,7 @@ function MainContent() {
     const today = new Date();
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
   });
-  const { clients, isLoaded, updateForm, addClient, deleteClient, addFormToClient, removeFormFromClient } = useClients();
+  const { clients, isLoaded, updateForm, addClient, deleteClient, clearAllClients, addFormToClient, removeFormFromClient } = useClients();
   const { forms, isLoaded: formsLoaded, addFormReference, deleteFormReference, updateFormReference } = useFormReferences();
 
   if (!isAuthLoaded || !isLoaded || !formsLoaded) {
@@ -50,6 +50,7 @@ function MainContent() {
             onUpdateForm={updateForm} 
             onAddClient={addClient}
             onDeleteClient={deleteClient}
+            onClearAllClients={clearAllClients}
             onAddFormToClient={addFormToClient}
             onRemoveFormFromClient={removeFormFromClient}
             selectedPeriod={selectedPeriod}
