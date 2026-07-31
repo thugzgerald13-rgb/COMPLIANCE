@@ -91,24 +91,9 @@ export function AuthPage() {
 
   const handleSelectGoogleAccount = async (accEmail: string, accName?: string) => {
     setSelectedAccountEmail(accEmail);
-
     const finalEmail = accEmail.trim();
     const finalName = accName?.trim() || (finalEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
     
-    setGoogleAccounts((prev) => {
-      const exists = prev.some((a) => a.email.toLowerCase() === finalEmail.toLowerCase());
-      if (exists) return prev;
-      const colors = ['bg-blue-600', 'bg-emerald-600', 'bg-purple-600', 'bg-amber-600', 'bg-rose-600'];
-      const newAcc: GoogleAccount = {
-        name: finalName,
-        email: finalEmail,
-        avatarBg: colors[prev.length % colors.length],
-      };
-      const updated = [newAcc, ...prev];
-      localStorage.setItem(SAVED_GOOGLE_ACCOUNTS_KEY, JSON.stringify(updated));
-      return updated;
-    });
-
     try {
       const res = await loginWithGoogle(finalEmail, finalName);
       if (!res.success) {
@@ -324,11 +309,21 @@ export function AuthPage() {
           {/* Google Sign In Button */}
           <button
             type="button"
-            onClick={() => {
+            onClick={async () => {
               setError(null);
-              const hasSaved = googleAccounts.length > 0;
-              setIsAddingNewGoogleAccount(!hasSaved);
-              setShowGoogleModal(true);
+              if (isSupabaseConnected) {
+                // Real Supabase OAuth flow -> redirects straight to accounts.google.com
+                const res = await loginWithGoogle('');
+                if (res && !res.success) {
+                  setError(res.message || 'Google OAuth failed.');
+                }
+              } else {
+                // Local dev preview mode: show clean prompt without cached emails
+                setCustomGoogleEmail('');
+                setCustomGoogleName('');
+                setIsAddingNewGoogleAccount(true);
+                setShowGoogleModal(true);
+              }
             }}
             disabled={isLoading}
             className="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700/80 border border-slate-700 text-slate-200 font-medium rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-500 transition-all flex items-center justify-center space-x-3 text-sm disabled:opacity-50 cursor-pointer shadow-sm"
@@ -461,7 +456,7 @@ export function AuthPage() {
                     autoFocus
                     value={customGoogleEmail}
                     onChange={(e) => setCustomGoogleEmail(e.target.value)}
-                    placeholder="e.g. tagz.gerald13@gmail.com"
+                    placeholder="e.g. user@gmail.com"
                     className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 bg-white"
                   />
                 </div>
@@ -473,7 +468,7 @@ export function AuthPage() {
                     type="text"
                     value={customGoogleName}
                     onChange={(e) => setCustomGoogleName(e.target.value)}
-                    placeholder="e.g. Gerald Tagz"
+                    placeholder="e.g. Maria Santos"
                     className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 bg-white"
                   />
                 </div>
