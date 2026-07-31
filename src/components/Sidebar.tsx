@@ -100,13 +100,13 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
 
         <button
           onClick={() => onChangeView('forms')}
-          title={isCollapsed ? "Compliance Reference" : undefined}
+          title={isCollapsed ? "Monitoring Reference" : undefined}
           className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'space-x-3 px-3'} py-3 rounded-lg transition-colors ${
             currentView === 'forms' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
           }`}
         >
           <BookOpen className="w-5 h-5 flex-shrink-0" />
-          {!isCollapsed && <span className="font-medium truncate">Compliance Reference</span>}
+          {!isCollapsed && <span className="font-medium truncate">Monitoring Reference</span>}
         </button>
       </nav>
 

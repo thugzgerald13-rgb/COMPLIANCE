@@ -43,7 +43,7 @@ export function FormsDirectory({ forms, onAddFormReference, onDeleteFormReferenc
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <h1 className="text-2xl font-bold text-slate-900 flex items-center">
           <BookOpen className="w-6 h-6 mr-3 text-blue-600" />
-          Compliance Reference
+          Monitoring Reference
         </h1>
         <div className="flex items-center space-x-3 w-full sm:w-auto">
           <div className="relative flex-1 sm:flex-none">
