@@ -2,45 +2,76 @@ import { useState, useEffect } from 'react';
 import { Client, FormStatus, FormReference, BIRForm } from './types';
 import { commonForms } from './data';
 import { useAuth } from './context/AuthContext';
+import { supabase, isSupabaseConfigured } from './lib/supabase';
 
 const FORMS_STORAGE_KEY = 'bir_monitor_forms_v2';
 
 export function useFormReferences() {
-  const [forms, setForms] = useState<FormReference[]>([]);
+  const { user } = useAuth();
+  const [forms, setForms] = useState<FormReference[]>(commonForms);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem(FORMS_STORAGE_KEY);
+    let isMounted = true;
+    const userFormsKey = user ? `bir_monitor_forms_u_${user.id}` : FORMS_STORAGE_KEY;
+    const stored = localStorage.getItem(userFormsKey) || localStorage.getItem(FORMS_STORAGE_KEY);
+    
     if (stored) {
       try {
         setForms(JSON.parse(stored));
       } catch (e) {
         setForms(commonForms);
-        localStorage.setItem(FORMS_STORAGE_KEY, JSON.stringify(commonForms));
       }
     } else {
       setForms(commonForms);
-      localStorage.setItem(FORMS_STORAGE_KEY, JSON.stringify(commonForms));
     }
+
+    if (supabase && isSupabaseConfigured && user) {
+      supabase.auth.getUser().then(({ data: { user: supabaseUser } }) => {
+        if (supabaseUser?.user_metadata?.custom_forms && isMounted) {
+          const remoteForms = supabaseUser.user_metadata.custom_forms;
+          setForms(remoteForms);
+          localStorage.setItem(userFormsKey, JSON.stringify(remoteForms));
+        }
+      }).catch(() => {});
+    }
+
     setIsLoaded(true);
-  }, []);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]);
+
+  const saveForms = async (updatedForms: FormReference[]) => {
+    setForms(updatedForms);
+    const userFormsKey = user ? `bir_monitor_forms_u_${user.id}` : FORMS_STORAGE_KEY;
+    localStorage.setItem(userFormsKey, JSON.stringify(updatedForms));
+
+    if (supabase && isSupabaseConfigured && user) {
+      try {
+        await supabase.auth.updateUser({
+          data: { custom_forms: updatedForms }
+        });
+      } catch (e) {
+        console.warn('Could not sync forms reference to Supabase:', e);
+      }
+    }
+  };
 
   const addFormReference = (formRef: FormReference) => {
     const updatedForms = [...forms, formRef];
-    setForms(updatedForms);
-    localStorage.setItem(FORMS_STORAGE_KEY, JSON.stringify(updatedForms));
+    saveForms(updatedForms);
   };
 
   const deleteFormReference = (code: string) => {
     const updatedForms = forms.filter(f => f.code !== code);
-    setForms(updatedForms);
-    localStorage.setItem(FORMS_STORAGE_KEY, JSON.stringify(updatedForms));
+    saveForms(updatedForms);
   };
 
   const updateFormReference = (updatedFormRef: FormReference) => {
     const updatedForms = forms.map(f => f.code === updatedFormRef.code ? updatedFormRef : f);
-    setForms(updatedForms);
-    localStorage.setItem(FORMS_STORAGE_KEY, JSON.stringify(updatedForms));
+    saveForms(updatedForms);
   };
 
   return { forms, isLoaded, addFormReference, deleteFormReference, updateFormReference };
@@ -60,26 +91,93 @@ export function useClients() {
       return;
     }
 
-    const stored = localStorage.getItem(userKey);
-    if (stored) {
-      try {
-        setClients(JSON.parse(stored));
-      } catch (e) {
-        setClients([]);
-        localStorage.setItem(userKey, JSON.stringify([]));
+    let isMounted = true;
+
+    async function loadClientData() {
+      // 1. Load local cache first for immediate rendering
+      const stored = localStorage.getItem(userKey);
+      let localClients: Client[] = [];
+      if (stored) {
+        try {
+          localClients = JSON.parse(stored);
+        } catch (e) {
+          localClients = [];
+        }
       }
-    } else {
-      // New user registration or login starts with NO example clients (empty list)
-      setClients([]);
-      localStorage.setItem(userKey, JSON.stringify([]));
+
+      if (isMounted) {
+        setClients(localClients);
+      }
+
+      // 2. Sync from Supabase Cloud Storage/Database if configured
+      if (supabase && isSupabaseConfigured && user) {
+        try {
+          // Check Supabase User Metadata cloud storage
+          const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+          if (supabaseUser?.user_metadata?.clients && Array.isArray(supabaseUser.user_metadata.clients)) {
+            const remoteClients = supabaseUser.user_metadata.clients as Client[];
+            if (isMounted) {
+              setClients(remoteClients);
+              localStorage.setItem(userKey, JSON.stringify(remoteClients));
+            }
+          } else {
+            // Also attempt to fetch from Supabase database table 'user_clients'
+            const { data } = await supabase
+              .from('user_clients')
+              .select('clients_data')
+              .eq('user_id', user.id)
+              .maybeSingle();
+
+            if (data?.clients_data && Array.isArray(data.clients_data) && isMounted) {
+              setClients(data.clients_data);
+              localStorage.setItem(userKey, JSON.stringify(data.clients_data));
+            }
+          }
+        } catch (err) {
+          console.warn('Supabase client data sync warning:', err);
+        }
+      }
+
+      if (isMounted) {
+        setIsLoaded(true);
+      }
     }
-    setIsLoaded(true);
+
+    loadClientData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [user?.id, userKey]);
 
-  const saveClients = (updated: Client[]) => {
+  const saveClients = async (updated: Client[]) => {
     setClients(updated);
     if (userKey) {
       localStorage.setItem(userKey, JSON.stringify(updated));
+    }
+
+    // Sync to Supabase centralized cloud storage & database if Supabase is connected
+    if (supabase && isSupabaseConfigured && user) {
+      try {
+        // Centralized sync to Supabase user metadata (accessible on any device/login)
+        await supabase.auth.updateUser({
+          data: { clients: updated }
+        });
+
+        // Also attempt to save to Supabase 'user_clients' table if provisioned
+        try {
+          await supabase
+            .from('user_clients')
+            .upsert(
+              { user_id: user.id, clients_data: updated, updated_at: new Date().toISOString() },
+              { onConflict: 'user_id' }
+            );
+        } catch (dbErr) {
+          // Table might not exist yet, metadata sync serves as fallback
+        }
+      } catch (e) {
+        console.warn('Could not sync clients to Supabase:', e);
+      }
     }
   };
 
