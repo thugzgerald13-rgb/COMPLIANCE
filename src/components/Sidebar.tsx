@@ -111,7 +111,7 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
       </nav>
 
       {/* User Profile Footer */}
-      <div className="p-3 border-t border-slate-800">
+      <div className="p-3 border-t border-slate-800 relative">
         <div className={`bg-slate-800/80 rounded-xl p-2.5 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} border border-slate-700/50`}>
           <div className="flex items-center space-x-3 overflow-hidden">
             <div className="w-9 h-9 bg-blue-600/30 border border-blue-500/40 text-blue-300 rounded-full flex items-center justify-center font-semibold text-xs flex-shrink-0">
@@ -120,7 +120,7 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
             {!isCollapsed && (
               <div className="flex-1 overflow-hidden pr-1">
                 <p className="text-xs font-semibold text-slate-100 truncate">{user?.name || 'User'}</p>
-                <p className="text-[10px] text-slate-400 truncate">{user?.role || 'Compliance Officer'}</p>
+                <p className="text-[10px] text-slate-400 truncate">{user?.email || user?.role || 'Compliance Officer'}</p>
               </div>
             )}
           </div>

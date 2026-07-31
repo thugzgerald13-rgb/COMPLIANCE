@@ -3,10 +3,12 @@ import { User } from '../types';
 
 interface AuthContextType {
   user: User | null;
+  allUsers: User[];
   login: (email: string, password: string) => { success: boolean; message?: string };
   register: (name: string, email: string, password: string, role: string) => { success: boolean; message?: string };
-  loginWithGoogle: (email?: string, name?: string) => { success: boolean; message?: string };
+  loginWithGoogle: (email: string, name?: string) => { success: boolean; message?: string };
   logout: () => void;
+  switchUser: (userId: string) => void;
   isAuthLoaded: boolean;
 }
 
@@ -34,14 +36,27 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isAuthLoaded, setIsAuthLoaded] = useState(false);
 
-  useEffect(() => {
-    // Seed initial users if none exist
-    const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-    if (!storedUsers) {
+  // Sync users list to state
+  const refreshUsersList = () => {
+    const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
+    if (!rawUsers) {
       localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(DEFAULT_USERS));
+      setAllUsers(DEFAULT_USERS.map(({ password, ...u }) => u));
+    } else {
+      try {
+        const parsed = JSON.parse(rawUsers);
+        setAllUsers(parsed.map(({ password, ...u }: any) => u));
+      } catch (e) {
+        setAllUsers(DEFAULT_USERS.map(({ password, ...u }) => u));
+      }
     }
+  };
+
+  useEffect(() => {
+    refreshUsersList();
 
     // Load active user session
     const storedCurrentUser = localStorage.getItem(CURRENT_USER_KEY);
@@ -63,10 +78,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const foundUser = usersList.find((u: any) => u.email.toLowerCase().trim() === normalizedEmail);
 
     if (!foundUser) {
-      return { success: false, message: 'No account found with this email address.' };
+      return { success: false, message: 'No account found with this email address. Please register first.' };
     }
 
-    if (foundUser.password !== password) {
+    if (foundUser.password && foundUser.password !== password) {
       return { success: false, message: 'Incorrect password. Please try again.' };
     }
 
@@ -90,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const existing = usersList.find((u: any) => u.email.toLowerCase().trim() === normalizedEmail);
 
     if (existing) {
-      return { success: false, message: 'An account with this email already exists.' };
+      return { success: false, message: 'An account with this email already exists. Try signing in instead.' };
     }
 
     const newUserObj = {
@@ -103,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const updatedUsers = [...usersList, newUserObj];
     localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
+    refreshUsersList();
 
     const authenticatedUser: User = {
       id: newUserObj.id,
@@ -116,28 +132,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: true };
   };
 
-  const loginWithGoogle = (email?: string, name?: string) => {
-    const googleEmail = email || 'tagz.gerald13@gmail.com';
-    const googleName = name || (googleEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
-    const googleUser: User = {
-      id: 'google_' + Date.now(),
-      name: googleName,
-      email: googleEmail,
-      role: 'Compliance Specialist',
-    };
-
-    setUser(googleUser);
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(googleUser));
-
-    // Also persist in users list if not existing
+  const loginWithGoogle = (email: string, name?: string) => {
+    const googleEmail = email.trim().toLowerCase();
+    const googleName = name?.trim() || (googleEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
+    
     const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
     const usersList = rawUsers ? JSON.parse(rawUsers) : DEFAULT_USERS;
-    if (!usersList.some((u: any) => u.email.toLowerCase() === googleUser.email.toLowerCase())) {
-      usersList.push({ ...googleUser, password: '' });
+
+    let existing = usersList.find((u: any) => u.email.toLowerCase().trim() === googleEmail);
+    let googleUser: User;
+
+    if (existing) {
+      googleUser = {
+        id: existing.id,
+        name: existing.name || googleName,
+        email: existing.email,
+        role: existing.role || 'Compliance Specialist',
+      };
+    } else {
+      const newUserObj = {
+        id: 'google_' + crypto.randomUUID(),
+        name: googleName,
+        email: googleEmail,
+        password: '',
+        role: 'Compliance Specialist',
+      };
+      usersList.push(newUserObj);
       localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
+      googleUser = {
+        id: newUserObj.id,
+        name: newUserObj.name,
+        email: newUserObj.email,
+        role: newUserObj.role,
+      };
     }
 
+    refreshUsersList();
+    setUser(googleUser);
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(googleUser));
     return { success: true };
+  };
+
+  const switchUser = (userId: string) => {
+    const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
+    const usersList = rawUsers ? JSON.parse(rawUsers) : DEFAULT_USERS;
+    const target = usersList.find((u: any) => u.id === userId);
+    if (target) {
+      const authenticatedUser: User = {
+        id: target.id,
+        name: target.name,
+        email: target.email,
+        role: target.role || 'Compliance Officer',
+      };
+      setUser(authenticatedUser);
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
+    }
   };
 
   const logout = () => {
@@ -146,7 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, loginWithGoogle, logout, isAuthLoaded }}>
+    <AuthContext.Provider value={{ user, allUsers, login, register, loginWithGoogle, logout, switchUser, isAuthLoaded }}>
       {children}
     </AuthContext.Provider>
   );
