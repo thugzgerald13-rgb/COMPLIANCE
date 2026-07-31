@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { FileText, Eye, EyeOff, Lock, Mail, User as UserIcon, Briefcase, ArrowRight, X, UserPlus, Check } from 'lucide-react';
+import { FileText, Eye, EyeOff, Lock, Mail, User as UserIcon, Briefcase, ArrowRight, X, UserPlus, Check, Trash2 } from 'lucide-react';
 
 interface GoogleAccount {
   name: string;
@@ -8,11 +8,11 @@ interface GoogleAccount {
   avatarBg: string;
 }
 
-const DEFAULT_GOOGLE_ACCOUNTS: GoogleAccount[] = [
+const INITIAL_GOOGLE_ACCOUNTS: GoogleAccount[] = [
   { name: 'Gerald Tagz', email: 'tagz.gerald13@gmail.com', avatarBg: 'bg-blue-600' },
-  { name: 'Gerald (BIR Auditor)', email: 'gerald.compliance@gmail.com', avatarBg: 'bg-emerald-600' },
-  { name: 'Tax Advisory Team', email: 'tax.advisory.ph@gmail.com', avatarBg: 'bg-purple-600' },
 ];
+
+const SAVED_GOOGLE_ACCOUNTS_KEY = 'bir_google_saved_accounts_v1';
 
 export function AuthPage() {
   const { login, register, loginWithGoogle } = useAuth();
@@ -29,12 +29,30 @@ export function AuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Google modal states
+  // Google modal & saved accounts states
   const [showGoogleModal, setShowGoogleModal] = useState(false);
   const [selectedAccountEmail, setSelectedAccountEmail] = useState<string | null>(null);
   const [isAddingNewGoogleAccount, setIsAddingNewGoogleAccount] = useState(false);
   const [customGoogleEmail, setCustomGoogleEmail] = useState('');
   const [customGoogleName, setCustomGoogleName] = useState('');
+  const [googleAccounts, setGoogleAccounts] = useState<GoogleAccount[]>([]);
+
+  useEffect(() => {
+    const rawSaved = localStorage.getItem(SAVED_GOOGLE_ACCOUNTS_KEY);
+    if (rawSaved) {
+      try {
+        const parsed = JSON.parse(rawSaved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setGoogleAccounts(parsed);
+          return;
+        }
+      } catch (e) {
+        // Fallback
+      }
+    }
+    setGoogleAccounts(INITIAL_GOOGLE_ACCOUNTS);
+    localStorage.setItem(SAVED_GOOGLE_ACCOUNTS_KEY, JSON.stringify(INITIAL_GOOGLE_ACCOUNTS));
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,14 +93,33 @@ export function AuthPage() {
 
   const handleSelectGoogleAccount = (accEmail: string, accName?: string) => {
     setSelectedAccountEmail(accEmail);
+
+    // Save/update this account in Google accounts list
+    const finalEmail = accEmail.trim();
+    const finalName = accName?.trim() || (finalEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
+    
+    setGoogleAccounts((prev) => {
+      const exists = prev.some((a) => a.email.toLowerCase() === finalEmail.toLowerCase());
+      if (exists) return prev;
+      const colors = ['bg-blue-600', 'bg-emerald-600', 'bg-purple-600', 'bg-amber-600', 'bg-rose-600'];
+      const newAcc: GoogleAccount = {
+        name: finalName,
+        email: finalEmail,
+        avatarBg: colors[prev.length % colors.length],
+      };
+      const updated = [newAcc, ...prev];
+      localStorage.setItem(SAVED_GOOGLE_ACCOUNTS_KEY, JSON.stringify(updated));
+      return updated;
+    });
+
     setTimeout(() => {
-      const res = loginWithGoogle(accEmail, accName);
+      const res = loginWithGoogle(finalEmail, finalName);
       if (!res.success) {
         setError(res.message || 'Google login failed.');
       }
       setShowGoogleModal(false);
       setSelectedAccountEmail(null);
-    }, 600);
+    }, 500);
   };
 
   const handleCustomGoogleSubmit = (e: React.FormEvent) => {
@@ -90,6 +127,14 @@ export function AuthPage() {
     if (!customGoogleEmail.trim()) return;
     handleSelectGoogleAccount(customGoogleEmail.trim(), customGoogleName.trim() || undefined);
   };
+
+  const removeSavedGoogleAccount = (emailToRemove: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = googleAccounts.filter((a) => a.email.toLowerCase() !== emailToRemove.toLowerCase());
+    setGoogleAccounts(updated);
+    localStorage.setItem(SAVED_GOOGLE_ACCOUNTS_KEY, JSON.stringify(updated));
+  };
+
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden font-sans">
@@ -339,20 +384,20 @@ export function AuthPage() {
 
             {!isAddingNewGoogleAccount ? (
               <>
-                <div className="space-y-1 divide-y divide-slate-100 border-t border-b border-slate-100 py-1 mb-4">
-                  {DEFAULT_GOOGLE_ACCOUNTS.map((acc) => {
+                <div className="space-y-1 divide-y divide-slate-100 border-t border-b border-slate-100 py-1 mb-4 max-h-60 overflow-y-auto">
+                  {googleAccounts.map((acc) => {
                     const isSigningIn = selectedAccountEmail === acc.email;
                     return (
-                      <button
+                      <div
                         key={acc.email}
-                        type="button"
                         onClick={() => handleSelectGoogleAccount(acc.email, acc.name)}
-                        disabled={selectedAccountEmail !== null}
-                        className="w-full text-left py-3 px-2 rounded-xl hover:bg-slate-50 flex items-center justify-between transition-colors group cursor-pointer disabled:opacity-60"
+                        className={`w-full py-2.5 px-2 rounded-xl hover:bg-slate-50 flex items-center justify-between transition-colors group cursor-pointer ${
+                          selectedAccountEmail !== null ? 'pointer-events-none opacity-60' : ''
+                        }`}
                       >
                         <div className="flex items-center space-x-3 overflow-hidden">
-                          <div className={`w-9 h-9 ${acc.avatarBg} text-white font-semibold rounded-full flex items-center justify-center text-sm flex-shrink-0 shadow-sm`}>
-                            {acc.name[0]}
+                          <div className={`w-9 h-9 ${acc.avatarBg || 'bg-blue-600'} text-white font-semibold rounded-full flex items-center justify-center text-sm flex-shrink-0 shadow-sm`}>
+                            {(acc.name || acc.email)[0].toUpperCase()}
                           </div>
                           <div className="overflow-hidden">
                             <p className="text-sm font-medium text-slate-800 group-hover:text-blue-600 transition-colors truncate">
@@ -362,10 +407,21 @@ export function AuthPage() {
                           </div>
                         </div>
 
-                        {isSigningIn && (
-                          <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin flex-shrink-0 ml-2" />
-                        )}
-                      </button>
+                        <div className="flex items-center space-x-1 flex-shrink-0 ml-2">
+                          {isSigningIn ? (
+                            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => removeSavedGoogleAccount(acc.email, e)}
+                              className="p-1 text-slate-300 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                              title="Remove account"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
@@ -381,29 +437,33 @@ export function AuthPage() {
               </>
             ) : (
               <form onSubmit={handleCustomGoogleSubmit} className="space-y-3">
+                <div className="bg-blue-50/70 border border-blue-100 rounded-xl p-3 text-xs text-blue-900 mb-2">
+                  Enter your Google Account details below to log in directly.
+                </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">
-                    Google Email Address
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Your Google Email Address
                   </label>
                   <input
                     type="email"
                     required
+                    autoFocus
                     value={customGoogleEmail}
                     onChange={(e) => setCustomGoogleEmail(e.target.value)}
-                    placeholder="your.email@gmail.com"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                    placeholder="e.g. tagz.gerald13@gmail.com"
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 bg-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">
-                    Display Name (Optional)
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Your Name (Optional)
                   </label>
                   <input
                     type="text"
                     value={customGoogleName}
                     onChange={(e) => setCustomGoogleName(e.target.value)}
-                    placeholder="e.g. Maria Santos"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                    placeholder="e.g. Gerald Tagz"
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 bg-white"
                   />
                 </div>
 
@@ -411,13 +471,13 @@ export function AuthPage() {
                   <button
                     type="button"
                     onClick={() => setIsAddingNewGoogleAccount(false)}
-                    className="flex-1 py-2 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-medium transition-colors"
+                    className="flex-1 py-2.5 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-medium transition-colors"
                   >
-                    Back
+                    Back to Accounts
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-medium transition-colors shadow-sm flex items-center justify-center space-x-1"
+                    className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-medium transition-colors shadow-sm flex items-center justify-center space-x-1"
                   >
                     <span>Sign In</span>
                     <Check className="w-3.5 h-3.5" />
