@@ -50,6 +50,14 @@ export function useFormReferences() {
 
     if (supabase && isSupabaseConfigured && user) {
       try {
+        // Sync to Supabase Storage bucket
+        const blob = new Blob([JSON.stringify(updatedForms, null, 2)], { type: 'application/json' });
+        await supabase.storage
+          .from('bizcomply-data')
+          .upload(`users/${user.id}/forms.json`, blob, { upsert: true, contentType: 'application/json' })
+          .catch(() => {});
+
+        // Centralized metadata sync
         await supabase.auth.updateUser({
           data: { custom_forms: updatedForms }
         });
@@ -112,7 +120,23 @@ export function useClients() {
       // 2. Sync from Supabase Cloud Storage/Database if configured
       if (supabase && isSupabaseConfigured && user) {
         try {
-          // Check Supabase User Metadata cloud storage
+          // Attempt 1: Fetch from Supabase Storage Bucket 'bizcomply-data'
+          const { data: storageFile, error: storageErr } = await supabase.storage
+            .from('bizcomply-data')
+            .download(`users/${user.id}/clients.json`);
+
+          if (storageFile && !storageErr) {
+            const text = await storageFile.text();
+            const remoteClients = JSON.parse(text);
+            if (Array.isArray(remoteClients) && isMounted) {
+              setClients(remoteClients);
+              localStorage.setItem(userKey, JSON.stringify(remoteClients));
+              setIsLoaded(true);
+              return;
+            }
+          }
+
+          // Attempt 2: Check Supabase User Metadata cloud storage
           const { data: { user: supabaseUser } } = await supabase.auth.getUser();
           if (supabaseUser?.user_metadata?.clients && Array.isArray(supabaseUser.user_metadata.clients)) {
             const remoteClients = supabaseUser.user_metadata.clients as Client[];
@@ -121,7 +145,7 @@ export function useClients() {
               localStorage.setItem(userKey, JSON.stringify(remoteClients));
             }
           } else {
-            // Also attempt to fetch from Supabase database table 'user_clients'
+            // Attempt 3: Fetch from Supabase database table 'user_clients'
             const { data } = await supabase
               .from('user_clients')
               .select('clients_data')
@@ -159,12 +183,20 @@ export function useClients() {
     // Sync to Supabase centralized cloud storage & database if Supabase is connected
     if (supabase && isSupabaseConfigured && user) {
       try {
-        // Centralized sync to Supabase user metadata (accessible on any device/login)
+        // 1. Save to Supabase Storage Bucket 'bizcomply-data'
+        const jsonContent = JSON.stringify(updated, null, 2);
+        const blob = new Blob([jsonContent], { type: 'application/json' });
+        await supabase.storage
+          .from('bizcomply-data')
+          .upload(`users/${user.id}/clients.json`, blob, { upsert: true, contentType: 'application/json' })
+          .catch(() => {});
+
+        // 2. Centralized sync to Supabase user metadata (accessible on any device/login)
         await supabase.auth.updateUser({
           data: { clients: updated }
         });
 
-        // Also attempt to save to Supabase 'user_clients' table if provisioned
+        // 3. Save to Supabase 'user_clients' table if provisioned
         try {
           await supabase
             .from('user_clients')
@@ -173,7 +205,7 @@ export function useClients() {
               { onConflict: 'user_id' }
             );
         } catch (dbErr) {
-          // Table might not exist yet, metadata sync serves as fallback
+          // Table might not exist yet, metadata/storage sync serves as fallback
         }
       } catch (e) {
         console.warn('Could not sync clients to Supabase:', e);

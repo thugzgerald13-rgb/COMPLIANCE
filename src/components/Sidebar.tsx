@@ -1,6 +1,7 @@
-import { LayoutDashboard, Users, FileText, BookOpen, ChevronLeft, ChevronRight, Calendar, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, BookOpen, ChevronLeft, ChevronRight, Calendar, LogOut, Cloud } from 'lucide-react';
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 interface SidebarProps {
   currentView: 'dashboard' | 'clients' | 'forms';
@@ -111,7 +112,19 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
       </nav>
 
       {/* User Profile Footer */}
-      <div className="p-3 border-t border-slate-800 relative">
+      <div className="p-3 border-t border-slate-800 relative space-y-2">
+        {!isCollapsed && (
+          <div className="flex items-center justify-between px-1 text-[11px] text-slate-400">
+            <div className="flex items-center space-x-1.5">
+              <Cloud className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+              <span className="font-medium text-slate-300">Supabase Storage</span>
+            </div>
+            <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+              {isSupabaseConfigured ? 'Synced Central' : 'Cloud Ready'}
+            </span>
+          </div>
+        )}
+
         <div className={`bg-slate-800/80 rounded-xl p-2.5 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} border border-slate-700/50`}>
           <div className="flex items-center space-x-3 overflow-hidden">
             <div className="w-9 h-9 bg-blue-600/30 border border-blue-500/40 text-blue-300 rounded-full flex items-center justify-center font-semibold text-xs flex-shrink-0">
