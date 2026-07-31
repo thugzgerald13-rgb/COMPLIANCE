@@ -5,7 +5,7 @@ interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => { success: boolean; message?: string };
   register: (name: string, email: string, password: string, role: string) => { success: boolean; message?: string };
-  loginWithGoogle: () => { success: boolean; message?: string };
+  loginWithGoogle: (email?: string, name?: string) => { success: boolean; message?: string };
   logout: () => void;
   isAuthLoaded: boolean;
 }
@@ -116,11 +116,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: true };
   };
 
-  const loginWithGoogle = () => {
+  const loginWithGoogle = (email?: string, name?: string) => {
+    const googleEmail = email || 'tagz.gerald13@gmail.com';
+    const googleName = name || (googleEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
     const googleUser: User = {
       id: 'google_' + Date.now(),
-      name: 'Gerald Tagz',
-      email: 'tagz.gerald13@gmail.com',
+      name: googleName,
+      email: googleEmail,
       role: 'Compliance Specialist',
     };
 
