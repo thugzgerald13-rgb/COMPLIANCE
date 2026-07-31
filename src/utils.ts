@@ -155,6 +155,26 @@ export function isFormVisibleForPeriod(form: BIRForm, selectedPeriod: string, fo
   return false;
 }
 
+export function adjustDeadlineForWeekend(dateStr: string): string {
+  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
+  if (dayOfWeek === 6) {
+    // Saturday -> next working day (Monday, +2 days)
+    date.setDate(date.getDate() + 2);
+  } else if (dayOfWeek === 0) {
+    // Sunday -> next working day (Monday, +1 day)
+    date.setDate(date.getDate() + 1);
+  } else {
+    return dateStr;
+  }
+  const rYear = date.getFullYear();
+  const rMonth = String(date.getMonth() + 1).padStart(2, '0');
+  const rDay = String(date.getDate()).padStart(2, '0');
+  return `${rYear}-${rMonth}-${rDay}`;
+}
+
 export function getFormsForClientAndPeriod(
   client: Client,
   selectedPeriod: string,
@@ -203,7 +223,7 @@ export function getFormsForClientAndPeriod(
       if (existing) {
         resultForms.push({
           ...existing,
-          deadline: info.deadline || existing.deadline,
+          deadline: adjustDeadlineForWeekend(info.deadline || existing.deadline),
           period: info.period || existing.period,
           assignedPeriod: existing.assignedPeriod || earliestAssignedPeriod
         });
@@ -213,7 +233,7 @@ export function getFormsForClientAndPeriod(
           code: code,
           description: ref.description,
           status: 'Pending',
-          deadline: info.deadline,
+          deadline: adjustDeadlineForWeekend(info.deadline),
           period: info.period || selectedPeriod,
           assignedPeriod: earliestAssignedPeriod
         });
@@ -252,13 +272,13 @@ export function getComplianceDeadlineForPeriod(ref: FormReference, selectedPerio
   // 2. 1701Q (Individual Quarterly Income Tax: Q1 May 15, Q2 Aug 15, Q3 Nov 15)
   if (code === '1701Q') {
     if (month === 5) {
-      return { isDue: true, deadline: `${year}-05-15`, period: `${year}-03` };
+      return { isDue: true, deadline: adjustDeadlineForWeekend(`${year}-05-15`), period: `${year}-03` };
     }
     if (month === 8) {
-      return { isDue: true, deadline: `${year}-08-15`, period: `${year}-06` };
+      return { isDue: true, deadline: adjustDeadlineForWeekend(`${year}-08-15`), period: `${year}-06` };
     }
     if (month === 11) {
-      return { isDue: true, deadline: `${year}-11-15`, period: `${year}-09` };
+      return { isDue: true, deadline: adjustDeadlineForWeekend(`${year}-11-15`), period: `${year}-09` };
     }
     return { isDue: false, deadline: '', period: '' };
   }
@@ -266,13 +286,13 @@ export function getComplianceDeadlineForPeriod(ref: FormReference, selectedPerio
   // 3. 1702Q (Corporate Quarterly Income Tax: Q1 May 30, Q2 Aug 29, Q3 Nov 29)
   if (code === '1702Q') {
     if (month === 5) {
-      return { isDue: true, deadline: `${year}-05-30`, period: `${year}-03` };
+      return { isDue: true, deadline: adjustDeadlineForWeekend(`${year}-05-30`), period: `${year}-03` };
     }
     if (month === 8) {
-      return { isDue: true, deadline: `${year}-08-29`, period: `${year}-06` };
+      return { isDue: true, deadline: adjustDeadlineForWeekend(`${year}-08-29`), period: `${year}-06` };
     }
     if (month === 11) {
-      return { isDue: true, deadline: `${year}-11-29`, period: `${year}-09` };
+      return { isDue: true, deadline: adjustDeadlineForWeekend(`${year}-11-29`), period: `${year}-09` };
     }
     return { isDue: false, deadline: '', period: '' };
   }
@@ -296,7 +316,8 @@ export function getComplianceDeadlineForPeriod(ref: FormReference, selectedPerio
     ];
     for (const p of testPeriods) {
       const dl = calculateDeadline(p, ref.frequency, ref.deadlineRule);
-      if (dl.startsWith(selectedPeriod)) {
+      const rawMonth = calculateRawDeadlineMonth(p, ref.frequency, ref.deadlineRule);
+      if (dl.startsWith(selectedPeriod) || rawMonth === selectedPeriod) {
         return { isDue: true, deadline: dl, period: p };
       }
     }
@@ -308,7 +329,8 @@ export function getComplianceDeadlineForPeriod(ref: FormReference, selectedPerio
     const testPeriods = [`${year - 1}-12`, `${year}-12`, `${year}-01`];
     for (const p of testPeriods) {
       const dl = calculateDeadline(p, ref.frequency, ref.deadlineRule);
-      if (dl.startsWith(selectedPeriod)) {
+      const rawMonth = calculateRawDeadlineMonth(p, ref.frequency, ref.deadlineRule);
+      if (dl.startsWith(selectedPeriod) || rawMonth === selectedPeriod) {
         return { isDue: true, deadline: dl, period: p };
       }
     }
@@ -319,7 +341,8 @@ export function getComplianceDeadlineForPeriod(ref: FormReference, selectedPerio
     const testPeriods = [`${year - 1}-12`, `${year}-06`, `${year}-12`];
     for (const p of testPeriods) {
       const dl = calculateDeadline(p, ref.frequency, ref.deadlineRule);
-      if (dl.startsWith(selectedPeriod)) {
+      const rawMonth = calculateRawDeadlineMonth(p, ref.frequency, ref.deadlineRule);
+      if (dl.startsWith(selectedPeriod) || rawMonth === selectedPeriod) {
         return { isDue: true, deadline: dl, period: p };
       }
     }
@@ -327,11 +350,55 @@ export function getComplianceDeadlineForPeriod(ref: FormReference, selectedPerio
   }
 
   const dl = calculateDeadline(selectedPeriod, ref.frequency, ref.deadlineRule);
-  if (dl.startsWith(selectedPeriod)) {
+  const rawMonth = calculateRawDeadlineMonth(selectedPeriod, ref.frequency, ref.deadlineRule);
+  if (dl.startsWith(selectedPeriod) || rawMonth === selectedPeriod) {
     return { isDue: true, deadline: dl, period: selectedPeriod };
   }
 
   return { isDue: false, deadline: dl, period: selectedPeriod };
+}
+
+// Helper to determine the unadjusted target month (YYYY-MM) before weekend shifting
+function calculateRawDeadlineMonth(period: string, frequency: string, rule: string): string {
+  if (!period) return '';
+  const [yearStr, monthStr] = period.split('-');
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  let resultDate = new Date(year, month - 1, 15);
+  const lowerRule = (rule || '').toLowerCase();
+
+  if (lowerRule.includes('10th') && (lowerRule.includes('following') || lowerRule.includes('next'))) {
+    resultDate = new Date(year, month, 10);
+  } else if (lowerRule.includes('last day') || lowerRule.includes('end of')) {
+    if (lowerRule.includes('following') || lowerRule.includes('next')) {
+      resultDate = new Date(year, month + 1, 0);
+    } else {
+      resultDate = new Date(year, month, 0);
+    }
+  } else if (lowerRule.includes('25th')) {
+    if (lowerRule.includes('following') || lowerRule.includes('next')) {
+      resultDate = new Date(year, month, 25);
+    } else {
+      resultDate = new Date(year, month - 1, 25);
+    }
+  } else if (lowerRule.includes('15th')) {
+    if (lowerRule.includes('following') || lowerRule.includes('next')) {
+      resultDate = new Date(year, month, 15);
+    } else {
+      resultDate = new Date(year, month - 1, 15);
+    }
+  } else if (lowerRule.includes('60 days') && (lowerRule.includes('following') || lowerRule.includes('next'))) {
+    const endOfMonth = new Date(year, month, 0);
+    resultDate = new Date(endOfMonth.getTime() + 60 * 24 * 60 * 60 * 1000);
+  } else if (lowerRule.includes('april 15') && (lowerRule.includes('following') || lowerRule.includes('next'))) {
+    resultDate = new Date(year + 1, 3, 15);
+  } else if (lowerRule.includes('15th day of the 4th month')) {
+    resultDate = new Date(year + 1, 3, 15);
+  }
+
+  const rYear = resultDate.getFullYear();
+  const rMonth = String(resultDate.getMonth() + 1).padStart(2, '0');
+  return `${rYear}-${rMonth}`;
 }
 
 export function getEffectiveDeadline(form: BIRForm, formReferences: FormReference[], selectedPeriod: string): string {
@@ -339,14 +406,14 @@ export function getEffectiveDeadline(form: BIRForm, formReferences: FormReferenc
   if (ref) {
     const info = getComplianceDeadlineForPeriod(ref, selectedPeriod);
     if (info.isDue) {
-      return info.deadline;
+      return adjustDeadlineForWeekend(info.deadline);
     }
     if (form.period) {
-      return calculateDeadline(form.period, ref.frequency, ref.deadlineRule);
+      return adjustDeadlineForWeekend(calculateDeadline(form.period, ref.frequency, ref.deadlineRule));
     }
-    return calculateDeadline(selectedPeriod, ref.frequency, ref.deadlineRule);
+    return adjustDeadlineForWeekend(calculateDeadline(selectedPeriod, ref.frequency, ref.deadlineRule));
   }
-  return form.deadline || new Date().toISOString().split('T')[0];
+  return adjustDeadlineForWeekend(form.deadline || new Date().toISOString().split('T')[0]);
 }
 
 export function calculateDeadline(period: string, frequency: string, rule: string): string {
@@ -406,5 +473,6 @@ export function calculateDeadline(period: string, frequency: string, rule: strin
   const rMonth = String(resultDate.getMonth() + 1).padStart(2, '0');
   const rDay = String(resultDate.getDate()).padStart(2, '0');
 
-  return `${rYear}-${rMonth}-${rDay}`;
+  const rawDeadline = `${rYear}-${rMonth}-${rDay}`;
+  return adjustDeadlineForWeekend(rawDeadline);
 }
