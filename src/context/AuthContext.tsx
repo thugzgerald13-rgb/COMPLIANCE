@@ -5,6 +5,7 @@ interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => { success: boolean; message?: string };
   register: (name: string, email: string, password: string, role: string) => { success: boolean; message?: string };
+  loginWithGoogle: () => { success: boolean; message?: string };
   logout: () => void;
   isAuthLoaded: boolean;
 }
@@ -115,13 +116,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: true };
   };
 
+  const loginWithGoogle = () => {
+    const googleUser: User = {
+      id: 'google_' + Date.now(),
+      name: 'Gerald Tagz',
+      email: 'tagz.gerald13@gmail.com',
+      role: 'Compliance Specialist',
+    };
+
+    setUser(googleUser);
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(googleUser));
+
+    // Also persist in users list if not existing
+    const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
+    const usersList = rawUsers ? JSON.parse(rawUsers) : DEFAULT_USERS;
+    if (!usersList.some((u: any) => u.email.toLowerCase() === googleUser.email.toLowerCase())) {
+      usersList.push({ ...googleUser, password: '' });
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
+    }
+
+    return { success: true };
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem(CURRENT_USER_KEY);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isAuthLoaded }}>
+    <AuthContext.Provider value={{ user, login, register, loginWithGoogle, logout, isAuthLoaded }}>
       {children}
     </AuthContext.Provider>
   );
