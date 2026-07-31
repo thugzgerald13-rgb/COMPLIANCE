@@ -132,21 +132,11 @@ export function AuthPage() {
           <div className="w-12 h-12 bg-blue-600/20 border border-blue-500/30 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/10">
             <FileText className="w-7 h-7 text-blue-400" />
           </div>
-          <span className="text-2xl font-bold tracking-tight text-white">BIR Compliance</span>
+          <span className="text-2xl font-bold tracking-tight text-white">BIZ-COMPLY</span>
         </div>
         <h2 className="text-center text-sm font-medium text-slate-400">
-          Tax Compliance & Monitoring Portal
+          Monitoring Portal
         </h2>
-        <div className="mt-2 flex justify-center">
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${
-            isSupabaseConnected
-              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-              : 'bg-slate-800 text-slate-400 border-slate-700'
-          }`}>
-            <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${isSupabaseConnected ? 'bg-emerald-400 animate-pulse' : 'bg-slate-400'}`} />
-            {isSupabaseConnected ? 'Supabase Auth Connected' : 'Supabase & Vercel Ready'}
-          </span>
-        </div>
       </div>
 
       <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
