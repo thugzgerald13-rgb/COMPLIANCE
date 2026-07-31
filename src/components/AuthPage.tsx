@@ -8,14 +8,10 @@ interface GoogleAccount {
   avatarBg: string;
 }
 
-const INITIAL_GOOGLE_ACCOUNTS: GoogleAccount[] = [
-  { name: 'Gerald Tagz', email: 'tagz.gerald13@gmail.com', avatarBg: 'bg-blue-600' },
-];
-
 const SAVED_GOOGLE_ACCOUNTS_KEY = 'bir_google_saved_accounts_v1';
 
 export function AuthPage() {
-  const { login, register, loginWithGoogle } = useAuth();
+  const { login, register, loginWithGoogle, isSupabaseConnected } = useAuth();
   const [isRegister, setIsRegister] = useState(false);
 
   // Form states
@@ -42,7 +38,7 @@ export function AuthPage() {
     if (rawSaved) {
       try {
         const parsed = JSON.parse(rawSaved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           setGoogleAccounts(parsed);
           return;
         }
@@ -50,11 +46,10 @@ export function AuthPage() {
         // Fallback
       }
     }
-    setGoogleAccounts(INITIAL_GOOGLE_ACCOUNTS);
-    localStorage.setItem(SAVED_GOOGLE_ACCOUNTS_KEY, JSON.stringify(INITIAL_GOOGLE_ACCOUNTS));
+    setGoogleAccounts([]);
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -75,26 +70,28 @@ export function AuthPage() {
 
     setIsLoading(true);
 
-    setTimeout(() => {
+    try {
       if (isRegister) {
-        const res = register(name, email, password, role);
+        const res = await register(name, email, password, role);
         if (!res.success) {
           setError(res.message || 'Registration failed.');
         }
       } else {
-        const res = login(email, password);
+        const res = await login(email, password);
         if (!res.success) {
           setError(res.message || 'Login failed.');
         }
       }
+    } catch (err: any) {
+      setError(err?.message || 'Authentication error.');
+    } finally {
       setIsLoading(false);
-    }, 400);
+    }
   };
 
-  const handleSelectGoogleAccount = (accEmail: string, accName?: string) => {
+  const handleSelectGoogleAccount = async (accEmail: string, accName?: string) => {
     setSelectedAccountEmail(accEmail);
 
-    // Save/update this account in Google accounts list
     const finalEmail = accEmail.trim();
     const finalName = accName?.trim() || (finalEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
     
@@ -112,14 +109,17 @@ export function AuthPage() {
       return updated;
     });
 
-    setTimeout(() => {
-      const res = loginWithGoogle(finalEmail, finalName);
+    try {
+      const res = await loginWithGoogle(finalEmail, finalName);
       if (!res.success) {
         setError(res.message || 'Google login failed.');
       }
+    } catch (err: any) {
+      setError(err?.message || 'Google sign in error.');
+    } finally {
       setShowGoogleModal(false);
       setSelectedAccountEmail(null);
-    }, 500);
+    }
   };
 
   const handleCustomGoogleSubmit = (e: React.FormEvent) => {
@@ -152,6 +152,16 @@ export function AuthPage() {
         <h2 className="text-center text-sm font-medium text-slate-400">
           Tax Compliance & Monitoring Portal
         </h2>
+        <div className="mt-2 flex justify-center">
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${
+            isSupabaseConnected
+              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+              : 'bg-slate-800 text-slate-400 border-slate-700'
+          }`}>
+            <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${isSupabaseConnected ? 'bg-emerald-400 animate-pulse' : 'bg-slate-400'}`} />
+            {isSupabaseConnected ? 'Supabase Auth Connected' : 'Supabase & Vercel Ready'}
+          </span>
+        </div>
       </div>
 
       <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
@@ -316,7 +326,8 @@ export function AuthPage() {
             type="button"
             onClick={() => {
               setError(null);
-              setIsAddingNewGoogleAccount(false);
+              const hasSaved = googleAccounts.length > 0;
+              setIsAddingNewGoogleAccount(!hasSaved);
               setShowGoogleModal(true);
             }}
             disabled={isLoading}

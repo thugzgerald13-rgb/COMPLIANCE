@@ -1,16 +1,19 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../types';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 interface AuthContextType {
   user: User | null;
   allUsers: User[];
-  login: (email: string, password: string) => { success: boolean; message?: string };
-  register: (name: string, email: string, password: string, role: string) => { success: boolean; message?: string };
-  loginWithGoogle: (email: string, name?: string) => { success: boolean; message?: string };
+  login: (email: string, password: string) => Promise<{ success: boolean; message?: string }> | { success: boolean; message?: string };
+  register: (name: string, email: string, password: string, role: string) => Promise<{ success: boolean; message?: string }> | { success: boolean; message?: string };
+  loginWithGoogle: (email: string, name?: string) => Promise<{ success: boolean; message?: string }> | { success: boolean; message?: string };
   logout: () => void;
   switchUser: (userId: string) => void;
   isAuthLoaded: boolean;
+  isSupabaseConnected: boolean;
 }
+
 
 const DEFAULT_USERS = [
   {
@@ -58,7 +61,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refreshUsersList();
 
-    // Load active user session
+    if (supabase && isSupabaseConfigured) {
+      // Supabase authentication listener
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          const u: User = {
+            id: session.user.id,
+            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
+            email: session.user.email || '',
+            role: session.user.user_metadata?.role || 'Compliance Officer',
+          };
+          setUser(u);
+        } else {
+          // Fallback to local
+          loadLocalUser();
+        }
+        setIsAuthLoaded(true);
+      });
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (session?.user) {
+          const u: User = {
+            id: session.user.id,
+            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
+            email: session.user.email || '',
+            role: session.user.user_metadata?.role || 'Compliance Officer',
+          };
+          setUser(u);
+        } else {
+          setUser(null);
+          localStorage.removeItem(CURRENT_USER_KEY);
+        }
+      });
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    } else {
+      loadLocalUser();
+      setIsAuthLoaded(true);
+    }
+  }, []);
+
+  const loadLocalUser = () => {
     const storedCurrentUser = localStorage.getItem(CURRENT_USER_KEY);
     if (storedCurrentUser) {
       try {
@@ -67,10 +112,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem(CURRENT_USER_KEY);
       }
     }
-    setIsAuthLoaded(true);
-  }, []);
+  };
 
-  const login = (email: string, password: string) => {
+  const login = async (email: string, password: string) => {
+    if (supabase && isSupabaseConfigured) {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      if (error) {
+        return { success: false, message: error.message };
+      }
+
+      if (data.user) {
+        const authenticatedUser: User = {
+          id: data.user.id,
+          name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User',
+          email: data.user.email || email,
+          role: data.user.user_metadata?.role || 'Compliance Officer',
+        };
+        setUser(authenticatedUser);
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
+        return { success: true };
+      }
+    }
+
+    // Local fallback
     const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
     const usersList = rawUsers ? JSON.parse(rawUsers) : DEFAULT_USERS;
 
@@ -97,7 +165,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: true };
   };
 
-  const register = (name: string, email: string, password: string, role: string) => {
+  const register = async (name: string, email: string, password: string, role: string) => {
+    if (supabase && isSupabaseConfigured) {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: {
+            full_name: name.trim(),
+            role: role.trim() || 'Compliance Officer',
+          },
+        },
+      });
+
+      if (error) {
+        return { success: false, message: error.message };
+      }
+
+      if (data.user) {
+        const authenticatedUser: User = {
+          id: data.user.id,
+          name: name.trim(),
+          email: data.user.email || email,
+          role: role.trim() || 'Compliance Officer',
+        };
+        setUser(authenticatedUser);
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
+        return { success: true };
+      }
+    }
+
+    // Local fallback
     const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
     const usersList = rawUsers ? JSON.parse(rawUsers) : DEFAULT_USERS;
 
@@ -132,7 +230,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: true };
   };
 
-  const loginWithGoogle = (email: string, name?: string) => {
+  const loginWithGoogle = async (email: string, name?: string) => {
+    if (supabase && isSupabaseConfigured) {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+
+      if (error) {
+        return { success: false, message: error.message };
+      }
+      return { success: true };
+    }
+
+    // Local fallback
     const googleEmail = email.trim().toLowerCase();
     const googleName = name?.trim() || (googleEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
     
@@ -189,13 +302,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    if (supabase && isSupabaseConfigured) {
+      await supabase.auth.signOut();
+    }
     setUser(null);
     localStorage.removeItem(CURRENT_USER_KEY);
   };
 
   return (
-    <AuthContext.Provider value={{ user, allUsers, login, register, loginWithGoogle, logout, switchUser, isAuthLoaded }}>
+    <AuthContext.Provider value={{
+      user,
+      allUsers,
+      login,
+      register,
+      loginWithGoogle,
+      logout,
+      switchUser,
+      isAuthLoaded,
+      isSupabaseConnected: isSupabaseConfigured,
+    }}>
       {children}
     </AuthContext.Provider>
   );
