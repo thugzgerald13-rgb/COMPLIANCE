@@ -40,7 +40,12 @@ function MainContent() {
       
       <main className="flex-1 h-full overflow-y-auto">
         {currentView === 'dashboard' && (
-          <Dashboard clients={clients} formReferences={forms} selectedPeriod={selectedPeriod} />
+          <Dashboard 
+            clients={clients} 
+            formReferences={forms} 
+            selectedPeriod={selectedPeriod} 
+            onUpdateForm={updateForm}
+          />
         )}
         
         {currentView === 'clients' && (

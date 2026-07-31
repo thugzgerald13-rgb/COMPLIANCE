@@ -20,6 +20,10 @@ export interface BIRForm {
   dateFiled?: string;
   datePaid?: string;
   taxStatus?: 'With Payable' | 'W/O Payable';
+  amount?: number;
+  referenceNo?: string;
+  confirmationNo?: string;
+  notes?: string;
 }
 
 export interface FormReference {
