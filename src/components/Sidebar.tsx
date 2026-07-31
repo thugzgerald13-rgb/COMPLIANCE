@@ -11,7 +11,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePeriod }: SidebarProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const { user, logout } = useAuth();
 
   const getInitials = (name?: string) => {
