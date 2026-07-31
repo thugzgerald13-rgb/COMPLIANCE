@@ -73,7 +73,7 @@ export function useClients() {
     clientId: string, 
     formId: string, 
     updates: Partial<BIRForm>, 
-    formMeta?: { code: string; description: string; deadline: string; period: string }
+    formMeta?: { code: string; description: string; deadline: string; period: string; assignedPeriod?: string }
   ) => {
     const updatedClients = clients.map(client => {
       if (client.id === clientId) {
@@ -86,6 +86,8 @@ export function useClients() {
           newForms[existingIndex] = { ...newForms[existingIndex], ...updates };
           return { ...client, forms: newForms };
         } else if (formMeta) {
+          const codeExisting = client.forms.find(f => f.code === formMeta.code);
+          const assignedPeriod = codeExisting?.assignedPeriod || formMeta.assignedPeriod || formMeta.period || '2026-01';
           const newForm: BIRForm = {
             id: formId,
             code: formMeta.code,
@@ -93,6 +95,7 @@ export function useClients() {
             status: 'Pending',
             deadline: formMeta.deadline,
             period: formMeta.period,
+            assignedPeriod,
             ...updates,
           };
           return { ...client, forms: [...client.forms, newForm] };
@@ -117,8 +120,15 @@ export function useClients() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedClients));
   };
 
-  const addFormToClient = (clientId: string, formRef: FormReference, deadline?: string, period?: string) => {
+  const addFormToClient = (
+    clientId: string, 
+    formRef: FormReference, 
+    deadline?: string, 
+    period?: string,
+    assignedPeriod?: string
+  ) => {
     const defaultDeadline = deadline || new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0];
+    const targetAssignedPeriod = assignedPeriod || period || '2026-01';
     const newForm: BIRForm = {
       id: crypto.randomUUID(),
       code: formRef.code,
@@ -126,6 +136,7 @@ export function useClients() {
       status: 'Pending',
       deadline: defaultDeadline,
       period: period,
+      assignedPeriod: targetAssignedPeriod,
     };
     const updatedClients = clients.map(client => {
       if (client.id === clientId) {

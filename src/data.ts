@@ -32,6 +32,7 @@ export const getRandomForms = (isCorporate: boolean): BIRForm[] => {
     code: '1601-C',
     description: 'Monthly Remittance Return of Income Taxes Withheld on Compensation',
     status: statuses[Math.floor(Math.random() * statuses.length)],
+    assignedPeriod: '2026-01',
   });
 
   forms.push({
@@ -39,6 +40,7 @@ export const getRandomForms = (isCorporate: boolean): BIRForm[] => {
     code: '0619-E',
     description: 'Monthly Remittance Form for Creditable Income Taxes Withheld (Expanded)',
     status: statuses[Math.floor(Math.random() * statuses.length)],
+    assignedPeriod: '2026-01',
   });
 
   const isVat = Math.random() > 0.5;
@@ -48,6 +50,7 @@ export const getRandomForms = (isCorporate: boolean): BIRForm[] => {
       code: '2550Q',
       description: 'Quarterly Value-Added Tax Return',
       status: statuses[Math.floor(Math.random() * statuses.length)],
+      assignedPeriod: '2026-01',
     });
   } else {
     forms.push({
@@ -55,6 +58,7 @@ export const getRandomForms = (isCorporate: boolean): BIRForm[] => {
       code: '2551Q',
       description: 'Quarterly Percentage Tax Return',
       status: statuses[Math.floor(Math.random() * statuses.length)],
+      assignedPeriod: '2026-01',
     });
   }
 
@@ -64,12 +68,14 @@ export const getRandomForms = (isCorporate: boolean): BIRForm[] => {
       code: '1702Q',
       description: 'Quarterly Income Tax Return (Corporations)',
       status: statuses[Math.floor(Math.random() * statuses.length)],
+      assignedPeriod: '2026-01',
     });
     forms.push({
       id: crypto.randomUUID(),
       code: '1702-RT',
       description: 'Annual Income Tax Return (Corporations)',
       status: statuses[Math.floor(Math.random() * statuses.length)],
+      assignedPeriod: '2026-01',
     });
   } else {
     forms.push({
@@ -77,12 +83,14 @@ export const getRandomForms = (isCorporate: boolean): BIRForm[] => {
       code: '1701Q',
       description: 'Quarterly Income Tax Return (Individuals)',
       status: statuses[Math.floor(Math.random() * statuses.length)],
+      assignedPeriod: '2026-01',
     });
     forms.push({
       id: crypto.randomUUID(),
       code: '1701',
       description: 'Annual Income Tax Return (Individuals)',
       status: statuses[Math.floor(Math.random() * statuses.length)],
+      assignedPeriod: '2026-01',
     });
   }
 

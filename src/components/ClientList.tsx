@@ -15,7 +15,7 @@ interface ClientListProps {
   ) => void;
   onAddClient: (client: Client) => void;
   onDeleteClient: (clientId: string) => void;
-  onAddFormToClient: (clientId: string, formRef: FormReference, deadline?: string, period?: string) => void;
+  onAddFormToClient: (clientId: string, formRef: FormReference, deadline?: string, period?: string, assignedPeriod?: string) => void;
   onRemoveFormFromClient: (clientId: string, formId: string) => void;
   selectedPeriod: string;
 }
@@ -58,7 +58,7 @@ export function ClientList({
       const info = getComplianceDeadlineForPeriod(ref, selectedPeriod);
       const deadline = info.deadline || calculateDeadline(selectedPeriod, ref.frequency, ref.deadlineRule);
       const period = info.period || selectedPeriod;
-      onAddFormToClient(clientId, ref, deadline, period);
+      onAddFormToClient(clientId, ref, deadline, period, selectedPeriod);
       setSelectedRefToAdd(prev => ({ ...prev, [clientId]: '' }));
     }
   };

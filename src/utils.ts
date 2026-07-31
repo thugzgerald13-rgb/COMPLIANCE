@@ -167,9 +167,27 @@ export function getFormsForClientAndPeriod(
   const resultForms: BIRForm[] = [];
 
   for (const code of assignedCodes) {
+    const clientFormInstances = client.forms.filter(f => f.code === code);
+
+    // Find earliest assignedPeriod or period for this compliance code
+    let earliestAssignedPeriod = '2026-01';
+    const assignedPeriods = clientFormInstances
+      .map(f => f.assignedPeriod || f.period)
+      .filter((p): p is string => Boolean(p) && p.length === 7);
+
+    if (assignedPeriods.length > 0) {
+      assignedPeriods.sort();
+      earliestAssignedPeriod = assignedPeriods[0];
+    }
+
+    // Compliances assigned/selected for a month SHOULD NOT appear on preceding months
+    if (selectedPeriod < earliestAssignedPeriod) {
+      continue;
+    }
+
     const ref = formReferences.find(r => r.code === code);
     if (!ref) {
-      const existing = client.forms.filter(f => f.code === code && isFormVisibleForPeriod(f, selectedPeriod, formReferences));
+      const existing = clientFormInstances.filter(f => isFormVisibleForPeriod(f, selectedPeriod, formReferences));
       resultForms.push(...existing);
       continue;
     }
@@ -177,18 +195,17 @@ export function getFormsForClientAndPeriod(
     const info = getComplianceDeadlineForPeriod(ref, selectedPeriod);
     if (info.isDue) {
       // Find if there's an existing recorded form for this code and target period
-      const existing = client.forms.find(f => 
-        f.code === code && (
-          (info.period && f.period === info.period) ||
-          (f.deadline && f.deadline.startsWith(selectedPeriod))
-        )
+      const existing = clientFormInstances.find(f => 
+        (info.period && f.period === info.period) ||
+        (f.deadline && f.deadline.startsWith(selectedPeriod))
       );
 
       if (existing) {
         resultForms.push({
           ...existing,
           deadline: info.deadline || existing.deadline,
-          period: info.period || existing.period
+          period: info.period || existing.period,
+          assignedPeriod: existing.assignedPeriod || earliestAssignedPeriod
         });
       } else {
         resultForms.push({
@@ -197,7 +214,8 @@ export function getFormsForClientAndPeriod(
           description: ref.description,
           status: 'Pending',
           deadline: info.deadline,
-          period: info.period || selectedPeriod
+          period: info.period || selectedPeriod,
+          assignedPeriod: earliestAssignedPeriod
         });
       }
     }

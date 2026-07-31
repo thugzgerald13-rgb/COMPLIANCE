@@ -2,6 +2,13 @@ export type FormStatus = 'Pending' | 'Processing' | 'Filed' | 'Paid';
 
 export type TaxPayerType = 'Individual' | 'Corporate';
 
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
 export interface BIRForm {
   id: string;
   code: string;
@@ -9,6 +16,7 @@ export interface BIRForm {
   status: FormStatus;
   deadline?: string;
   period?: string;
+  assignedPeriod?: string;
   dateFiled?: string;
   datePaid?: string;
   taxStatus?: 'With Payable' | 'W/O Payable';

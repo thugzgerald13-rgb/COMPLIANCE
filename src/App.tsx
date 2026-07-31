@@ -3,9 +3,12 @@ import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
 import { ClientList } from './components/ClientList';
 import { FormsDirectory } from './components/FormsDirectory';
+import { AuthPage } from './components/AuthPage';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { useClients, useFormReferences } from './store';
 
-export default function App() {
+function MainContent() {
+  const { user, isAuthLoaded } = useAuth();
   const [currentView, setCurrentView] = useState<'dashboard' | 'clients' | 'forms'>('dashboard');
   const [selectedPeriod, setSelectedPeriod] = useState(() => {
     const today = new Date();
@@ -14,12 +17,16 @@ export default function App() {
   const { clients, isLoaded, updateForm, addClient, deleteClient, addFormToClient, removeFormFromClient } = useClients();
   const { forms, isLoaded: formsLoaded, addFormReference, deleteFormReference, updateFormReference } = useFormReferences();
 
-  if (!isLoaded || !formsLoaded) {
+  if (!isAuthLoaded || !isLoaded || !formsLoaded) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
       </div>
     );
+  }
+
+  if (!user) {
+    return <AuthPage />;
   }
 
   return (
@@ -59,5 +66,13 @@ export default function App() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <MainContent />
+    </AuthProvider>
   );
 }

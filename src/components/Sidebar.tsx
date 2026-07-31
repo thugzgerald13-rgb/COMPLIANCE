@@ -1,5 +1,6 @@
-import { LayoutDashboard, Users, FileText, BookOpen, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, BookOpen, ChevronLeft, ChevronRight, Calendar, LogOut } from 'lucide-react';
 import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 interface SidebarProps {
   currentView: 'dashboard' | 'clients' | 'forms';
@@ -10,6 +11,16 @@ interface SidebarProps {
 
 export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePeriod }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { user, logout } = useAuth();
+
+  const getInitials = (name?: string) => {
+    if (!name) return 'U';
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
 
   return (
     <div className={`${isCollapsed ? 'w-20' : 'w-64'} bg-slate-900 text-white h-full flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out relative group`}>
@@ -101,16 +112,25 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
 
       {/* User Profile Footer */}
       <div className="p-3 border-t border-slate-800">
-        <div className={`bg-slate-800 rounded-lg p-2.5 flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'} cursor-pointer hover:bg-slate-700 transition-colors`} title="Juan Dela Cruz (Admin)">
-          <div className="w-9 h-9 bg-slate-600 rounded-full flex items-center justify-center font-semibold text-sm flex-shrink-0">
-            JD
-          </div>
-          {!isCollapsed && (
-            <div className="flex-1 overflow-hidden">
-              <p className="text-sm font-medium truncate">Juan Dela Cruz</p>
-              <p className="text-xs text-slate-400 truncate">Admin</p>
+        <div className={`bg-slate-800/80 rounded-xl p-2.5 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} border border-slate-700/50`}>
+          <div className="flex items-center space-x-3 overflow-hidden">
+            <div className="w-9 h-9 bg-blue-600/30 border border-blue-500/40 text-blue-300 rounded-full flex items-center justify-center font-semibold text-xs flex-shrink-0">
+              {getInitials(user?.name)}
             </div>
-          )}
+            {!isCollapsed && (
+              <div className="flex-1 overflow-hidden pr-1">
+                <p className="text-xs font-semibold text-slate-100 truncate">{user?.name || 'User'}</p>
+                <p className="text-[10px] text-slate-400 truncate">{user?.role || 'Compliance Officer'}</p>
+              </div>
+            )}
+          </div>
+          <button
+            onClick={logout}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-700/80 transition-colors focus:outline-none flex-shrink-0"
+            title="Sign Out"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </div>

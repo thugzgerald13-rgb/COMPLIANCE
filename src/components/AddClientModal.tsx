@@ -58,6 +58,8 @@ export function AddClientModal({ isOpen, onClose, onAdd, formReferences, selecte
         description: ref?.description || code,
         status: 'Pending',
         deadline,
+        period: selectedPeriod,
+        assignedPeriod: selectedPeriod || '2026-01',
       };
     });
 
