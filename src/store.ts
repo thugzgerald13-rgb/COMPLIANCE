@@ -36,9 +36,12 @@ export function useFormReferences() {
     if (supabase && isSupabaseConfigured && user) {
       supabase.auth.getUser().then(({ data: { user: supabaseUser } }) => {
         if (supabaseUser?.user_metadata?.custom_forms && isMounted) {
-          const remoteForms = supabaseUser.user_metadata.custom_forms;
-          setForms(remoteForms);
-          localStorage.setItem(userFormsKey, JSON.stringify(remoteForms));
+          const remoteForms: FormReference[] = supabaseUser.user_metadata.custom_forms;
+          const existingCodes = new Set(remoteForms.map(f => f.code));
+          const missingCommon = commonForms.filter(f => !existingCodes.has(f.code));
+          const merged = missingCommon.length > 0 ? [...remoteForms, ...missingCommon] : remoteForms;
+          setForms(merged);
+          localStorage.setItem(userFormsKey, JSON.stringify(merged));
         }
       }).catch(() => {});
     }

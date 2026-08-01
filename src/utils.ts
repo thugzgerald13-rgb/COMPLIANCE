@@ -254,8 +254,8 @@ export function getComplianceDeadlineForPeriod(ref: FormReference, selectedPerio
   const freq = (ref.frequency || '').toLowerCase().trim();
   const code = (ref.code || '').toUpperCase().trim();
 
-  // 1. 0619-E: Due only for transaction periods in Jan, Feb, Apr, May, Jul, Aug, Oct, Nov
-  if (code === '0619-E' || freq.includes('january') || (freq.includes('jan') && freq.includes('feb'))) {
+  // 1. 0619-E & 0619-F: Due only for transaction periods in Jan, Feb, Apr, May, Jul, Aug, Oct, Nov
+  if (code === '0619-E' || code === '0619-F' || freq.includes('january') || (freq.includes('jan') && freq.includes('feb'))) {
     const prevD = new Date(year, month - 2, 1);
     const targetMonth = prevD.getMonth() + 1;
     const targetYear = prevD.getFullYear();
