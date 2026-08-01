@@ -8,13 +8,22 @@ const generateTIN = () => {
 export const commonForms: FormReference[] = [
   { code: '1601-C', description: 'Monthly Remittance Return of Income Taxes Withheld on Compensation', frequency: 'Monthly', deadlineRule: '10th day of the following month' },
   { code: '0619-E', description: 'Monthly Remittance Form for Creditable Income Taxes Withheld (Expanded)', frequency: 'Only for January, February, April, May, July, August, October and November', deadlineRule: '10th day of the following month' },
+  { code: '0619-F', description: 'Monthly Remittance Form for Final Income Taxes Withheld', frequency: 'Only for January, February, April, May, July, August, October and November', deadlineRule: '10th day of the following month' },
   { code: '1601-EQ', description: 'Quarterly Remittance Return of Creditable Income Taxes Withheld', frequency: 'Quarterly', deadlineRule: 'Last day of the month following the close of the quarter' },
   { code: '2550Q', description: 'Quarterly Value-Added Tax Return', frequency: 'Quarterly', deadlineRule: '25th day of the month following the close of the quarter' },
   { code: '2551Q', description: 'Quarterly Percentage Tax Return', frequency: 'Quarterly', deadlineRule: '25th day of the month following the close of the quarter' },
   { code: '1701Q', description: 'Quarterly Income Tax Return (Individuals)', frequency: 'Quarterly', deadlineRule: '15th day of the month following the close of the quarter' },
   { code: '1702Q', description: 'Quarterly Income Tax Return (Corporations)', frequency: 'Quarterly', deadlineRule: '60 days following the close of the quarter' },
   { code: '1701', description: 'Annual Income Tax Return (Individuals)', frequency: 'Annually', deadlineRule: 'April 15 of the following year' },
-  { code: '1702-RT', description: 'Annual Income Tax Return (Corporations)', frequency: 'Annually', deadlineRule: '15th day of the 4th month following the close of the taxable year' }
+  { code: '1702-RT', description: 'Annual Income Tax Return (Corporations)', frequency: 'Annually', deadlineRule: '15th day of the 4th month following the close of the taxable year' },
+  { code: '1604-C', description: 'Annual Information Return of Income Taxes Withheld on Compensation', frequency: 'Annually', deadlineRule: 'January 31 of the following year' },
+  { code: '1604-E', description: 'Annual Information Return of Creditable Income Taxes Withheld (Expanded)', frequency: 'Annually', deadlineRule: 'March 1 of the following year' },
+  { code: '1604-F', description: 'Annual Information Return of Income Payments Subjected to Final Withholding Taxes', frequency: 'Annually', deadlineRule: 'January 31 of the following year' },
+  { code: 'SSS', description: 'SSS Monthly Contributions & Loan Remittances', frequency: 'Monthly', deadlineRule: 'Last day of the month following the applicable month' },
+  { code: 'Pag-IBIG/HDMF', description: 'Pag-IBIG/HDMF Monthly Remittance (Contributions & Loans)', frequency: 'Monthly', deadlineRule: '15th day of the following month' },
+  { code: 'PhilHealth', description: 'PhilHealth Monthly Premium Remittance', frequency: 'Monthly', deadlineRule: '15th day of the following month' },
+  { code: 'Inventory List', description: 'Annual BIR Inventory List and Schedules', frequency: 'Annually', deadlineRule: 'January 30 of the following year' },
+  { code: 'Business Permit', description: 'Annual LGU Business & Mayor\'s Permit Renewal', frequency: 'Annually', deadlineRule: 'January 20 of each year' }
 ];
 
 const getRelativeDate = (offsetDays: number) => {

@@ -18,7 +18,14 @@ export function useFormReferences() {
     
     if (stored) {
       try {
-        setForms(JSON.parse(stored));
+        const parsed: FormReference[] = JSON.parse(stored);
+        const existingCodes = new Set(parsed.map(f => f.code));
+        const missingCommon = commonForms.filter(f => !existingCodes.has(f.code));
+        const merged = missingCommon.length > 0 ? [...parsed, ...missingCommon] : parsed;
+        setForms(merged);
+        if (missingCommon.length > 0) {
+          localStorage.setItem(userFormsKey, JSON.stringify(merged));
+        }
       } catch (e) {
         setForms(commonForms);
       }

@@ -394,6 +394,14 @@ function calculateRawDeadlineMonth(period: string, frequency: string, rule: stri
     resultDate = new Date(year + 1, 3, 15);
   } else if (lowerRule.includes('15th day of the 4th month')) {
     resultDate = new Date(year + 1, 3, 15);
+  } else if (lowerRule.includes('january 31')) {
+    resultDate = new Date(year + 1, 0, 31);
+  } else if (lowerRule.includes('january 30')) {
+    resultDate = new Date(year + 1, 0, 30);
+  } else if (lowerRule.includes('january 20')) {
+    resultDate = new Date(year + 1, 0, 20);
+  } else if (lowerRule.includes('march 1')) {
+    resultDate = new Date(year + 1, 2, 1);
   }
 
   const rYear = resultDate.getFullYear();
@@ -454,6 +462,14 @@ export function calculateDeadline(period: string, frequency: string, rule: strin
     resultDate = new Date(year + 1, 3, 15);
   } else if (lowerRule.includes('15th day of the 4th month')) {
     resultDate = new Date(year + 1, 3, 15);
+  } else if (lowerRule.includes('january 31')) {
+    resultDate = new Date(year + 1, 0, 31);
+  } else if (lowerRule.includes('january 30')) {
+    resultDate = new Date(year + 1, 0, 30);
+  } else if (lowerRule.includes('january 20')) {
+    resultDate = new Date(year + 1, 0, 20);
+  } else if (lowerRule.includes('march 1')) {
+    resultDate = new Date(year + 1, 2, 1);
   } else {
     // Basic fallback parsing
     const dayMatch = lowerRule.match(/(\d+)(st|nd|rd|th)?/);
