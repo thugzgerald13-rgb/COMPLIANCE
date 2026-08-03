@@ -1,6 +1,7 @@
-import { LayoutDashboard, Users, FileText, BookOpen, ChevronLeft, ChevronRight, Calendar, CalendarDays, LogOut, Cloud, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, BookOpen, ChevronLeft, ChevronRight, Calendar, CalendarDays, LogOut, Cloud, Menu, X, Sun, Moon } from 'lucide-react';
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { isSupabaseConfigured } from '../lib/supabase';
 
 interface SidebarProps {
@@ -14,6 +15,7 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const getInitials = (name?: string) => {
     if (!name) return 'U';
@@ -38,6 +40,14 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
           <span className="font-bold text-base tracking-tight">BIZ-COMPLY</span>
         </div>
         <div className="flex items-center space-x-2">
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-lg bg-slate-800 text-amber-400 hover:text-amber-300 hover:bg-slate-700 transition-colors focus:outline-none cursor-pointer"
+            title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+            aria-label="Toggle dark/light mode"
+          >
+            {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-blue-400" />}
+          </button>
           <div className="flex items-center bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs">
             <Calendar className="w-3.5 h-3.5 text-blue-400 mr-1.5 shrink-0" />
             <input
@@ -132,6 +142,20 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
               >
                 <BookOpen className="w-5 h-5 shrink-0" />
                 <span className="font-medium">Monitoring Reference</span>
+              </button>
+
+              <button
+                onClick={toggleTheme}
+                className="w-full flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors text-slate-300 hover:bg-slate-800 cursor-pointer"
+              >
+                {theme === 'dark' ? (
+                  <Sun className="w-5 h-5 shrink-0 text-amber-400" />
+                ) : (
+                  <Moon className="w-5 h-5 shrink-0 text-blue-400" />
+                )}
+                <span className="font-medium">
+                  {theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                </span>
               </button>
             </nav>
 
@@ -265,6 +289,24 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
           >
             <BookOpen className="w-5 h-5 flex-shrink-0" />
             {!isCollapsed && <span className="font-medium truncate">Monitoring Reference</span>}
+          </button>
+
+          {/* Theme Toggle Button */}
+          <button
+            onClick={toggleTheme}
+            title={isCollapsed ? (theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode') : undefined}
+            className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'space-x-3 px-3'} py-3 rounded-lg transition-colors text-slate-300 hover:bg-slate-800 hover:text-white cursor-pointer`}
+          >
+            {theme === 'dark' ? (
+              <Sun className="w-5 h-5 flex-shrink-0 text-amber-400" />
+            ) : (
+              <Moon className="w-5 h-5 flex-shrink-0 text-blue-400" />
+            )}
+            {!isCollapsed && (
+              <span className="font-medium truncate">
+                {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+              </span>
+            )}
           </button>
         </nav>
 

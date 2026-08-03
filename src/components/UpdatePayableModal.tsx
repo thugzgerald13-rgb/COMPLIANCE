@@ -72,7 +72,7 @@ export function UpdatePayableModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-150">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="p-5 bg-slate-900 text-white flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -96,21 +96,21 @@ export function UpdatePayableModal({
 
         {/* Modal Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-3.5 text-xs text-slate-700">
-            <p className="font-bold text-blue-900">
+          <div className="bg-blue-50/60 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 rounded-xl p-3.5 text-xs text-slate-700 dark:text-slate-300">
+            <p className="font-bold text-blue-900 dark:text-blue-300">
               BIR Form {form.code} - {form.description}
             </p>
             {form.deadline && (
-              <p className="text-slate-500 mt-0.5">
-                Effective Deadline: <span className="font-medium text-slate-800">{form.deadline}</span>
+              <p className="text-slate-500 dark:text-slate-400 mt-0.5">
+                Effective Deadline: <span className="font-medium text-slate-800 dark:text-slate-200">{form.deadline}</span>
               </p>
             )}
           </div>
 
           {/* Date Filed Entry */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center space-x-1.5">
-              <Calendar className="w-3.5 h-3.5 text-blue-600" />
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center space-x-1.5">
+              <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
               <span>Date Filed</span>
             </label>
             <input
@@ -118,14 +118,14 @@ export function UpdatePayableModal({
               required
               value={dateFiled}
               onChange={(e) => setDateFiled(e.target.value)}
-              className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+              className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
             />
           </div>
 
           {/* Amount Paid Entry */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center space-x-1.5">
-              <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center space-x-1.5">
+              <DollarSign className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
               <span>Amount Paid (₱)</span>
             </label>
             <input
@@ -135,14 +135,14 @@ export function UpdatePayableModal({
               placeholder="0.00"
               value={amountPaid}
               onChange={(e) => setAmountPaid(e.target.value)}
-              className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+              className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
             />
           </div>
 
           {/* Reference / Confirmation No. Entry */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center space-x-1.5">
-              <Hash className="w-3.5 h-3.5 text-indigo-600" />
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center space-x-1.5">
+              <Hash className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
               <span>Reference / Confirmation No.</span>
             </label>
             <input
@@ -150,14 +150,14 @@ export function UpdatePayableModal({
               placeholder="e.g. BIR-2026-991204 / eFPS Confirmation #"
               value={referenceNo}
               onChange={(e) => setReferenceNo(e.target.value)}
-              className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+              className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
             />
           </div>
 
           {/* Notes / Remarks Entry */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center space-x-1.5">
-              <FileText className="w-3.5 h-3.5 text-slate-500" />
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center space-x-1.5">
+              <FileText className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
               <span>Notes / Remarks</span>
             </label>
             <textarea
@@ -165,19 +165,19 @@ export function UpdatePayableModal({
               placeholder="Enter compliance notes, bank receipt details, or audit remarks..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-medium"
+              className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-medium"
             />
           </div>
 
           {/* Compliance Status Selector */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
               Compliance Status
             </label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as FormStatus)}
-              className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium cursor-pointer"
+              className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium cursor-pointer"
             >
               <option value="Paid">Paid</option>
               <option value="Filed">Filed</option>
@@ -187,11 +187,11 @@ export function UpdatePayableModal({
           </div>
 
           {/* Footer Buttons */}
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-end space-x-3">
+          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end space-x-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 rounded-xl transition-colors cursor-pointer"
+              className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 rounded-xl transition-colors cursor-pointer"
             >
               Cancel
             </button>

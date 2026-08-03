@@ -226,8 +226,8 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
     <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Dashboard Overview</h1>
-          <p className="text-xs text-slate-500 mt-0.5">Click any pending or in-processing reference below to update its compliance status & details</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Dashboard Overview</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Click any pending or in-processing reference below to update its compliance status & details</p>
         </div>
 
         {/* Automated Email & Phone Notification Trigger Hub Button */}
@@ -236,7 +236,7 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
           className={`flex items-center space-x-2.5 px-4 py-2.5 rounded-xl border transition-all cursor-pointer shadow-sm text-xs font-bold ${
             dueItems.length > 0 
               ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-400 shadow-amber-500/20 animate-pulse' 
-              : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+              : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-800'
           }`}
         >
           <Bell className="w-4 h-4" />
@@ -269,8 +269,8 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
                 else if (stat.id === 'Processing') setFilterStatus('Processing');
                 else setFilterStatus('all');
               }}
-              className={`bg-white rounded-xl shadow-sm border p-6 flex items-center justify-between transition-all cursor-pointer ${
-                isSelected ? 'border-blue-500 ring-2 ring-blue-500/20 shadow-md' : 'border-slate-100 hover:border-slate-300'
+              className={`bg-white dark:bg-slate-900 rounded-xl shadow-sm border p-6 flex items-center justify-between transition-all cursor-pointer ${
+                isSelected ? 'border-blue-500 ring-2 ring-blue-500/20 shadow-md' : 'border-slate-100 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
               }`}
             >
               <div className="flex items-center space-x-4">
@@ -278,8 +278,8 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
                   <stat.icon className={`w-6 h-6 ${stat.color}`} />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-500">{stat.title}</p>
-                  <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{stat.title}</p>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{stat.value}</p>
                 </div>
               </div>
             </div>
@@ -288,23 +288,23 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
       </div>
 
       {/* Pending & In Processing References Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-lg font-bold text-slate-900 flex items-center">
-              <Calendar className="w-5 h-5 mr-2 text-blue-600" />
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center">
+              <Calendar className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
               Pending & In Processing References
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Click any row or use the Edit button to open full reference controls
             </p>
           </div>
 
-          <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-lg text-xs">
+          <div className="flex items-center space-x-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg text-xs">
             <button
               onClick={() => setFilterStatus('all')}
               className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
-                filterStatus === 'all' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                filterStatus === 'all' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               All Active ({pendingForms + processingForms})

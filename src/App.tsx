@@ -6,10 +6,12 @@ import { ClientList } from './components/ClientList';
 import { FormsDirectory } from './components/FormsDirectory';
 import { AuthPage } from './components/AuthPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { useClients, useFormReferences } from './store';
 
 function MainContent() {
   const { user, isAuthLoaded } = useAuth();
+  const { theme } = useTheme();
   const [currentView, setCurrentView] = useState<'dashboard' | 'calendar' | 'clients' | 'forms'>('dashboard');
   const [selectedPeriod, setSelectedPeriod] = useState(() => {
     const today = new Date();
@@ -31,7 +33,7 @@ function MainContent() {
   }
 
   return (
-    <div className="flex flex-col md:flex-row h-screen h-[100dvh] bg-slate-50 font-sans overflow-hidden">
+    <div className="flex flex-col md:flex-row h-screen h-[100dvh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans overflow-hidden transition-colors duration-200">
       <Sidebar 
         currentView={currentView} 
         onChangeView={setCurrentView} 
@@ -88,8 +90,10 @@ function MainContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <MainContent />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <MainContent />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
