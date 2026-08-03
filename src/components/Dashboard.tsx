@@ -154,8 +154,19 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
     e.preventDefault();
     if (!editingForm || !onUpdateForm) return;
 
+    let finalStatus = editStatus;
+    if (editTaxStatus === 'W/O Payable') {
+      finalStatus = editDateFiled ? 'Filed' : 'Processing';
+    } else {
+      if (editDatePaid || editAmount) {
+        finalStatus = 'Paid';
+      } else if (editDateFiled) {
+        finalStatus = 'Filed';
+      }
+    }
+
     const updates: Partial<BIRForm> = {
-      status: editStatus,
+      status: finalStatus,
       taxStatus: editTaxStatus,
       deadline: editDeadline,
       notes: editNotes,
@@ -163,14 +174,14 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
       amount: editAmount ? parseFloat(editAmount) : undefined,
     };
 
-    if (editStatus === 'Filed' || editStatus === 'Paid') {
-      updates.dateFiled = editDateFiled;
+    if (finalStatus === 'Filed' || finalStatus === 'Paid' || editDateFiled) {
+      updates.dateFiled = editDateFiled || undefined;
     } else {
       updates.dateFiled = undefined;
     }
 
-    if (editStatus === 'Paid' && editTaxStatus !== 'W/O Payable') {
-      updates.datePaid = editDatePaid;
+    if (finalStatus === 'Paid') {
+      updates.datePaid = editDatePaid || undefined;
     } else {
       updates.datePaid = undefined;
     }
@@ -503,46 +514,7 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
                 <p className="text-slate-500 mt-0.5">Assigned Period: {editingForm.period || selectedPeriod}</p>
               </div>
 
-              {/* 1. FIRST CHOICE: Tax Payable Status */}
-              <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1">1. Tax Payable Choice (First Selection)</label>
-                <select
-                  value={editTaxStatus}
-                  onChange={(e) => handleTaxStatusSelectChange(e.target.value as 'With Payable' | 'W/O Payable')}
-                  className="w-full text-xs font-bold border-2 border-blue-200 rounded-xl p-2.5 bg-blue-50/30 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="With Payable">With Payable</option>
-                  <option value="W/O Payable">W/O Payable</option>
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Compliance Status</label>
-                  <select
-                    value={editStatus}
-                    onChange={(e) => setEditStatus(e.target.value as FormStatus)}
-                    className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
-                  >
-                    <option value="Pending">Pending</option>
-                    <option value="Processing">In Processing</option>
-                    <option value="Filed">Filed</option>
-                    {editTaxStatus !== 'W/O Payable' && <option value="Paid">Paid</option>}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Effective Deadline Date</label>
-                  <input
-                    type="date"
-                    value={editDeadline}
-                    onChange={(e) => setEditDeadline(e.target.value)}
-                    className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              {/* 2. NEXT TO APPEAR: Date Filed / Payable Entries */}
+              {/* Date Filed / Payable Entries */}
               {editTaxStatus === 'W/O Payable' ? (
                 <div className="bg-amber-50/60 border border-amber-200 rounded-xl p-3.5 space-y-3">
                   <div>
