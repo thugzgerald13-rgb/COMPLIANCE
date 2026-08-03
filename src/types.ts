@@ -54,7 +54,7 @@ export interface NotificationLog {
   formCode: string;
   formDescription: string;
   deadline: string;
-  type: 'Email' | 'Web Push';
+  type: 'Web Push';
   status: 'Sent' | 'Delivered' | 'Failed';
   timestamp: string;
   message: string;

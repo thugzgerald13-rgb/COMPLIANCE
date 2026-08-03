@@ -48,28 +48,16 @@ export function NotificationHubModal({
   const [logs, setLogs] = useState<NotificationLog[]>(loadNotificationLogs());
   const [dispatchSuccessMsg, setDispatchSuccessMsg] = useState<string | null>(null);
 
-  // Initial user-bound email default
-  const resolvedEmail = settings.defaultNotificationEmail && settings.defaultNotificationEmail !== 'compliance@bizcomply.ph'
-    ? settings.defaultNotificationEmail
-    : (user?.email || '');
-
   // Settings form state
   const [autoLoad, setAutoLoad] = useState(settings.autoDispatchOnLoad);
   const [sound, setSound] = useState(settings.soundEnabled);
   const [browserNotif, setBrowserNotif] = useState(settings.browserNotificationsEnabled);
-  const [defaultEmail, setDefaultEmail] = useState(resolvedEmail);
   const [pushPermission, setPushPermission] = useState<string>(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       return Notification.permission;
     }
     return 'unsupported';
   });
-
-  useEffect(() => {
-    if (user?.email && (!defaultEmail || defaultEmail === 'compliance@bizcomply.ph')) {
-      setDefaultEmail(user.email);
-    }
-  }, [user?.email]);
 
   useEffect(() => {
     if (isOpen) {
@@ -95,7 +83,6 @@ export function NotificationHubModal({
       autoDispatchOnLoad: autoLoad,
       soundEnabled: sound,
       browserNotificationsEnabled: browserNotif,
-      defaultNotificationEmail: defaultEmail || user?.email || '',
     };
     onUpdateSettings(updated);
     saveNotificationSettings(updated, user?.email);
@@ -142,14 +129,14 @@ export function NotificationHubModal({
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h2 className="text-xl font-bold tracking-tight text-white">Settings & Automated Dispatcher</h2>
+                <h2 className="text-xl font-bold tracking-tight text-white">Settings & Web Push Notification Hub</h2>
                 <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center space-x-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                  <span>Email Dispatcher Active</span>
+                  <span>Web Push Service Active</span>
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Automated email notification dispatcher for tax compliance deadlines
+                Automated Web Push notification engine for BIR tax compliance deadlines
               </p>
             </div>
           </div>
@@ -185,7 +172,7 @@ export function NotificationHubModal({
             }`}
           >
             <History className="w-4 h-4" />
-            <span>Email Dispatch Audit Logs ({logs.length})</span>
+            <span>Web Push Audit Logs ({logs.length})</span>
           </button>
 
           <button
@@ -232,16 +219,11 @@ export function NotificationHubModal({
                     </div>
                   </div>
                 </div>
-
-                <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 text-xs space-y-1">
-                  <span className="text-slate-400 block font-medium">Default Dispatch Email</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-200">{defaultEmail || 'Registered email'}</span>
-                </div>
               </div>
 
               <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2">
                 <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                  Automated Email Dispatcher Summary
+                  Web Push Dispatcher Overview
                 </h4>
                 <div className="flex items-center justify-between text-xs py-1 border-b border-slate-200 dark:border-slate-700/60">
                   <span className="text-slate-600 dark:text-slate-400">Current Assigned Period</span>
@@ -252,7 +234,7 @@ export function NotificationHubModal({
                   <span className="font-bold text-amber-600 dark:text-amber-400">{dueItems.length} unfiled / unpaid form(s)</span>
                 </div>
                 <div className="flex items-center justify-between text-xs py-1">
-                  <span className="text-slate-600 dark:text-slate-400">Automatic Email Dispatching</span>
+                  <span className="text-slate-600 dark:text-slate-400">Automatic Web Push Dispatching</span>
                   <span className="font-bold text-emerald-600 dark:text-emerald-400">
                     Always Active
                   </span>
@@ -276,7 +258,7 @@ export function NotificationHubModal({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  Automated Email Dispatch History Log ({logs.length})
+                  Web Push Dispatch History Log ({logs.length})
                 </h4>
                 {logs.length > 0 && (
                   <button
@@ -291,7 +273,7 @@ export function NotificationHubModal({
 
               {logs.length === 0 ? (
                 <div className="p-10 text-center text-slate-400 text-xs bg-slate-50 rounded-xl">
-                  No automated email notification logs generated yet.
+                  No automated Web Push notification logs recorded yet.
                 </div>
               ) : (
                 <div className="space-y-2.5 max-h-[400px] overflow-y-auto pr-1">
@@ -324,26 +306,6 @@ export function NotificationHubModal({
             <form onSubmit={handleSaveSettings} className="space-y-4">
               <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3">
                 <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center">
-                  <Mail className="w-4 h-4 mr-2 text-blue-600" /> Default Email Dispatcher
-                </h4>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Default Notification Recipient Email
-                  </label>
-                  <input 
-                    type="email" 
-                    required
-                    value={defaultEmail}
-                    onChange={e => setDefaultEmail(e.target.value)}
-                    className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder={user?.email || "registered.user@email.com"}
-                  />
-                </div>
-              </div>
-
-              <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3">
-                <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center">
                   <Bell className="w-4 h-4 mr-2 text-amber-600" /> Automated Trigger Controls
                 </h4>
 
@@ -356,8 +318,8 @@ export function NotificationHubModal({
                       className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
                     />
                     <div>
-                      <span className="text-xs font-semibold text-slate-900 dark:text-white block">Automatic Email Dispatch on Due Deadlines</span>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Automatically generate and record email notifications whenever unfiled due forms exist</span>
+                      <span className="text-xs font-semibold text-slate-900 dark:text-white block">Automatic Web Push Dispatch on Due Deadlines</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Automatically send and record Web Push notifications whenever unfiled due forms exist</span>
                     </div>
                   </label>
 
@@ -373,7 +335,7 @@ export function NotificationHubModal({
                     />
                     <div>
                       <span className="text-xs font-semibold text-slate-900 dark:text-white block">Audio Sound Alert Chime</span>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Play synth sound chime when automated email notifications trigger</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Play synth sound chime when Web Push notifications trigger</span>
                     </div>
                   </label>
 

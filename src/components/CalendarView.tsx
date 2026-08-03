@@ -247,7 +247,6 @@ export function CalendarView({
       autoDispatchOnLoad: false,
       soundEnabled: true,
       browserNotificationsEnabled: true,
-      defaultNotificationEmail: event.clientEmail || 'client@example.com',
     };
 
     const isDueToday = event.deadlineDateStr === todayStr;
@@ -269,7 +268,7 @@ export function CalendarView({
       }
     ], settings);
 
-    showToast(`Email reminder alert sent to ${event.clientName}!`);
+    showToast(`Web Push notification alert dispatched for ${event.clientName}!`);
   };
 
   const showToast = (msg: string) => {
