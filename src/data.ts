@@ -2,7 +2,7 @@ import { Client, FormStatus, BIRForm, FormReference } from './types';
 import { calculateDeadline } from './utils';
 
 const generateTIN = () => {
-  return `${Math.floor(100 + Math.random() * 900)}-${Math.floor(100 + Math.random() * 900)}-${Math.floor(100 + Math.random() * 900)}-000`;
+  return `${Math.floor(100 + Math.random() * 900)}-${Math.floor(100 + Math.random() * 900)}-${Math.floor(100 + Math.random() * 900)}-00000`;
 };
 
 export const commonForms: FormReference[] = [

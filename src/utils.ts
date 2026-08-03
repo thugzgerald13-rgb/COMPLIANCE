@@ -492,3 +492,14 @@ export function calculateDeadline(period: string, frequency: string, rule: strin
   const rawDeadline = `${rYear}-${rMonth}-${rDay}`;
   return adjustDeadlineForWeekend(rawDeadline);
 }
+
+// Format TIN to 000-000-000-00000 format (digits only)
+export function formatTIN(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 14);
+  const parts = [];
+  if (digits.length > 0) parts.push(digits.slice(0, 3));
+  if (digits.length > 3) parts.push(digits.slice(3, 6));
+  if (digits.length > 6) parts.push(digits.slice(6, 9));
+  if (digits.length > 9) parts.push(digits.slice(9, 14));
+  return parts.join('-');
+}

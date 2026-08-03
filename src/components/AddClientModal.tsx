@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Client, TaxPayerType, FormReference, BIRForm } from '../types';
 import { X, CheckSquare, Square } from 'lucide-react';
-import { isFormAllowedForTaxpayerType, calculateDeadline } from '../utils';
+import { isFormAllowedForTaxpayerType, calculateDeadline, formatTIN } from '../utils';
 
 interface AddClientModalProps {
   isOpen: boolean;
@@ -107,10 +107,12 @@ export function AddClientModal({ isOpen, onClose, onAdd, formReferences, selecte
             <input 
               required
               type="text" 
+              inputMode="numeric"
+              maxLength={18}
               value={tin}
-              onChange={e => setTin(e.target.value)}
+              onChange={e => setTin(formatTIN(e.target.value))}
               className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-sm"
-              placeholder="000-000-000-000"
+              placeholder="000-000-000-00000"
             />
           </div>
           
