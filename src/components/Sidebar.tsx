@@ -1,6 +1,7 @@
-import { LayoutDashboard, Users, FileText, BookOpen, ChevronLeft, ChevronRight, Calendar, CalendarDays, LogOut, Cloud, Menu, X, Settings } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, BookOpen, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Calendar, CalendarDays, LogOut, Cloud, Menu, X, Settings, Sun, Moon } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { Client, FormReference, BIRForm } from '../types';
 import { 
@@ -37,7 +38,9 @@ export function Sidebar({
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(() => 
     loadNotificationSettings(user?.email)
@@ -182,14 +185,55 @@ export function Sidebar({
                 </span>
               </div>
 
-              {/* Clickable User Profile Card (Mobile) */}
-              <div 
-                onClick={() => {
-                  setIsSettingsOpen(true);
-                  setIsMobileOpen(false);
-                }}
-                className="bg-slate-800/80 hover:bg-slate-800 rounded-xl p-2.5 flex items-center justify-between border border-slate-700/50 cursor-pointer transition-all hover:border-slate-600 group/user"
-                title="Click to open Settings & Automated Notification Dispatcher"
+              {/* Clickable Collapsible User Profile Card (Mobile) */}
+              {isUserMenuOpen && (
+                <div className="bg-slate-800 border border-slate-700 rounded-xl p-1.5 space-y-1 shadow-2xl text-slate-100">
+                  <button
+                    onClick={() => toggleTheme()}
+                    className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-slate-700/80 transition-colors cursor-pointer"
+                  >
+                    {theme === 'dark' ? (
+                      <>
+                        <Sun className="w-4 h-4 text-amber-400 shrink-0" />
+                        <span>Theme: Light Mode</span>
+                      </>
+                    ) : (
+                      <>
+                        <Moon className="w-4 h-4 text-blue-400 shrink-0" />
+                        <span>Theme: Dark Mode</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsSettingsOpen(true);
+                      setIsUserMenuOpen(false);
+                      setIsMobileOpen(false);
+                    }}
+                    className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-slate-700/80 transition-colors cursor-pointer"
+                  >
+                    <Settings className="w-4 h-4 text-blue-400 shrink-0" />
+                    <span>Settings</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      logout();
+                    }}
+                    className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-red-400 hover:bg-red-950/40 transition-colors cursor-pointer border-t border-slate-700/50 pt-2 mt-1"
+                  >
+                    <LogOut className="w-4 h-4 shrink-0" />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              )}
+
+              <button
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className={`w-full bg-slate-800/80 hover:bg-slate-800 rounded-xl p-2.5 flex items-center justify-between border ${isUserMenuOpen ? 'border-blue-500 ring-1 ring-blue-500/50' : 'border-slate-700/50'} cursor-pointer transition-all hover:border-slate-600 group/user text-left`}
+                title="Click for Theme, Settings & Logout options"
               >
                 <div className="flex items-center space-x-3 overflow-hidden">
                   <div className="w-9 h-9 bg-blue-600/30 border border-blue-500/40 text-blue-300 rounded-full flex items-center justify-center font-semibold text-xs shrink-0 relative">
@@ -199,24 +243,14 @@ export function Sidebar({
                     )}
                   </div>
                   <div className="flex-1 overflow-hidden pr-1">
-                    <div className="flex items-center space-x-1">
-                      <p className="text-xs font-semibold text-slate-100 truncate">{user?.name || 'User'}</p>
-                      <Settings className="w-3 h-3 text-slate-400 group-hover/user:text-blue-400 transition-colors" />
-                    </div>
+                    <p className="text-xs font-semibold text-slate-100 truncate">{user?.name || 'User'}</p>
                     <p className="text-[10px] text-slate-400 truncate">{user?.email || user?.role || 'Compliance Officer'}</p>
                   </div>
                 </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    logout();
-                  }}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-700/80 transition-colors shrink-0"
-                  title="Sign Out"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
+                <div className="text-slate-400 group-hover/user:text-white transition-colors shrink-0">
+                  {isUserMenuOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+                </div>
+              </button>
             </div>
           </div>
         </div>
@@ -335,10 +369,58 @@ export function Sidebar({
             </div>
           )}
 
-          <div 
-            onClick={() => setIsSettingsOpen(true)}
-            className={`bg-slate-800/80 hover:bg-slate-800 rounded-xl p-2.5 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} border border-slate-700/50 cursor-pointer transition-all hover:border-slate-600 group/user relative`}
-            title="Click to open Settings & Automated Notification Dispatcher"
+          {/* Collapsible Menu Options */}
+          {isUserMenuOpen && (
+            <div className="bg-slate-800 border border-slate-700 rounded-xl p-1.5 space-y-1 shadow-2xl text-slate-100 animate-in fade-in slide-in-from-bottom-2 duration-150">
+              <button
+                onClick={() => toggleTheme()}
+                className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-slate-700/80 transition-colors cursor-pointer"
+                title="Toggle Dark / Light mode"
+              >
+                {theme === 'dark' ? (
+                  <>
+                    <Sun className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>Theme: Light Mode</span>
+                  </>
+                ) : (
+                  <>
+                    <Moon className="w-4 h-4 text-blue-400 shrink-0" />
+                    <span>Theme: Dark Mode</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => {
+                  setIsSettingsOpen(true);
+                  setIsUserMenuOpen(false);
+                }}
+                className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-slate-700/80 transition-colors cursor-pointer"
+                title="Automated Email & Phone Dispatcher Settings"
+              >
+                <Settings className="w-4 h-4 text-blue-400 shrink-0" />
+                <span>Settings</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setIsUserMenuOpen(false);
+                  logout();
+                }}
+                className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-red-400 hover:bg-red-950/40 transition-colors cursor-pointer border-t border-slate-700/50 pt-2 mt-1"
+                title="Sign Out of Account"
+              >
+                <LogOut className="w-4 h-4 shrink-0" />
+                <span>Logout</span>
+              </button>
+            </div>
+          )}
+
+          {/* User Name Collapsible Button */}
+          <button
+            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+            className={`w-full bg-slate-800/80 hover:bg-slate-800 rounded-xl p-2.5 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} border ${isUserMenuOpen ? 'border-blue-500 ring-1 ring-blue-500/50' : 'border-slate-700/50'} cursor-pointer transition-all hover:border-slate-600 group/user relative text-left`}
+            title="Click for Theme, Settings & Logout options"
           >
             <div className="flex items-center space-x-3 overflow-hidden">
               <div className="w-9 h-9 bg-blue-600/30 border border-blue-500/40 text-blue-300 rounded-full flex items-center justify-center font-semibold text-xs flex-shrink-0 relative">
@@ -349,27 +431,17 @@ export function Sidebar({
               </div>
               {!isCollapsed && (
                 <div className="flex-1 overflow-hidden pr-1">
-                  <div className="flex items-center space-x-1">
-                    <p className="text-xs font-semibold text-slate-100 truncate">{user?.name || 'User'}</p>
-                    <Settings className="w-3.5 h-3.5 text-slate-400 group-hover/user:text-blue-400 transition-colors shrink-0" />
-                  </div>
+                  <p className="text-xs font-semibold text-slate-100 truncate">{user?.name || 'User'}</p>
                   <p className="text-[10px] text-slate-400 truncate">{user?.email || user?.role || 'Compliance Officer'}</p>
                 </div>
               )}
             </div>
             {!isCollapsed && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  logout();
-                }}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-700/80 transition-colors focus:outline-none flex-shrink-0 cursor-pointer"
-                title="Sign Out"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
+              <div className="text-slate-400 group-hover/user:text-white transition-colors shrink-0">
+                {isUserMenuOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+              </div>
             )}
-          </div>
+          </button>
         </div>
       </div>
 
