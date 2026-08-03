@@ -4,8 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { isSupabaseConfigured } from '../lib/supabase';
 
 interface SidebarProps {
-  currentView: 'dashboard' | 'clients' | 'forms';
-  onChangeView: (view: 'dashboard' | 'clients' | 'forms') => void;
+  currentView: 'dashboard' | 'clients' | 'forms' | 'calendar';
+  onChangeView: (view: 'dashboard' | 'clients' | 'forms' | 'calendar') => void;
   selectedPeriod: string;
   onChangePeriod: (period: string) => void;
 }
@@ -24,7 +24,7 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
     return name.slice(0, 2).toUpperCase();
   };
 
-  const handleNavClick = (view: 'dashboard' | 'clients' | 'forms') => {
+  const handleNavClick = (view: 'dashboard' | 'clients' | 'forms' | 'calendar') => {
     onChangeView(view);
     setIsMobileOpen(false);
   };
@@ -102,6 +102,16 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
               >
                 <LayoutDashboard className="w-5 h-5 shrink-0" />
                 <span className="font-medium">Dashboard</span>
+              </button>
+
+              <button
+                onClick={() => handleNavClick('calendar')}
+                className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${
+                  currentView === 'calendar' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
+                }`}
+              >
+                <Calendar className="w-5 h-5 shrink-0" />
+                <span className="font-medium">Workload Calendar</span>
               </button>
 
               <button
@@ -222,6 +232,17 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
           >
             <LayoutDashboard className="w-5 h-5 flex-shrink-0" />
             {!isCollapsed && <span className="font-medium truncate">Dashboard</span>}
+          </button>
+
+          <button
+            onClick={() => onChangeView('calendar')}
+            title={isCollapsed ? "Workload Calendar" : undefined}
+            className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'space-x-3 px-3'} py-3 rounded-lg transition-colors ${
+              currentView === 'calendar' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
+            }`}
+          >
+            <Calendar className="w-5 h-5 flex-shrink-0" />
+            {!isCollapsed && <span className="font-medium truncate">Workload Calendar</span>}
           </button>
           
           <button

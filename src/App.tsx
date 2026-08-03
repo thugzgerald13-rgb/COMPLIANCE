@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
+import { CalendarView } from './components/CalendarView';
 import { ClientList } from './components/ClientList';
 import { FormsDirectory } from './components/FormsDirectory';
 import { AuthPage } from './components/AuthPage';
@@ -9,7 +10,7 @@ import { useClients, useFormReferences } from './store';
 
 function MainContent() {
   const { user, isAuthLoaded } = useAuth();
-  const [currentView, setCurrentView] = useState<'dashboard' | 'clients' | 'forms'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'calendar' | 'clients' | 'forms'>('dashboard');
   const [selectedPeriod, setSelectedPeriod] = useState(() => {
     const today = new Date();
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
@@ -44,6 +45,16 @@ function MainContent() {
             clients={clients} 
             formReferences={forms} 
             selectedPeriod={selectedPeriod} 
+            onUpdateForm={updateForm}
+          />
+        )}
+
+        {currentView === 'calendar' && (
+          <CalendarView
+            clients={clients}
+            formReferences={forms}
+            selectedPeriod={selectedPeriod}
+            onChangePeriod={setSelectedPeriod}
             onUpdateForm={updateForm}
           />
         )}
