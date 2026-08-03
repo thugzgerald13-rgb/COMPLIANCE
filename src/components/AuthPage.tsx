@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { FileText, Eye, EyeOff, Lock, Mail, User as UserIcon, Briefcase, ArrowRight, X, UserPlus, Check, Trash2 } from 'lucide-react';
+import { FileText, Eye, EyeOff, Lock, Mail, User as UserIcon, ArrowRight, X, UserPlus, Check, Trash2 } from 'lucide-react';
 
 interface GoogleAccount {
   name: string;
@@ -246,29 +246,6 @@ export function AuthPage() {
                 </button>
               </div>
             </div>
-
-            {isRegister && (
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-                  Role / Position
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Briefcase className="h-4 w-4 text-slate-500" />
-                  </div>
-                  <select
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    className="block w-full pl-9 pr-8 py-2.5 bg-slate-800/80 border border-slate-700/80 rounded-xl text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors appearance-none cursor-pointer"
-                  >
-                    <option value="Compliance Officer">Compliance Officer</option>
-                    <option value="Tax Consultant">Tax Consultant</option>
-                    <option value="Admin">Admin</option>
-                    <option value="Accountant">Accountant</option>
-                  </select>
-                </div>
-              </div>
-            )}
 
             <button
               type="submit"
