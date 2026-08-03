@@ -3,7 +3,7 @@ import { Client, FormReference, BIRForm, NotificationLog } from '../types';
 import { 
   X, Bell, Mail, CheckCircle2, 
   Settings, History, Volume2, VolumeX, ShieldCheck, 
-  Trash2, ExternalLink, Calendar, User, FileText, Check
+  Trash2, ExternalLink, Calendar, User, FileText, Check, Send
 } from 'lucide-react';
 import { 
   DueItemForNotification, 
@@ -13,7 +13,9 @@ import {
   saveNotificationLogs,
   saveNotificationSettings,
   playNotificationChime,
-  triggerBrowserNotification
+  triggerBrowserNotification,
+  requestWebPushPermission,
+  sendTestWebPushNotification
 } from '../utils/notificationService';
 import { useAuth } from '../context/AuthContext';
 
@@ -56,6 +58,12 @@ export function NotificationHubModal({
   const [sound, setSound] = useState(settings.soundEnabled);
   const [browserNotif, setBrowserNotif] = useState(settings.browserNotificationsEnabled);
   const [defaultEmail, setDefaultEmail] = useState(resolvedEmail);
+  const [pushPermission, setPushPermission] = useState<string>(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      return Notification.permission;
+    }
+    return 'unsupported';
+  });
 
   useEffect(() => {
     if (user?.email && (!defaultEmail || defaultEmail === 'compliance@bizcomply.ph')) {
@@ -66,6 +74,9 @@ export function NotificationHubModal({
   useEffect(() => {
     if (isOpen) {
       setLogs(loadNotificationLogs());
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        setPushPermission(Notification.permission);
+      }
     }
   }, [isOpen]);
 
@@ -93,13 +104,27 @@ export function NotificationHubModal({
   };
 
   const handleRequestBrowserPermission = async () => {
-    if ('Notification' in window) {
-      const perm = await Notification.requestPermission();
+    const perm = await requestWebPushPermission();
+    if (perm !== 'unsupported') {
+      setPushPermission(perm);
       if (perm === 'granted') {
         setBrowserNotif(true);
-        triggerBrowserNotification('BIZ-COMPLY Alert Test', 'Browser native alerts are now active for due compliance deadlines.');
+        triggerBrowserNotification('BIZ-COMPLY Web Push Active', 'Web Push alerts are now enabled for upcoming compliance deadlines.');
+        setDispatchSuccessMsg('Web Push Notifications successfully enabled!');
+      } else {
+        setDispatchSuccessMsg('Web Push permission was denied in your browser settings.');
       }
+      setTimeout(() => setDispatchSuccessMsg(null), 4000);
     }
+  };
+
+  const handleSendTestPush = async () => {
+    const result = await sendTestWebPushNotification();
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setPushPermission(Notification.permission);
+    }
+    setDispatchSuccessMsg(result.message);
+    setTimeout(() => setDispatchSuccessMsg(null), 4000);
   };
 
   return (
@@ -351,19 +376,61 @@ export function NotificationHubModal({
                     </div>
                   </label>
 
-                  <div className="flex items-center justify-between pt-1">
-                    <div>
-                      <span className="text-xs font-semibold text-slate-900 dark:text-white block">Browser Native Push Alerts</span>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Display floating desktop notification popups for due compliance items</span>
+                  <div className="pt-3 border-t border-slate-200 dark:border-slate-700/60 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs font-semibold text-slate-900 dark:text-white block">Web Push Notifications</span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                            pushPermission === 'granted'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                              : pushPermission === 'denied'
+                              ? 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 border-red-300 dark:border-red-800'
+                              : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                          }`}>
+                            {pushPermission === 'granted' ? '● Web Push Active' : pushPermission === 'denied' ? '✕ Web Push Blocked' : '▲ Action Needed'}
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">
+                          Receive instant floating desktop & device push popups when tax deadlines approach
+                        </span>
+                      </div>
+
+                      <div className="flex items-center space-x-2 shrink-0">
+                        {pushPermission !== 'granted' && (
+                          <button
+                            type="button"
+                            onClick={handleRequestBrowserPermission}
+                            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer flex items-center space-x-1 shadow-sm"
+                          >
+                            <Bell className="w-3.5 h-3.5" />
+                            <span>Enable Web Push</span>
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={handleSendTestPush}
+                          className="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 text-xs font-semibold rounded-lg transition-colors cursor-pointer flex items-center space-x-1"
+                          title="Trigger a test Web Push notification alert"
+                        >
+                          <Send className="w-3.5 h-3.5 text-blue-500" />
+                          <span>Test Web Push</span>
+                        </button>
+                      </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={handleRequestBrowserPermission}
-                      className="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
-                    >
-                      Enable Desktop Alerts
-                    </button>
+                    <label className="flex items-center space-x-3 cursor-pointer">
+                      <input 
+                        type="checkbox"
+                        checked={browserNotif}
+                        onChange={e => setBrowserNotif(e.target.checked)}
+                        className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                      />
+                      <span className="text-xs text-slate-700 dark:text-slate-300">
+                        Dispatch Web Push notifications on automated compliance checks
+                      </span>
+                    </label>
                   </div>
                 </div>
               </div>

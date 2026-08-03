@@ -55,18 +55,98 @@ export function playNotificationChime() {
   }
 }
 
-// Trigger Web Browser Native Notification
-export function triggerBrowserNotification(title: string, body: string) {
-  if ('Notification' in window && Notification.permission === 'granted') {
-    try {
-      new Notification(title, {
+// Request browser Web Push permission
+export async function requestWebPushPermission(): Promise<NotificationPermission | 'unsupported'> {
+  if (!('Notification' in window)) {
+    return 'unsupported';
+  }
+  try {
+    return await Notification.requestPermission();
+  } catch (e) {
+    console.warn('Error requesting Web Push notification permission:', e);
+    return 'denied';
+  }
+}
+
+// Trigger Web Browser Native & Push Notification
+export async function triggerBrowserNotification(title: string, body: string, dataUrl?: string): Promise<boolean> {
+  if (!('Notification' in window)) {
+    console.warn('Web Push Notifications are not supported in this browser environment.');
+    return false;
+  }
+
+  try {
+    let perm = Notification.permission;
+    if (perm === 'default') {
+      perm = await Notification.requestPermission();
+    }
+
+    if (perm === 'granted') {
+      // Check for active Service Worker
+      if ('serviceWorker' in navigator) {
+        try {
+          const reg = await navigator.serviceWorker.getRegistration();
+          if (reg && reg.showNotification) {
+            await reg.showNotification(title, {
+              body,
+              icon: '/favicon.ico',
+              badge: '/favicon.ico',
+              tag: 'bizcomply-alert-' + Date.now(),
+              data: { url: dataUrl || '/' }
+            });
+            return true;
+          }
+        } catch (e) {
+          console.warn('Service worker showNotification fallback to window.Notification:', e);
+        }
+      }
+
+      // Standard browser Notification API
+      const notif = new Notification(title, {
         body,
         icon: '/favicon.ico',
+        tag: 'bizcomply-alert-' + Date.now(),
       });
-    } catch (e) {
-      console.warn('Browser notification error:', e);
+
+      notif.onclick = () => {
+        window.focus();
+        notif.close();
+      };
+      return true;
     }
+  } catch (e) {
+    console.warn('Browser Web Push Notification error:', e);
   }
+  return false;
+}
+
+// Trigger a test Web Push notification for user verification
+export async function sendTestWebPushNotification(): Promise<{ success: boolean; message: string }> {
+  if (!('Notification' in window)) {
+    return { success: false, message: 'Web Push Notifications are not supported in this browser.' };
+  }
+
+  let perm: string = Notification.permission;
+  if (perm === 'default') {
+    perm = await requestWebPushPermission();
+  }
+
+  if (perm !== 'granted') {
+    return { success: false, message: 'Web Push permission was not granted by browser settings.' };
+  }
+
+  playNotificationChime();
+  const success = await triggerBrowserNotification(
+    'BIZ-COMPLY Web Push Test',
+    'Web Push Notifications are active! You will receive instant alerts for upcoming BIR tax deadlines.'
+  );
+
+  return {
+    success: true,
+    message: success
+      ? 'Web Push Notification test dispatched successfully!'
+      : 'Notification permission is granted. (Note: standard browser notifications display when allowed)'
+  };
 }
 
 export function loadNotificationLogs(): NotificationLog[] {
