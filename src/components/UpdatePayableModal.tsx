@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BIRForm, FormStatus } from '../types';
-import { X, Save, Calendar, DollarSign, Hash, FileText, CheckCircle } from 'lucide-react';
+import { X, Save, Calendar, DollarSign, Hash, FileText, CheckCircle, Clock } from 'lucide-react';
 
 interface UpdatePayableModalProps {
   isOpen: boolean;
@@ -27,39 +27,36 @@ export function UpdatePayableModal({
   const [amountPaid, setAmountPaid] = useState('');
   const [referenceNo, setReferenceNo] = useState('');
   const [notes, setNotes] = useState('');
-  const [status, setStatus] = useState<FormStatus>('Paid');
 
   useEffect(() => {
     if (form) {
-      setDateFiled(form.dateFiled || new Date().toISOString().split('T')[0]);
-      setDatePaid(form.datePaid || new Date().toISOString().split('T')[0]);
-      setAmountPaid(form.amount !== undefined ? String(form.amount) : '');
+      setDateFiled(form.dateFiled || '');
+      setDatePaid(form.datePaid || '');
+      setAmountPaid(form.amount !== undefined && form.amount !== null ? String(form.amount) : '');
       setReferenceNo(form.referenceNo || form.confirmationNo || '');
       setNotes(form.notes || '');
-      setStatus(form.status === 'Pending' || form.status === 'Processing' ? 'Paid' : form.status);
     }
   }, [form]);
 
   if (!isOpen || !form) return null;
 
+  const numericAmount = amountPaid ? parseFloat(amountPaid) : undefined;
+  const hasDateFiled = Boolean(dateFiled && dateFiled.trim());
+  const hasDatePaid = Boolean(datePaid && datePaid.trim());
+  const hasAmount = Boolean(numericAmount !== undefined && numericAmount > 0);
+  const hasRefNo = Boolean(referenceNo && referenceNo.trim());
+
+  const isComplete = hasDateFiled && hasDatePaid && hasAmount && hasRefNo;
+  const calculatedStatus: FormStatus = isComplete ? 'Paid' : 'Processing';
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const numericAmount = amountPaid ? parseFloat(amountPaid) : undefined;
-    
-    // Determine status: if amount paid & date filed exist, default to Paid or Filed
-    let finalStatus = status;
-    if (numericAmount && numericAmount > 0 && dateFiled) {
-      finalStatus = 'Paid';
-    } else if (dateFiled) {
-      finalStatus = status === 'Pending' || status === 'Processing' ? 'Filed' : status;
-    }
-
     const updates: Partial<BIRForm> = {
       taxStatus: 'With Payable',
-      status: finalStatus,
+      status: calculatedStatus,
       dateFiled: dateFiled || undefined,
-      datePaid: datePaid || (numericAmount ? dateFiled : undefined),
+      datePaid: datePaid || undefined,
       amount: numericAmount,
       referenceNo: referenceNo.trim() || undefined,
       confirmationNo: referenceNo.trim() || undefined,
@@ -107,51 +104,87 @@ export function UpdatePayableModal({
             )}
           </div>
 
-          {/* Date Filed Entry */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center space-x-1.5">
-              <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-              <span>Date Filed</span>
-            </label>
-            <input
-              type="date"
-              required
-              value={dateFiled}
-              onChange={(e) => setDateFiled(e.target.value)}
-              className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
-            />
+          {/* Status Live Notice */}
+          <div className={`p-3 rounded-xl border flex items-center space-x-2 text-xs font-medium ${
+            isComplete 
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900/50 text-emerald-800 dark:text-emerald-300' 
+              : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/50 text-amber-800 dark:text-amber-300'
+          }`}>
+            {isComplete ? (
+              <>
+                <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>All 4 details complete! Compliance status will be set to <strong>Paid</strong>.</span>
+              </>
+            ) : (
+              <>
+                <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span>If any of the 4 details is missing, status will remain <strong>In Processing</strong>.</span>
+              </>
+            )}
           </div>
 
-          {/* Amount Paid Entry */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center space-x-1.5">
-              <DollarSign className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span>Amount Paid (₱)</span>
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="0.00"
-              value={amountPaid}
-              onChange={(e) => setAmountPaid(e.target.value)}
-              className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            {/* 1. Date Filed Entry */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center space-x-1.5">
+                <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                <span>1. Date Filed {!hasDateFiled && <span className="text-red-500">*</span>}</span>
+              </label>
+              <input
+                type="date"
+                value={dateFiled}
+                onChange={(e) => setDateFiled(e.target.value)}
+                className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+              />
+            </div>
+
+            {/* 2. Date Paid Entry */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center space-x-1.5">
+                <Calendar className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>2. Date Paid {!hasDatePaid && <span className="text-red-500">*</span>}</span>
+              </label>
+              <input
+                type="date"
+                value={datePaid}
+                onChange={(e) => setDatePaid(e.target.value)}
+                className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+              />
+            </div>
           </div>
 
-          {/* Reference / Confirmation No. Entry */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center space-x-1.5">
-              <Hash className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-              <span>Reference / Confirmation No.</span>
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. BIR-2026-991204 / eFPS Confirmation #"
-              value={referenceNo}
-              onChange={(e) => setReferenceNo(e.target.value)}
-              className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            {/* 3. Amount Paid Entry */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center space-x-1.5">
+                <DollarSign className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>3. Amount Paid (₱) {!hasAmount && <span className="text-red-500">*</span>}</span>
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={amountPaid}
+                onChange={(e) => setAmountPaid(e.target.value)}
+                className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+              />
+            </div>
+
+            {/* 4. Reference / Confirmation No. Entry */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center space-x-1.5">
+                <Hash className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                <span>4. Reference No. {!hasRefNo && <span className="text-red-500">*</span>}</span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. BIR-2026-991204"
+                value={referenceNo}
+                onChange={(e) => setReferenceNo(e.target.value)}
+                className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium font-mono"
+              />
+            </div>
           </div>
 
           {/* Notes / Remarks Entry */}
@@ -161,29 +194,12 @@ export function UpdatePayableModal({
               <span>Notes / Remarks</span>
             </label>
             <textarea
-              rows={3}
-              placeholder="Enter compliance notes, bank receipt details, or audit remarks..."
+              rows={2}
+              placeholder="Enter optional compliance notes, bank receipt details, or audit remarks..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-medium"
             />
-          </div>
-
-          {/* Compliance Status Selector */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Compliance Status
-            </label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as FormStatus)}
-              className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium cursor-pointer"
-            >
-              <option value="Paid">Paid</option>
-              <option value="Filed">Filed</option>
-              <option value="Processing">In Processing</option>
-              <option value="Pending">Pending</option>
-            </select>
           </div>
 
           {/* Footer Buttons */}

@@ -154,14 +154,20 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
     e.preventDefault();
     if (!editingForm || !onUpdateForm) return;
 
-    let finalStatus = editStatus;
+    let finalStatus: FormStatus = 'Processing';
     if (editTaxStatus === 'W/O Payable') {
       finalStatus = editDateFiled ? 'Filed' : 'Processing';
     } else {
-      if (editDatePaid || editAmount) {
+      const numericAmount = editAmount ? parseFloat(editAmount) : undefined;
+      const hasDateFiled = Boolean(editDateFiled && editDateFiled.trim());
+      const hasDatePaid = Boolean(editDatePaid && editDatePaid.trim());
+      const hasAmount = Boolean(numericAmount !== undefined && numericAmount > 0);
+      const hasRefNo = Boolean(editRefNo && editRefNo.trim());
+
+      if (hasDateFiled && hasDatePaid && hasAmount && hasRefNo) {
         finalStatus = 'Paid';
-      } else if (editDateFiled) {
-        finalStatus = 'Filed';
+      } else {
+        finalStatus = 'Processing';
       }
     }
 
@@ -170,21 +176,12 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
       taxStatus: editTaxStatus,
       deadline: editDeadline,
       notes: editNotes,
-      referenceNo: editRefNo,
+      referenceNo: editRefNo.trim() || undefined,
+      confirmationNo: editRefNo.trim() || undefined,
       amount: editAmount ? parseFloat(editAmount) : undefined,
+      dateFiled: editDateFiled || undefined,
+      datePaid: editDatePaid || undefined,
     };
-
-    if (finalStatus === 'Filed' || finalStatus === 'Paid' || editDateFiled) {
-      updates.dateFiled = editDateFiled || undefined;
-    } else {
-      updates.dateFiled = undefined;
-    }
-
-    if (finalStatus === 'Paid') {
-      updates.datePaid = editDatePaid || undefined;
-    } else {
-      updates.datePaid = undefined;
-    }
 
     onUpdateForm(
       editingForm.clientId,
