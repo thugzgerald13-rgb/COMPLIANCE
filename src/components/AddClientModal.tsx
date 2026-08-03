@@ -88,93 +88,93 @@ export function AddClientModal({ isOpen, onClose, onAdd, formReferences, selecte
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="flex items-center justify-between p-4 border-b border-slate-100">
-          <h2 className="text-lg font-bold text-slate-900">Add New Client</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Add New Client</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
         
         <form onSubmit={handleSubmit} className="p-4 space-y-4 overflow-y-auto flex-1">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Client Name</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Client Name</label>
             <input 
               required
               type="text" 
               value={name}
               onChange={e => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-sm"
               placeholder="e.g. Acme Corp"
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">TIN</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">TIN</label>
             <input 
               required
               type="text" 
               value={tin}
               onChange={e => setTin(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-sm"
               placeholder="000-000-000-000"
             />
           </div>
           
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">RDO Code</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">RDO Code</label>
               <input 
                 required
                 type="text" 
                 value={rdo}
                 onChange={e => setRdo(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-sm"
                 placeholder="039"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Type</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Type</label>
               <select 
                 value={type}
                 onChange={e => setType(e.target.value as TaxPayerType)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-sm"
               >
-                <option value="Individual">Individual</option>
-                <option value="Corporate">Corporate</option>
+                <option value="Individual" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100">Individual</option>
+                <option value="Corporate" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100">Corporate</option>
               </select>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Email (For Automated Alerts)</label>
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Email (For Automated Alerts)</label>
               <input 
                 type="email" 
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-xs"
                 placeholder="client@company.com"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Phone SMS (For Automated Alerts)</label>
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Phone SMS (For Automated Alerts)</label>
               <input 
                 type="tel" 
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-xs"
                 placeholder="+639170000000"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Applicable Compliance References</label>
-            <div className="border border-slate-200 rounded-lg p-3 max-h-48 overflow-y-auto divide-y divide-slate-100">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Applicable Compliance References</label>
+            <div className="border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900/50 rounded-lg p-3 max-h-48 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/80">
               {allowedFormReferences.length === 0 ? (
-                <p className="text-xs text-slate-400">No compliance references available for this client type.</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500">No compliance references available for this client type.</p>
               ) : (
                 allowedFormReferences.map(f => {
                   const isChecked = selectedCodes.includes(f.code);
@@ -182,18 +182,18 @@ export function AddClientModal({ isOpen, onClose, onAdd, formReferences, selecte
                     <div 
                       key={f.code}
                       onClick={() => toggleForm(f.code)}
-                      className="py-2 flex items-center justify-between cursor-pointer hover:bg-slate-50 px-1 rounded transition-colors"
+                      className="py-2 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60 px-1 rounded transition-colors"
                     >
                       <div className="flex items-center space-x-2 overflow-hidden">
                         {isChecked ? (
-                          <CheckSquare className="w-4 h-4 text-blue-600 shrink-0" />
+                          <CheckSquare className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                         ) : (
-                          <Square className="w-4 h-4 text-slate-400 shrink-0" />
+                          <Square className="w-4 h-4 text-slate-400 dark:text-slate-600 shrink-0" />
                         )}
-                        <span className="font-semibold text-xs text-slate-900">{f.code}</span>
-                        <span className="text-xs text-slate-500 truncate">- {f.description}</span>
+                        <span className="font-semibold text-xs text-slate-900 dark:text-slate-100">{f.code}</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 truncate">- {f.description}</span>
                       </div>
-                      <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-medium ml-2 shrink-0">
+                      <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded font-medium ml-2 shrink-0">
                         {f.frequency}
                       </span>
                     </div>
@@ -207,13 +207,13 @@ export function AddClientModal({ isOpen, onClose, onAdd, formReferences, selecte
             <button 
               type="button" 
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button 
               type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm cursor-pointer"
             >
               Add Client
             </button>
