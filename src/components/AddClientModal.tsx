@@ -16,8 +16,6 @@ export function AddClientModal({ isOpen, onClose, onAdd, formReferences, selecte
   const [tin, setTin] = useState('');
   const [rdo, setRdo] = useState('');
   const [type, setType] = useState<TaxPayerType>('Individual');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
 
   const allowedFormReferences = formReferences.filter(f => isFormAllowedForTaxpayerType(f.code, type));
@@ -71,18 +69,12 @@ export function AddClientModal({ isOpen, onClose, onAdd, formReferences, selecte
       tin,
       rdo,
       type,
-      email: email.trim() || undefined,
-      phone: phone.trim() || undefined,
-      notifyEmail: true,
-      notifyPhone: true,
       forms: clientForms
     };
     onAdd(newClient);
     setName('');
     setTin('');
     setRdo('');
-    setEmail('');
-    setPhone('');
     setType('Individual');
     onClose();
   };
@@ -144,29 +136,6 @@ export function AddClientModal({ isOpen, onClose, onAdd, formReferences, selecte
                 <option value="Individual" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100">Individual</option>
                 <option value="Corporate" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100">Corporate</option>
               </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Email (For Automated Alerts)</label>
-              <input 
-                type="email" 
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-xs"
-                placeholder="client@company.com"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Phone SMS (For Automated Alerts)</label>
-              <input 
-                type="tel" 
-                value={phone}
-                onChange={e => setPhone(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-xs"
-                placeholder="+639170000000"
-              />
             </div>
           </div>
 
