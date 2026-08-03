@@ -289,7 +289,7 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
           <div className="flex items-center space-x-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg text-xs">
             <button
               onClick={() => setFilterStatus('all')}
-              className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
+              className={`px-3 py-1.5 rounded-md font-medium transition-colors cursor-pointer ${
                 filterStatus === 'all' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
@@ -297,16 +297,16 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
             </button>
             <button
               onClick={() => setFilterStatus('Pending')}
-              className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
-                filterStatus === 'Pending' ? 'bg-white text-red-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              className={`px-3 py-1.5 rounded-md font-medium transition-colors cursor-pointer ${
+                filterStatus === 'Pending' ? 'bg-white dark:bg-slate-700 text-red-700 dark:text-red-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               Pending ({pendingForms})
             </button>
             <button
               onClick={() => setFilterStatus('Processing')}
-              className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
-                filterStatus === 'Processing' ? 'bg-white text-amber-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              className={`px-3 py-1.5 rounded-md font-medium transition-colors cursor-pointer ${
+                filterStatus === 'Processing' ? 'bg-white dark:bg-slate-700 text-amber-700 dark:text-amber-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               In Processing ({processingForms})
@@ -314,12 +314,12 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
           </div>
         </div>
 
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-slate-100 dark:divide-slate-800">
           {displayForms.length === 0 ? (
-            <div className="p-12 text-center text-slate-500">
+            <div className="p-12 text-center text-slate-500 dark:text-slate-400">
               <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-3 opacity-80" />
-              <p className="text-sm font-semibold text-slate-800">No active {filterStatus !== 'all' ? filterStatus.toLowerCase() : 'pending/processing'} references found!</p>
-              <p className="text-xs text-slate-400 mt-1">All assigned tax compliance forms for this period are cleared or filed.</p>
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">No active {filterStatus !== 'all' ? filterStatus.toLowerCase() : 'pending/processing'} references found!</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">All assigned tax compliance forms for this period are cleared or filed.</p>
             </div>
           ) : (
             displayForms.map((item) => {
@@ -330,22 +330,22 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
                 <div 
                   key={`${item.clientId}-${item.id || item.code}`} 
                   onClick={() => handleOpenEditModal(item)}
-                  className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-blue-50/40 transition-colors cursor-pointer group ${
-                    deadlineInfo.urgency === 'high' ? 'bg-red-50/20' : ''
+                  className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-blue-50/40 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group ${
+                    deadlineInfo.urgency === 'high' ? 'bg-red-50/20 dark:bg-red-950/20' : ''
                   }`}
                 >
                   <div className="flex items-center space-x-4 mb-3 sm:mb-0 flex-1 pr-4">
-                    <div className="w-11 h-11 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm flex-shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors shadow-sm">
+                    <div className="w-11 h-11 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-900/50 flex items-center justify-center text-blue-700 dark:text-blue-300 font-bold text-sm flex-shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors shadow-sm">
                       {item.code}
                     </div>
                     <div>
                       <div className="flex items-center space-x-2">
-                        <span className="font-bold text-slate-900 text-sm group-hover:text-blue-600 transition-colors">{item.clientName}</span>
-                        <span className="text-xs font-mono text-slate-400">({item.clientTin})</span>
+                        <span className="font-bold text-slate-900 dark:text-white text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{item.clientName}</span>
+                        <span className="text-xs font-mono text-slate-400 dark:text-slate-500">({item.clientTin})</span>
                       </div>
-                      <p className="text-xs text-slate-600 mt-0.5">{refDesc || item.description}</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">{refDesc || item.description}</p>
                       {item.notes && (
-                        <p className="text-[11px] text-slate-400 italic mt-0.5 truncate max-w-md">Note: {item.notes}</p>
+                        <p className="text-[11px] text-slate-400 dark:text-slate-500 italic mt-0.5 truncate max-w-md">Note: {item.notes}</p>
                       )}
                     </div>
                   </div>
@@ -388,17 +388,17 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
                           handleOpenEditModal({ ...item, taxStatus: 'With Payable' });
                         }
                       }}
-                      className="text-xs font-bold rounded-lg px-2.5 py-1.5 border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-xs"
+                      className="text-xs font-bold rounded-lg px-2.5 py-1.5 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-xs"
                     >
-                      {!item.taxStatus && <option value="" disabled>Select Payable Choice</option>}
-                      <option value="With Payable">With Payable</option>
-                      <option value="W/O Payable">W/O Payable</option>
+                      {!item.taxStatus && <option value="" disabled className="bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400">Select Payable Choice</option>}
+                      <option value="With Payable" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100">With Payable</option>
+                      <option value="W/O Payable" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100">W/O Payable</option>
                     </select>
 
                     {/* 2. NEXT TO APPEAR ACCORDING TO CHOICE */}
                     {item.taxStatus === 'W/O Payable' ? (
-                      <div className="flex items-center space-x-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1">
-                        <span className="text-[10px] font-bold text-slate-600 whitespace-nowrap">Filed Date:</span>
+                      <div className="flex items-center space-x-1.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1">
+                        <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap">Filed Date:</span>
                         <input
                           type="date"
                           value={item.dateFiled || ''}
@@ -422,7 +422,7 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
                               );
                             }
                           }}
-                          className="text-xs bg-white border border-slate-200 rounded px-1.5 py-0.5 text-slate-800 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-0.5 text-slate-800 dark:text-slate-100 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
                       </div>
                     ) : (
@@ -442,16 +442,16 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
                       onChange={(e) => handleQuickStatusChange(e, item)}
                       className={`text-xs font-bold rounded-lg px-2.5 py-1.5 border-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs appearance-none ${
                         item.status === 'Pending' 
-                          ? 'bg-red-100 text-red-800' 
+                          ? 'bg-red-100 text-red-800 dark:bg-red-950/80 dark:text-red-300' 
                           : item.status === 'Processing'
-                          ? 'bg-amber-100 text-amber-800'
-                          : 'bg-blue-100 text-blue-800'
+                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
+                          : 'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300'
                       }`}
                     >
-                      <option value="Pending" className="bg-white text-slate-800">Pending</option>
-                      <option value="Processing" className="bg-white text-slate-800">In Processing</option>
-                      <option value="Filed" className="bg-white text-slate-800">Filed</option>
-                      {item.taxStatus !== 'W/O Payable' && <option value="Paid" className="bg-white text-slate-800">Paid</option>}
+                      <option value="Pending" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100">Pending</option>
+                      <option value="Processing" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100">In Processing</option>
+                      <option value="Filed" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100">Filed</option>
+                      {item.taxStatus !== 'W/O Payable' && <option value="Paid" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100">Paid</option>}
                     </select>
                   </div>
                 </div>
@@ -463,49 +463,49 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
 
       {/* Edit Reference Modal */}
       {editingForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-100 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-slate-900 dark:text-slate-100">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
                   {editingForm.code}
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900">Edit Compliance Reference</h3>
-                  <p className="text-xs text-slate-500">{editingForm.clientName} (TIN: {editingForm.clientTin})</p>
+                  <h3 className="font-bold text-slate-900 dark:text-white">Edit Compliance Reference</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{editingForm.clientName} (TIN: {editingForm.clientTin})</p>
                 </div>
               </div>
               <button 
                 onClick={() => setEditingForm(null)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleSaveFormEdit} className="p-6 space-y-4">
-              <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-3 text-xs text-slate-700">
-                <p className="font-semibold text-blue-900">{editingForm.code} - {editingForm.description}</p>
-                <p className="text-slate-500 mt-0.5">Assigned Period: {editingForm.period || selectedPeriod}</p>
+              <div className="bg-blue-50/50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 rounded-xl p-3 text-xs text-slate-700 dark:text-slate-300">
+                <p className="font-semibold text-blue-900 dark:text-blue-300">{editingForm.code} - {editingForm.description}</p>
+                <p className="text-slate-500 dark:text-slate-400 mt-0.5">Assigned Period: {editingForm.period || selectedPeriod}</p>
               </div>
 
               {/* Date Filed / Payable Entries */}
               {editTaxStatus === 'W/O Payable' ? (
-                <div className="bg-amber-50/60 border border-amber-200 rounded-xl p-3.5 space-y-3">
+                <div className="bg-amber-50/60 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 rounded-xl p-3.5 space-y-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-800 mb-1">When it was Filed (Date Filed)</label>
+                    <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">When it was Filed (Date Filed)</label>
                     <input
                       type="date"
                       value={editDateFiled}
                       onChange={(e) => handleDateFiledSelectChange(e.target.value)}
-                      className="w-full text-xs border border-amber-300 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      className="w-full text-xs border border-amber-300 dark:border-amber-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium"
                     />
                     {!editDateFiled ? (
-                      <p className="text-[11px] text-amber-700 font-medium mt-1">
+                      <p className="text-[11px] text-amber-700 dark:text-amber-400 font-medium mt-1">
                         * Date not yet updated. Compliance status is set to <span className="font-bold underline">In Processing</span>.
                       </p>
                     ) : (
-                      <p className="text-[11px] text-emerald-700 font-medium mt-1">
+                      <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium mt-1">
                         * Date filed recorded. Compliance status is set to <span className="font-bold underline">Filed</span>.
                       </p>
                     )}
@@ -515,69 +515,69 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">Date Filed</label>
+                      <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Date Filed</label>
                       <input
                         type="date"
                         value={editDateFiled}
                         onChange={(e) => handleDateFiledSelectChange(e.target.value)}
-                        className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">Date Paid</label>
+                      <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Date Paid</label>
                       <input
                         type="date"
                         value={editDatePaid}
                         onChange={(e) => setEditDatePaid(e.target.value)}
-                        className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">Amount Paid (₱)</label>
+                      <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Amount Paid (₱)</label>
                       <input
                         type="number"
                         step="0.01"
                         placeholder="0.00"
                         value={editAmount}
                         onChange={(e) => setEditAmount(e.target.value)}
-                        className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-emerald-700"
+                        className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-emerald-700 dark:text-emerald-400"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">Reference / Confirmation No.</label>
+                      <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Reference / Confirmation No.</label>
                       <input
                         type="text"
                         placeholder="e.g. BIR-2026-9921"
                         value={editRefNo}
                         onChange={(e) => setEditRefNo(e.target.value)}
-                        className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                        className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Notes / Remarks</label>
+                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Notes / Remarks</label>
                     <textarea
                       rows={2}
                       placeholder="Add optional notes or compliance instructions..."
                       value={editNotes}
                       onChange={(e) => setEditNotes(e.target.value)}
-                      className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                      className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                     />
                   </div>
                 </>
               )}
 
-              <div className="pt-4 flex items-center justify-end space-x-3 border-t border-slate-100">
+              <div className="pt-4 flex items-center justify-end space-x-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setEditingForm(null)}
-                  className="px-4 py-2 text-xs font-medium text-slate-600 hover:text-slate-800 rounded-xl transition-colors"
+                  className="px-4 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 rounded-xl transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>

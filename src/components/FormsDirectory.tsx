@@ -41,8 +41,8 @@ export function FormsDirectory({ forms, onAddFormReference, onDeleteFormReferenc
   return (
     <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-        <h1 className="text-2xl font-bold text-slate-900 flex items-center">
-          <BookOpen className="w-6 h-6 mr-3 text-blue-600" />
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center">
+          <BookOpen className="w-6 h-6 mr-3 text-blue-600 dark:text-blue-400" />
           Monitoring Reference
         </h1>
         <div className="flex items-center space-x-3 w-full sm:w-auto">
@@ -51,14 +51,14 @@ export function FormsDirectory({ forms, onAddFormReference, onDeleteFormReferenc
             <input 
               type="text" 
               placeholder="Search forms..." 
-              className="pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-72"
+              className="pl-10 pr-4 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-72"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <button 
             onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors cursor-pointer shrink-0"
           >
             <Plus className="w-5 h-5" />
             <span className="hidden sm:inline font-medium">Add Reference</span>
@@ -68,44 +68,44 @@ export function FormsDirectory({ forms, onAddFormReference, onDeleteFormReferenc
 
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredForms.map((form, i) => (
-          <div key={i} className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex flex-col hover:shadow-md transition-shadow group">
+          <div key={i} className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 flex flex-col hover:shadow-md transition-shadow group">
             <div className="flex justify-between items-start mb-4">
               <div className="flex-1">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="inline-block px-3 py-1 bg-slate-100 text-slate-700 font-bold rounded-lg text-sm">
+                  <span className="inline-block px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold rounded-lg text-sm border border-slate-200 dark:border-slate-700">
                     {form.code}
                   </span>
                   <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => handleEditClick(form)}
-                      className="text-slate-400 hover:text-blue-500 p-1 rounded hover:bg-blue-50"
+                      className="text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-950/50 cursor-pointer"
                       title="Edit Reference"
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => onDeleteFormReference(form.code)}
-                      className="text-slate-400 hover:text-red-500 p-1 rounded hover:bg-red-50"
+                      className="text-slate-400 hover:text-red-500 dark:hover:text-red-400 p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/50 cursor-pointer"
                       title="Delete Reference"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
-                <h3 className="font-semibold text-slate-900 line-clamp-2" title={form.description}>
+                <h3 className="font-semibold text-slate-900 dark:text-white line-clamp-2" title={form.description}>
                   {form.description}
                 </h3>
               </div>
             </div>
             
-            <div className="mt-auto pt-4 border-t border-slate-100 space-y-3">
-              <div className="flex items-start text-sm text-slate-600">
-                <Calendar className="w-4 h-4 mr-2 text-slate-400 shrink-0 mt-0.5" />
-                <span><span className="font-medium text-slate-700">Frequency:</span> {form.frequency}</span>
+            <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
+              <div className="flex items-start text-sm text-slate-600 dark:text-slate-400">
+                <Calendar className="w-4 h-4 mr-2 text-slate-400 dark:text-slate-500 shrink-0 mt-0.5" />
+                <span><span className="font-medium text-slate-700 dark:text-slate-300">Frequency:</span> {form.frequency}</span>
               </div>
-              <div className="flex items-start text-sm text-slate-600">
-                <Clock className="w-4 h-4 mr-2 text-slate-400 shrink-0 mt-0.5" />
-                <span><span className="font-medium text-slate-700">Deadline:</span> {form.deadlineRule}</span>
+              <div className="flex items-start text-sm text-slate-600 dark:text-slate-400">
+                <Clock className="w-4 h-4 mr-2 text-slate-400 dark:text-slate-500 shrink-0 mt-0.5" />
+                <span><span className="font-medium text-slate-700 dark:text-slate-300">Deadline:</span> {form.deadlineRule}</span>
               </div>
             </div>
           </div>
@@ -113,8 +113,8 @@ export function FormsDirectory({ forms, onAddFormReference, onDeleteFormReferenc
       </div>
       
       {filteredForms.length === 0 && (
-        <div className="text-center p-12 bg-white rounded-xl border border-slate-100">
-          <p className="text-slate-500 text-lg">No BIR forms found matching your search.</p>
+        <div className="text-center p-12 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+          <p className="text-slate-500 dark:text-slate-400 text-lg">No BIR forms found matching your search.</p>
         </div>
       )}
 

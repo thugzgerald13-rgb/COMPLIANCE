@@ -257,13 +257,13 @@ export function NotificationHubModal({
           {activeTab === 'logs' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Web Push Dispatch History Log ({logs.length})
                 </h4>
                 {logs.length > 0 && (
                   <button
                     onClick={handleClearLogs}
-                    className="text-xs text-slate-500 hover:text-red-600 flex items-center space-x-1 cursor-pointer"
+                    className="text-xs text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 flex items-center space-x-1 cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>Clear Logs</span>
@@ -272,7 +272,7 @@ export function NotificationHubModal({
               </div>
 
               {logs.length === 0 ? (
-                <div className="p-10 text-center text-slate-400 text-xs bg-slate-50 rounded-xl">
+                <div className="p-10 text-center text-slate-400 dark:text-slate-400 text-xs bg-slate-50 dark:bg-slate-800/50 rounded-xl">
                   No automated Web Push notification logs recorded yet.
                 </div>
               ) : (
@@ -285,9 +285,9 @@ export function NotificationHubModal({
                             {log.type}
                           </span>
                           <span className="font-bold text-slate-900 dark:text-white">{log.clientName}</span>
-                          <span className="text-slate-400">({log.formCode})</span>
+                          <span className="text-slate-400 dark:text-slate-500">({log.formCode})</span>
                         </div>
-                        <span className="text-[10px] text-slate-400 font-mono">
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
                           {new Date(log.timestamp).toLocaleString()}
                         </span>
                       </div>
