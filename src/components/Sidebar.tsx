@@ -65,6 +65,23 @@ export function Sidebar({
 
   const desktopUserMenuRef = useRef<HTMLDivElement>(null);
   const mobileUserMenuRef = useRef<HTMLDivElement>(null);
+  const collapsedMonthInputRef = useRef<HTMLInputElement>(null);
+
+  const handleCollapsedPeriodClick = () => {
+    if (collapsedMonthInputRef.current) {
+      try {
+        if ('showPicker' in collapsedMonthInputRef.current) {
+          (collapsedMonthInputRef.current as any).showPicker();
+        } else {
+          collapsedMonthInputRef.current.focus();
+          collapsedMonthInputRef.current.click();
+        }
+      } catch {
+        collapsedMonthInputRef.current.focus();
+        collapsedMonthInputRef.current.click();
+      }
+    }
+  };
 
   useEffect(() => {
     if (!isUserMenuOpen) return;
@@ -315,15 +332,33 @@ export function Sidebar({
                 />
               </div>
             ) : (
-              <div className="flex flex-col items-center group/period relative" title={`Period: ${selectedPeriod}`}>
-                <div className="p-2.5 rounded-lg bg-slate-800 text-blue-400 flex items-center justify-center cursor-pointer hover:bg-slate-700">
+              <div 
+                onClick={handleCollapsedPeriodClick}
+                className="flex flex-col items-center justify-center relative cursor-pointer group/period" 
+                title={`Period: ${selectedPeriod} (Click to change)`}
+              >
+                <button
+                  type="button"
+                  onClick={handleCollapsedPeriodClick}
+                  className="w-10 h-10 rounded-lg bg-slate-800 text-blue-400 hover:bg-slate-700 hover:text-white flex items-center justify-center transition-all cursor-pointer border border-slate-700/60 shadow-sm"
+                  title={`Period: ${selectedPeriod} (Click to change)`}
+                >
                   <Calendar className="w-5 h-5" />
-                </div>
+                </button>
                 <input
+                  ref={collapsedMonthInputRef}
                   type="month"
                   value={selectedPeriod}
                   onChange={(e) => onChangePeriod(e.target.value)}
-                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    try {
+                      if ('showPicker' in e.currentTarget) {
+                        (e.currentTarget as any).showPicker();
+                      }
+                    } catch {}
+                  }}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer pointer-events-auto"
                   title={`Selected Period: ${selectedPeriod}`}
                 />
               </div>
