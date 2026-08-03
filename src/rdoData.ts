@@ -72,8 +72,10 @@ export const birRDOList: BIRRDO[] = [
   { code: '048', name: 'RDO No. 048', location: 'West Rizal', region: 'RR 7B - East NCR' },
 
   // Revenue Region 8A - Makati City
-  { code: '054A', name: 'RDO No. 054A', location: 'South Makati City', region: 'RR 8A - Makati City' },
-  { code: '054B', name: 'RDO No. 054B', location: 'North Makati City', region: 'RR 8A - Makati City' },
+  { code: '047', name: 'RDO No. 047', location: 'East Makati City', region: 'RR 8A - Makati City' },
+  { code: '048', name: 'RDO No. 048', location: 'West Makati City', region: 'RR 8A - Makati City' },
+  { code: '049', name: 'RDO No. 049', location: 'North Makati City', region: 'RR 8A - Makati City' },
+  { code: '050', name: 'RDO No. 050', location: 'South Makati City', region: 'RR 8A - Makati City' },
 
   // Revenue Region 8B - South NCR
   { code: '051', name: 'RDO No. 051', location: 'Pasay City', region: 'RR 8B - South NCR' },
@@ -81,13 +83,14 @@ export const birRDOList: BIRRDO[] = [
   { code: '053A', name: 'RDO No. 053A', location: 'Las Piñas City', region: 'RR 8B - South NCR' },
   { code: '053B', name: 'RDO No. 053B', location: 'Muntinlupa City', region: 'RR 8B - South NCR' },
 
-  // Revenue Region 9A - San Pablo City
-  { code: '049', name: 'RDO No. 049', location: 'North Cavite (Kawit)', region: 'RR 9A - San Pablo City' },
-  { code: '050', name: 'RDO No. 050', location: 'South Cavite (Trece Martires)', region: 'RR 9A - San Pablo City' },
-  { code: '056', name: 'RDO No. 056', location: 'Central Batangas (Tanauan)', region: 'RR 9A - San Pablo City' },
-  { code: '057', name: 'RDO No. 057', location: 'West Batangas (Lian)', region: 'RR 9A - San Pablo City' },
-  { code: '058', name: 'RDO No. 058', location: 'Batangas City, East Batangas', region: 'RR 9A - San Pablo City' },
-  { code: '059', name: 'RDO No. 059', location: 'Lipa City, Batangas', region: 'RR 9A - San Pablo City' },
+  // Revenue Region 9A - San Pablo City (CALABARZON)
+  { code: '054A', name: 'RDO No. 054A', location: 'Trece Martires City, South Cavite', region: 'RR 9A - San Pablo City' },
+  { code: '054B', name: 'RDO No. 054B', location: 'Kawit, North Cavite', region: 'RR 9A - San Pablo City' },
+  { code: '055', name: 'RDO No. 055', location: 'San Pablo City, East Laguna', region: 'RR 9A - San Pablo City' },
+  { code: '056', name: 'RDO No. 056', location: 'Calamba City, Central Laguna', region: 'RR 9A - San Pablo City' },
+  { code: '057', name: 'RDO No. 057', location: 'West Laguna - Biñan City', region: 'RR 9A - San Pablo City' },
+  { code: '058', name: 'RDO No. 058', location: 'Batangas City, West Batangas', region: 'RR 9A - San Pablo City' },
+  { code: '059', name: 'RDO No. 059', location: 'Lipa City, East Batangas', region: 'RR 9A - San Pablo City' },
   { code: '060', name: 'RDO No. 060', location: 'Lucena City, Quezon', region: 'RR 9A - San Pablo City' },
   { code: '061', name: 'RDO No. 061', location: 'Calauag, Quezon', region: 'RR 9A - San Pablo City' },
 
@@ -157,7 +160,6 @@ export const birRDOList: BIRRDO[] = [
   { code: '106', name: 'RDO No. 106', location: 'Tandag City, Surigao del Sur', region: 'RR 17 - Butuan City' },
 
   // Revenue Region 18 - Koronadal City
-  { code: '055', name: 'RDO No. 055', location: 'Cotabato City', region: 'RR 18 - Koronadal City' },
   { code: '107', name: 'RDO No. 107', location: 'Cotabato City, Maguindanao', region: 'RR 18 - Koronadal City' },
   { code: '108', name: 'RDO No. 108', location: 'Kidapawan City, North Cotabato', region: 'RR 18 - Koronadal City' },
   { code: '109', name: 'RDO No. 109', location: 'Koronadal City, South Cotabato', region: 'RR 18 - Koronadal City' },
@@ -184,3 +186,15 @@ export const birRDOList: BIRRDO[] = [
   { code: '125', name: 'RDO No. 125', location: 'Large Taxpayers Document Processing Division', region: 'Large Taxpayers Service' },
   { code: '126', name: 'RDO No. 126', location: 'Large Taxpayers Collection Enforcement Division', region: 'Large Taxpayers Service' },
 ];
+
+export function getRDODetails(code: string): BIRRDO | undefined {
+  if (!code) return undefined;
+  const cleanCode = code.trim().toUpperCase();
+  return birRDOList.find(r => r.code.toUpperCase() === cleanCode);
+}
+
+export function getRDOLocationDisplay(code: string): string {
+  const match = getRDODetails(code);
+  return match ? match.location : `RDO ${code}`;
+}
+

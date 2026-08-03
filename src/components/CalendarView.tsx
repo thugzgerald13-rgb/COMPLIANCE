@@ -5,6 +5,7 @@ import {
   getComplianceStatusInfo, 
   isFormAllowedForTaxpayerType 
 } from '../utils';
+import { getRDOLocationDisplay } from '../rdoData';
 import { 
   Calendar as CalendarIcon, 
   ChevronLeft, 
@@ -803,7 +804,9 @@ export function CalendarView({
                 </div>
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-slate-500 dark:text-slate-400">Taxpayer TIN / RDO:</span>
-                  <span className="font-mono text-slate-800 dark:text-slate-200">{selectedEvent.clientTin} / {selectedEvent.clientRdo || 'N/A'}</span>
+                  <span className="font-mono text-slate-800 dark:text-slate-200">
+                    {selectedEvent.clientTin} / {selectedEvent.clientRdo ? `RDO ${selectedEvent.clientRdo} (${getRDOLocationDisplay(selectedEvent.clientRdo)})` : 'N/A'}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-slate-500 dark:text-slate-400">Current Status:</span>

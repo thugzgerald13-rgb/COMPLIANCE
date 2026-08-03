@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Client, FormStatus, FormReference, BIRForm } from '../types';
-import { Search, ChevronDown, ChevronRight, FileText, Plus, Trash2, XCircle, Users, Mail, Edit3 } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, FileText, Plus, Trash2, XCircle, Users, Mail, Edit3, Building2 } from 'lucide-react';
 import { AddClientModal } from './AddClientModal';
 import { UpdatePayableModal } from './UpdatePayableModal';
 import { isFormAllowedForTaxpayerType, calculateDeadline, isFormVisibleForPeriod, getEffectiveDeadline, getComplianceStatusInfo, getComplianceDeadlineForPeriod, getFormsForClientAndPeriod } from '../utils';
+import { getRDOLocationDisplay } from '../rdoData';
 
 interface ClientListProps {
   clients: Client[];
@@ -187,13 +188,22 @@ export function ClientList({
 
                 {isExpanded && (
                   <div className="bg-slate-50 p-4 border-t border-slate-100 pl-10 space-y-4">
-                    {/* Contact channels summary banner */}
-                    <div className="flex flex-wrap items-center gap-3 bg-white p-2.5 rounded-lg border border-slate-200 text-xs">
-                      <span className="font-semibold text-slate-700">Notification Email:</span>
-                      <span className="flex items-center space-x-1 text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
-                        <Mail className="w-3 h-3 text-blue-600" />
-                        <span>{client.email || 'Default System Email'}</span>
-                      </span>
+                    {/* Contact channels & RDO summary banner */}
+                    <div className="flex flex-wrap items-center gap-3 bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs">
+                      <div className="flex items-center space-x-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                        <span className="font-semibold text-slate-700 dark:text-slate-200">BIR RDO Office:</span>
+                        <span className="bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800/50">
+                          RDO {client.rdo} — {getRDOLocationDisplay(client.rdo)}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-1.5 ml-0 sm:ml-2">
+                        <Mail className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                        <span className="font-semibold text-slate-700 dark:text-slate-200">Email:</span>
+                        <span className="text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded">
+                          {client.email || 'Default System Email'}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
