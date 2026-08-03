@@ -98,14 +98,56 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
 
   const handleOpenEditModal = (form: SelectedDashboardForm) => {
     setEditingForm(form);
-    setEditStatus(form.status);
-    setEditTaxStatus(form.taxStatus || 'With Payable');
+    const taxStatus = form.taxStatus || 'With Payable';
+    setEditTaxStatus(taxStatus);
     setEditDeadline(form.deadline || '');
-    setEditDateFiled(form.dateFiled || new Date().toISOString().split('T')[0]);
-    setEditDatePaid(form.datePaid || new Date().toISOString().split('T')[0]);
+    setEditDateFiled(form.dateFiled || '');
+    setEditDatePaid(form.datePaid || '');
     setEditAmount(form.amount !== undefined ? String(form.amount) : '');
     setEditRefNo(form.referenceNo || form.confirmationNo || '');
     setEditNotes(form.notes || '');
+
+    if (taxStatus === 'W/O Payable') {
+      if (!form.dateFiled) {
+        setEditStatus('Processing');
+      } else {
+        setEditStatus('Filed');
+      }
+    } else {
+      setEditStatus(form.status);
+    }
+  };
+
+  const handleTaxStatusSelectChange = (newTaxStatus: 'With Payable' | 'W/O Payable') => {
+    setEditTaxStatus(newTaxStatus);
+    if (newTaxStatus === 'W/O Payable') {
+      if (!editDateFiled) {
+        setEditStatus('Processing');
+      } else {
+        setEditStatus('Filed');
+      }
+      setEditAmount('');
+      setEditDatePaid('');
+    } else {
+      if (editStatus === 'Processing' && editDateFiled) {
+        setEditStatus('Filed');
+      }
+    }
+  };
+
+  const handleDateFiledSelectChange = (newDateVal: string) => {
+    setEditDateFiled(newDateVal);
+    if (editTaxStatus === 'W/O Payable') {
+      if (newDateVal) {
+        setEditStatus('Filed');
+      } else {
+        setEditStatus('Processing');
+      }
+    } else {
+      if (newDateVal && (editStatus === 'Pending' || editStatus === 'Processing')) {
+        setEditStatus(editAmount ? 'Paid' : 'Filed');
+      }
+    }
   };
 
   const handleSaveFormEdit = (e: React.FormEvent) => {
@@ -322,40 +364,109 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap sm:flex-nowrap items-center space-x-3 justify-between sm:justify-end">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 justify-end" onClick={(e) => e.stopPropagation()}>
                     <div className={`inline-flex items-center px-2.5 py-1 rounded text-xs border ${deadlineInfo.color}`}>
                       {deadlineInfo.label} ({new Date(item.deadline || '').toLocaleDateString()})
                     </div>
 
-                    {/* Quick status dropdown selector directly in row */}
-                    <div onClick={(e) => e.stopPropagation()} className="relative">
-                      <select
-                        value={item.status}
-                        onChange={(e) => handleQuickStatusChange(e, item)}
-                        className={`text-xs font-semibold rounded-full px-3 py-1 border cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm appearance-none ${
-                          item.status === 'Pending' 
-                            ? 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200' 
-                            : 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200'
-                        }`}
-                      >
-                        <option value="Pending" className="bg-white text-slate-800">Pending</option>
-                        <option value="Processing" className="bg-white text-slate-800">In Processing</option>
-                        <option value="Filed" className="bg-white text-slate-800">Filed</option>
-                        <option value="Paid" className="bg-white text-slate-800">Paid</option>
-                      </select>
-                    </div>
-
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenEditModal(item);
+                    {/* 1. FIRST CHOICE: Tax Payable Status */}
+                    <select
+                      value={item.taxStatus || ''}
+                      onChange={(e) => {
+                        const newTaxStatus = e.target.value as 'With Payable' | 'W/O Payable';
+                        const updates: Partial<BIRForm> = { taxStatus: newTaxStatus };
+                        if (newTaxStatus === 'W/O Payable') {
+                          if (!item.dateFiled) {
+                            updates.status = 'Processing';
+                          } else {
+                            updates.status = 'Filed';
+                          }
+                          updates.datePaid = undefined;
+                          updates.amount = undefined;
+                        }
+                        if (onUpdateForm) {
+                          onUpdateForm(
+                            item.clientId,
+                            item.id,
+                            updates,
+                            {
+                              code: item.code,
+                              description: item.description,
+                              deadline: item.deadline || '',
+                              period: item.period || selectedPeriod,
+                              assignedPeriod: item.assignedPeriod
+                            }
+                          );
+                        }
+                        if (newTaxStatus === 'With Payable') {
+                          handleOpenEditModal({ ...item, taxStatus: 'With Payable' });
+                        }
                       }}
-                      className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-colors flex items-center space-x-1 text-xs font-medium"
-                      title="Edit reference details"
+                      className="text-xs font-bold rounded-lg px-2.5 py-1.5 border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-xs"
                     >
-                      <Edit3 className="w-4 h-4" />
-                      <span className="hidden md:inline">Edit</span>
-                    </button>
+                      {!item.taxStatus && <option value="" disabled>Select Payable Choice</option>}
+                      <option value="With Payable">With Payable</option>
+                      <option value="W/O Payable">W/O Payable</option>
+                    </select>
+
+                    {/* 2. NEXT TO APPEAR ACCORDING TO CHOICE */}
+                    {item.taxStatus === 'W/O Payable' ? (
+                      <div className="flex items-center space-x-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1">
+                        <span className="text-[10px] font-bold text-slate-600 whitespace-nowrap">Filed Date:</span>
+                        <input
+                          type="date"
+                          value={item.dateFiled || ''}
+                          onChange={(e) => {
+                            const dateVal = e.target.value;
+                            if (onUpdateForm) {
+                              onUpdateForm(
+                                item.clientId,
+                                item.id,
+                                {
+                                  dateFiled: dateVal || undefined,
+                                  status: dateVal ? 'Filed' : 'Processing'
+                                },
+                                {
+                                  code: item.code,
+                                  description: item.description,
+                                  deadline: item.deadline || '',
+                                  period: item.period || selectedPeriod,
+                                  assignedPeriod: item.assignedPeriod
+                                }
+                              );
+                            }
+                          }}
+                          className="text-xs bg-white border border-slate-200 rounded px-1.5 py-0.5 text-slate-800 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                    ) : (
+                      <button 
+                        onClick={() => handleOpenEditModal(item)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center space-x-1 shadow-xs cursor-pointer"
+                        title="Edit Date Filed, Amount Paid, Reference No. & Notes"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Edit Details</span>
+                      </button>
+                    )}
+
+                    {/* Status Dropdown */}
+                    <select
+                      value={item.status}
+                      onChange={(e) => handleQuickStatusChange(e, item)}
+                      className={`text-xs font-bold rounded-lg px-2.5 py-1.5 border-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs appearance-none ${
+                        item.status === 'Pending' 
+                          ? 'bg-red-100 text-red-800' 
+                          : item.status === 'Processing'
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-blue-100 text-blue-800'
+                      }`}
+                    >
+                      <option value="Pending" className="bg-white text-slate-800">Pending</option>
+                      <option value="Processing" className="bg-white text-slate-800">In Processing</option>
+                      <option value="Filed" className="bg-white text-slate-800">Filed</option>
+                      {item.taxStatus !== 'W/O Payable' && <option value="Paid" className="bg-white text-slate-800">Paid</option>}
+                    </select>
                   </div>
                 </div>
               );
@@ -392,6 +503,19 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
                 <p className="text-slate-500 mt-0.5">Assigned Period: {editingForm.period || selectedPeriod}</p>
               </div>
 
+              {/* 1. FIRST CHOICE: Tax Payable Status */}
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1">1. Tax Payable Choice (First Selection)</label>
+                <select
+                  value={editTaxStatus}
+                  onChange={(e) => handleTaxStatusSelectChange(e.target.value as 'With Payable' | 'W/O Payable')}
+                  className="w-full text-xs font-bold border-2 border-blue-200 rounded-xl p-2.5 bg-blue-50/30 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="With Payable">With Payable</option>
+                  <option value="W/O Payable">W/O Payable</option>
+                </select>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-slate-700 mb-1">Compliance Status</label>
@@ -403,46 +527,56 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
                     <option value="Pending">Pending</option>
                     <option value="Processing">In Processing</option>
                     <option value="Filed">Filed</option>
-                    <option value="Paid">Paid</option>
+                    {editTaxStatus !== 'W/O Payable' && <option value="Paid">Paid</option>}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Tax Payable Status</label>
-                  <select
-                    value={editTaxStatus}
-                    onChange={(e) => setEditTaxStatus(e.target.value as 'With Payable' | 'W/O Payable')}
-                    className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
-                  >
-                    <option value="With Payable">With Payable</option>
-                    <option value="W/O Payable">W/O Payable</option>
-                  </select>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Effective Deadline Date</label>
+                  <input
+                    type="date"
+                    value={editDeadline}
+                    onChange={(e) => setEditDeadline(e.target.value)}
+                    className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Effective Deadline Date</label>
-                <input
-                  type="date"
-                  value={editDeadline}
-                  onChange={(e) => setEditDeadline(e.target.value)}
-                  className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              {(editStatus === 'Filed' || editStatus === 'Paid') && (
-                <div className="grid grid-cols-2 gap-4">
+              {/* 2. NEXT TO APPEAR: Date Filed / Payable Entries */}
+              {editTaxStatus === 'W/O Payable' ? (
+                <div className="bg-amber-50/60 border border-amber-200 rounded-xl p-3.5 space-y-3">
                   <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Date Filed</label>
+                    <label className="block text-xs font-bold text-slate-800 mb-1">When it was Filed (Date Filed)</label>
                     <input
                       type="date"
                       value={editDateFiled}
-                      onChange={(e) => setEditDateFiled(e.target.value)}
-                      className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => handleDateFiledSelectChange(e.target.value)}
+                      className="w-full text-xs border border-amber-300 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
                     />
+                    {!editDateFiled ? (
+                      <p className="text-[11px] text-amber-700 font-medium mt-1">
+                        * Date not yet updated. Compliance status is set to <span className="font-bold underline">In Processing</span>.
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-emerald-700 font-medium mt-1">
+                        * Date filed recorded. Compliance status is set to <span className="font-bold underline">Filed</span>.
+                      </p>
+                    )}
                   </div>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 mb-1">Date Filed</label>
+                      <input
+                        type="date"
+                        value={editDateFiled}
+                        onChange={(e) => handleDateFiledSelectChange(e.target.value)}
+                        className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
 
-                  {editStatus === 'Paid' && editTaxStatus !== 'W/O Payable' && (
                     <div>
                       <label className="block text-xs font-medium text-slate-700 mb-1">Date Paid</label>
                       <input
@@ -452,45 +586,45 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
                         className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
-                  )}
-                </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 mb-1">Amount Paid (₱)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={editAmount}
+                        onChange={(e) => setEditAmount(e.target.value)}
+                        className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-emerald-700"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 mb-1">Reference / Confirmation No.</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. BIR-2026-9921"
+                        value={editRefNo}
+                        onChange={(e) => setEditRefNo(e.target.value)}
+                        className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Notes / Remarks</label>
+                    <textarea
+                      rows={2}
+                      placeholder="Add optional notes or compliance instructions..."
+                      value={editNotes}
+                      onChange={(e) => setEditNotes(e.target.value)}
+                      className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    />
+                  </div>
+                </>
               )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Amount / Tax Paid (₱)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={editAmount}
-                    onChange={(e) => setEditAmount(e.target.value)}
-                    className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Reference / Confirmation No.</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. BIR-2026-9921"
-                    value={editRefNo}
-                    onChange={(e) => setEditRefNo(e.target.value)}
-                    className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Notes / Remarks</label>
-                <textarea
-                  rows={2}
-                  placeholder="Add optional notes or compliance instructions..."
-                  value={editNotes}
-                  onChange={(e) => setEditNotes(e.target.value)}
-                  className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                />
-              </div>
 
               <div className="pt-4 flex items-center justify-end space-x-3 border-t border-slate-100">
                 <button

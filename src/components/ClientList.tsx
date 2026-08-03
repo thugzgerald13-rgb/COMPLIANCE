@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Client, FormStatus, FormReference, BIRForm } from '../types';
-import { Search, ChevronDown, ChevronRight, FileText, Plus, Trash2, XCircle, Users, Mail, Phone } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, FileText, Plus, Trash2, XCircle, Users, Mail, Phone, Edit3 } from 'lucide-react';
 import { AddClientModal } from './AddClientModal';
+import { UpdatePayableModal } from './UpdatePayableModal';
 import { isFormAllowedForTaxpayerType, calculateDeadline, isFormVisibleForPeriod, getEffectiveDeadline, getComplianceStatusInfo, getComplianceDeadlineForPeriod, getFormsForClientAndPeriod } from '../utils';
 
 interface ClientListProps {
@@ -36,6 +37,13 @@ export function ClientList({
   const [expandedClient, setExpandedClient] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedRefToAdd, setSelectedRefToAdd] = useState<{ [clientId: string]: string }>({});
+  const [payableModalForm, setPayableModalForm] = useState<{
+    clientId: string;
+    clientName: string;
+    clientTin: string;
+    form: BIRForm;
+    formMeta: { code: string; description: string; deadline: string; period: string };
+  } | null>(null);
 
   const filteredClients = clients.filter(c => 
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -256,53 +264,84 @@ export function ClientList({
                                   )}
                                 </div>
                               </div>
-                              <div className="flex items-center space-x-3">
-                                {(form.status === 'Filed' || form.status === 'Paid') && (
-                                  <div className="flex flex-col items-end mr-2">
-                                    <div className="flex items-center space-x-2">
-                                      <span className="text-[10px] text-slate-500 w-8 text-right">Filed:</span>
-                                      <input 
-                                        type="date" 
-                                        className="text-[10px] border border-slate-200 rounded px-1 py-0.5 text-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500 h-5"
-                                        value={form.dateFiled || ''}
-                                        onChange={(e) => onUpdateForm(client.id, form.id, { dateFiled: e.target.value }, formMeta)}
-                                      />
-                                    </div>
-                                    {form.status === 'Paid' && form.taxStatus !== 'W/O Payable' && (
-                                      <div className="flex items-center space-x-2 mt-1">
-                                        <span className="text-[10px] text-slate-500 w-8 text-right">Paid:</span>
-                                        <input 
-                                          type="date" 
-                                          className="text-[10px] border border-slate-200 rounded px-1 py-0.5 text-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500 h-5"
-                                          value={form.datePaid || ''}
-                                          onChange={(e) => onUpdateForm(client.id, form.id, { datePaid: e.target.value }, formMeta)}
-                                        />
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
+                              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                                {/* 1. FIRST CHOICE: Tax Payable Status */}
                                 <select
                                   value={form.taxStatus || ''}
                                   onChange={(e) => {
                                     const newTaxStatus = e.target.value as 'With Payable' | 'W/O Payable';
-                                    const updates: Partial<import('../types').BIRForm> = { taxStatus: newTaxStatus };
-                                    if (newTaxStatus === 'W/O Payable' && form.status === 'Paid') {
-                                      updates.status = 'Filed';
+                                    const updates: Partial<BIRForm> = { taxStatus: newTaxStatus };
+
+                                    if (newTaxStatus === 'W/O Payable') {
+                                      if (!form.dateFiled) {
+                                        updates.status = 'Processing';
+                                      } else {
+                                        updates.status = 'Filed';
+                                      }
                                       updates.datePaid = undefined;
+                                      updates.amount = undefined;
+                                      onUpdateForm(client.id, form.id, updates, formMeta);
+                                    } else if (newTaxStatus === 'With Payable') {
+                                      onUpdateForm(client.id, form.id, updates, formMeta);
+                                      setPayableModalForm({
+                                        clientId: client.id,
+                                        clientName: client.name,
+                                        clientTin: client.tin,
+                                        form: { ...form, taxStatus: 'With Payable' },
+                                        formMeta
+                                      });
                                     }
-                                    onUpdateForm(client.id, form.id, updates, formMeta);
                                   }}
-                                  className="text-xs font-medium rounded-full px-3 py-1 border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none"
+                                  className="text-xs font-bold rounded-lg px-2.5 py-1.5 border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-xs"
                                 >
-                                  {!form.taxStatus && <option value="" disabled className="hidden"></option>}
+                                  {!form.taxStatus && <option value="" disabled>Select Payable Choice</option>}
                                   <option value="With Payable">With Payable</option>
                                   <option value="W/O Payable">W/O Payable</option>
                                 </select>
+
+                                {/* 2. NEXT TO APPEAR ACCORDING TO CHOICE */}
+                                {form.taxStatus === 'W/O Payable' ? (
+                                  /* W/O PAYABLE: Next to appear is When it was Filed */
+                                  <div className="flex items-center space-x-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1">
+                                    <span className="text-[11px] font-bold text-slate-600 whitespace-nowrap">Filed Date:</span>
+                                    <input
+                                      type="date"
+                                      value={form.dateFiled || ''}
+                                      onChange={(e) => {
+                                        const dateVal = e.target.value;
+                                        if (dateVal) {
+                                          onUpdateForm(client.id, form.id, { dateFiled: dateVal, status: 'Filed' }, formMeta);
+                                        } else {
+                                          onUpdateForm(client.id, form.id, { dateFiled: undefined, status: 'Processing' }, formMeta);
+                                        }
+                                      }}
+                                      className="text-xs bg-white border border-slate-200 rounded-md px-2 py-0.5 text-slate-800 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    />
+                                  </div>
+                                ) : form.taxStatus === 'With Payable' ? (
+                                  /* WITH PAYABLE: Next to appear is Edit Button opening Modal */
+                                  <button
+                                    onClick={() => setPayableModalForm({
+                                      clientId: client.id,
+                                      clientName: client.name,
+                                      clientTin: client.tin,
+                                      form,
+                                      formMeta
+                                    })}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center space-x-1 shadow-xs cursor-pointer"
+                                    title="Edit Date Filed, Amount Paid, Reference No. & Notes"
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                    <span>Edit Details</span>
+                                  </button>
+                                ) : null}
+
+                                {/* Status Selector / Indicator */}
                                 <select
                                   value={form.status}
                                   onChange={(e) => {
-                                    const newStatus = e.target.value as import('../types').FormStatus;
-                                    const updates: Partial<import('../types').BIRForm> = { status: newStatus };
+                                    const newStatus = e.target.value as FormStatus;
+                                    const updates: Partial<BIRForm> = { status: newStatus };
                                     if (newStatus === 'Filed' && !form.dateFiled) updates.dateFiled = new Date().toISOString().split('T')[0];
                                     if (newStatus === 'Paid') {
                                       if (!form.dateFiled) updates.dateFiled = new Date().toISOString().split('T')[0];
@@ -310,13 +349,14 @@ export function ClientList({
                                     }
                                     onUpdateForm(client.id, form.id, updates, formMeta);
                                   }}
-                                  className={`text-xs font-medium rounded-full px-3 py-1 border-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none ${getStatusColor(form.status)}`}
+                                  className={`text-xs font-bold rounded-lg px-2.5 py-1.5 border-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none shadow-xs ${getStatusColor(form.status)}`}
                                 >
                                   <option value="Pending">Pending</option>
-                                  <option value="Processing">Processing</option>
+                                  <option value="Processing">In Processing</option>
                                   <option value="Filed">Filed</option>
                                   {form.taxStatus !== 'W/O Payable' && <option value="Paid">Paid</option>}
                                 </select>
+
                                 <button
                                   onClick={() => onRemoveFormFromClient(client.id, form.id)}
                                   className="text-slate-400 hover:text-red-500 p-1 rounded hover:bg-red-50 transition-colors"
@@ -352,6 +392,24 @@ export function ClientList({
         formReferences={formReferences}
         selectedPeriod={selectedPeriod}
       />
+
+      {payableModalForm && (
+        <UpdatePayableModal
+          isOpen={!!payableModalForm}
+          onClose={() => setPayableModalForm(null)}
+          form={payableModalForm.form}
+          clientName={payableModalForm.clientName}
+          clientTin={payableModalForm.clientTin}
+          onSave={(formId, updates) => {
+            onUpdateForm(
+              payableModalForm.clientId,
+              formId,
+              updates,
+              payableModalForm.formMeta
+            );
+          }}
+        />
+      )}
     </div>
   );
 }
