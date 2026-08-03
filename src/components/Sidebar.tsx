@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, FileText, BookOpen, ChevronLeft, ChevronRight, Calendar, LogOut, Cloud, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, BookOpen, ChevronLeft, ChevronRight, Calendar, CalendarDays, LogOut, Cloud, Menu, X } from 'lucide-react';
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { isSupabaseConfigured } from '../lib/supabase';
@@ -110,7 +110,7 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
                   currentView === 'calendar' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
                 }`}
               >
-                <Calendar className="w-5 h-5 shrink-0" />
+                <CalendarDays className="w-5 h-5 shrink-0" />
                 <span className="font-medium">Workload Calendar</span>
               </button>
 
@@ -241,7 +241,7 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
               currentView === 'calendar' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
             }`}
           >
-            <Calendar className="w-5 h-5 flex-shrink-0" />
+            <CalendarDays className="w-5 h-5 flex-shrink-0" />
             {!isCollapsed && <span className="font-medium truncate">Workload Calendar</span>}
           </button>
           
