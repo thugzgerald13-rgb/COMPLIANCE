@@ -16,10 +16,21 @@ export function AddClientModal({ isOpen, onClose, onAdd, formReferences, selecte
   const [name, setName] = useState('');
   const [tin, setTin] = useState('');
   const [rdo, setRdo] = useState('039');
+  const [isCustomRdo, setIsCustomRdo] = useState(false);
   const [type, setType] = useState<TaxPayerType>('Individual');
   const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
 
   const allowedFormReferences = formReferences.filter(f => isFormAllowedForTaxpayerType(f.code, type));
+
+  const groupedRDOs = React.useMemo<Record<string, typeof birRDOList>>(() => {
+    const groups: Record<string, typeof birRDOList> = {};
+    birRDOList.forEach(r => {
+      const reg = r.region || 'Other District Offices';
+      if (!groups[reg]) groups[reg] = [];
+      groups[reg].push(r);
+    });
+    return groups;
+  }, []);
 
   // Pre-select default forms based on taxpayer type
   useEffect(() => {
@@ -119,24 +130,52 @@ export function AddClientModal({ isOpen, onClose, onAdd, formReferences, selecte
           
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">RDO Code</label>
-              <select 
-                required
-                value={rdo}
-                onChange={e => setRdo(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-sm"
-              >
-                <option value="" disabled className="bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400">Select RDO Office</option>
-                {birRDOList.map(r => (
-                  <option 
-                    key={r.code} 
-                    value={r.code} 
-                    className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-                  >
-                    RDO {r.code} - {r.location}
-                  </option>
-                ))}
-              </select>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">RDO Code</label>
+                <button
+                  type="button"
+                  onClick={() => setIsCustomRdo(!isCustomRdo)}
+                  className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                >
+                  {isCustomRdo ? "Select List" : "Type Custom"}
+                </button>
+              </div>
+
+              {isCustomRdo ? (
+                <input
+                  required
+                  type="text"
+                  value={rdo}
+                  onChange={e => setRdo(e.target.value)}
+                  placeholder="e.g. 039 or 054A"
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-sm"
+                />
+              ) : (
+                <select 
+                  required
+                  value={rdo}
+                  onChange={e => setRdo(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-sm"
+                >
+                  <option value="" disabled className="bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400">Select RDO Office</option>
+                  {Object.keys(groupedRDOs).map(region => {
+                    const rdos = groupedRDOs[region];
+                    return (
+                      <optgroup key={region} label={region} className="bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-200 font-bold">
+                        {rdos.map(r => (
+                          <option 
+                            key={r.code} 
+                            value={r.code} 
+                            className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-normal"
+                          >
+                            RDO {r.code} - {r.location}
+                          </option>
+                        ))}
+                      </optgroup>
+                    );
+                  })}
+                </select>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Type</label>
