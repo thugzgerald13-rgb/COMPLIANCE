@@ -121,9 +121,32 @@ export async function triggerBrowserNotification(title: string, body: string, da
 }
 
 // Trigger a test Web Push notification for user verification
-export async function sendTestWebPushNotification(): Promise<{ success: boolean; message: string }> {
+export async function sendTestWebPushNotification(): Promise<{ success: boolean; message: string; nativePushed: boolean }> {
+  playNotificationChime();
+
+  // Create a log entry for history tracking
+  const currentLogs = loadNotificationLogs();
+  const testLog: NotificationLog = {
+    id: 'push-test-' + Date.now(),
+    clientId: 'all',
+    clientName: 'Web Push Subscriber',
+    clientEmail: 'webpush@bizcomply.ph',
+    formCode: 'WEB-PUSH',
+    formDescription: 'BIR Tax Compliance Push Alert',
+    deadline: new Date().toISOString().split('T')[0],
+    type: 'Web Push',
+    status: 'Sent',
+    timestamp: new Date().toISOString(),
+    message: 'Web Push test alert dispatched for BIR tax deadline reminders'
+  };
+  saveNotificationLogs([testLog, ...currentLogs]);
+
   if (!('Notification' in window)) {
-    return { success: false, message: 'Web Push Notifications are not supported in this browser.' };
+    return { 
+      success: true, 
+      nativePushed: false, 
+      message: 'Web Push test alert simulated in app! (Web Push API unavailable in this browser).' 
+    };
   }
 
   let perm: string = Notification.permission;
@@ -131,21 +154,25 @@ export async function sendTestWebPushNotification(): Promise<{ success: boolean;
     perm = await requestWebPushPermission();
   }
 
-  if (perm !== 'granted') {
-    return { success: false, message: 'Web Push permission was not granted by browser settings.' };
-  }
+  if (perm === 'granted') {
+    const success = await triggerBrowserNotification(
+      'BIZ-COMPLY Web Push Test',
+      'Web Push Notifications are active! You will receive instant alerts for upcoming BIR tax deadlines.'
+    );
 
-  playNotificationChime();
-  const success = await triggerBrowserNotification(
-    'BIZ-COMPLY Web Push Test',
-    'Web Push Notifications are active! You will receive instant alerts for upcoming BIR tax deadlines.'
-  );
+    return {
+      success: true,
+      nativePushed: success,
+      message: success
+        ? 'Native Web Push Notification dispatched to your desktop!'
+        : 'Web Push test alert logged and simulated in app!'
+    };
+  }
 
   return {
     success: true,
-    message: success
-      ? 'Web Push Notification test dispatched successfully!'
-      : 'Notification permission is granted. (Note: standard browser notifications display when allowed)'
+    nativePushed: false,
+    message: 'Web Push alert simulated with chime sound! (To grant OS native push popups, open app in a new tab).'
   };
 }
 

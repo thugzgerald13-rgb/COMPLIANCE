@@ -123,8 +123,9 @@ export function NotificationHubModal({
     if (typeof window !== 'undefined' && 'Notification' in window) {
       setPushPermission(Notification.permission);
     }
+    setLogs(loadNotificationLogs());
     setDispatchSuccessMsg(result.message);
-    setTimeout(() => setDispatchSuccessMsg(null), 4000);
+    setTimeout(() => setDispatchSuccessMsg(null), 5000);
   };
 
   return (
