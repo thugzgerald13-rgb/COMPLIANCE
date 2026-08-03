@@ -77,8 +77,8 @@ export function ClientList({
     <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">My Clients</h1>
-          <p className="text-xs text-slate-500 mt-0.5">Manage your active taxpayer clients and compliance deadlines</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">My Clients</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Manage your active taxpayer clients and compliance deadlines</p>
         </div>
         <div className="flex items-center space-x-3 w-full sm:w-auto">
           {clients.length > 0 && onClearAllClients && (
@@ -88,17 +88,17 @@ export function ClientList({
                   onClearAllClients();
                 }
               }}
-              className="text-xs text-slate-500 hover:text-red-600 px-3 py-2 border border-slate-200 hover:border-red-200 rounded-lg transition-colors bg-white shadow-sm cursor-pointer"
+              className="text-xs text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 px-3 py-2 border border-slate-200 dark:border-slate-800 hover:border-red-200 dark:hover:border-red-900/50 rounded-lg transition-colors bg-white dark:bg-slate-900 shadow-sm cursor-pointer"
             >
               Clear All Clients
             </button>
           )}
           <div className="relative flex-1 sm:flex-none">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 w-4 h-4" />
             <input 
               type="text" 
               placeholder="Search clients or TIN..." 
-              className="pl-9 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64 text-xs"
+              className="pl-9 pr-4 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64 text-xs"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -114,7 +114,7 @@ export function ClientList({
       </div>
 
       {clients.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-xl border border-slate-100 shadow-sm">
+        <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
           <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
             <Users className="w-8 h-8" />
           </div>

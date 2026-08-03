@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Client, TaxPayerType, FormReference, BIRForm } from '../types';
 import { X, CheckSquare, Square } from 'lucide-react';
 import { isFormAllowedForTaxpayerType, calculateDeadline, formatTIN } from '../utils';
+import { birRDOList } from '../rdoData';
 
 interface AddClientModalProps {
   isOpen: boolean;
@@ -14,7 +15,7 @@ interface AddClientModalProps {
 export function AddClientModal({ isOpen, onClose, onAdd, formReferences, selectedPeriod }: AddClientModalProps) {
   const [name, setName] = useState('');
   const [tin, setTin] = useState('');
-  const [rdo, setRdo] = useState('');
+  const [rdo, setRdo] = useState('039');
   const [type, setType] = useState<TaxPayerType>('Individual');
   const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
 
@@ -119,14 +120,23 @@ export function AddClientModal({ isOpen, onClose, onAdd, formReferences, selecte
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">RDO Code</label>
-              <input 
+              <select 
                 required
-                type="text" 
                 value={rdo}
                 onChange={e => setRdo(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-sm"
-                placeholder="039"
-              />
+                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-sm"
+              >
+                <option value="" disabled className="bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400">Select RDO Office</option>
+                {birRDOList.map(r => (
+                  <option 
+                    key={r.code} 
+                    value={r.code} 
+                    className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                  >
+                    RDO {r.code} - {r.location}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Type</label>
