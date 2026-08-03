@@ -235,7 +235,7 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Dashboard Overview</h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Click any pending or in-processing reference below to update its compliance status & details</p>
+          <p className="text-xs text-slate-600 dark:text-slate-300 font-medium mt-0.5">Click any pending or in-processing reference below to update its compliance status & details</p>
         </div>
       </div>
       
@@ -264,7 +264,7 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
                   <stat.icon className={`w-6 h-6 ${stat.color}`} />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{stat.title}</p>
+                  <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">{stat.title}</p>
                   <p className="text-2xl font-bold text-slate-900 dark:text-white">{stat.value}</p>
                 </div>
               </div>
@@ -281,32 +281,32 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
               <Calendar className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
               Pending & In Processing References
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-600 dark:text-slate-300 font-medium mt-0.5">
               Click any row or use the Edit button to open full reference controls
             </p>
           </div>
 
-          <div className="flex items-center space-x-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg text-xs">
+          <div className="flex items-center space-x-1 bg-slate-100 dark:bg-slate-800/90 p-1 rounded-lg text-xs border border-slate-200 dark:border-slate-700">
             <button
               onClick={() => setFilterStatus('all')}
-              className={`px-3 py-1.5 rounded-md font-medium transition-colors cursor-pointer ${
-                filterStatus === 'all' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              className={`px-3 py-1.5 rounded-md font-semibold transition-colors cursor-pointer ${
+                filterStatus === 'all' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               All Active ({pendingForms + processingForms})
             </button>
             <button
               onClick={() => setFilterStatus('Pending')}
-              className={`px-3 py-1.5 rounded-md font-medium transition-colors cursor-pointer ${
-                filterStatus === 'Pending' ? 'bg-white dark:bg-slate-700 text-red-700 dark:text-red-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              className={`px-3 py-1.5 rounded-md font-semibold transition-colors cursor-pointer ${
+                filterStatus === 'Pending' ? 'bg-white dark:bg-slate-700 text-red-700 dark:text-red-400 shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               Pending ({pendingForms})
             </button>
             <button
               onClick={() => setFilterStatus('Processing')}
-              className={`px-3 py-1.5 rounded-md font-medium transition-colors cursor-pointer ${
-                filterStatus === 'Processing' ? 'bg-white dark:bg-slate-700 text-amber-700 dark:text-amber-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              className={`px-3 py-1.5 rounded-md font-semibold transition-colors cursor-pointer ${
+                filterStatus === 'Processing' ? 'bg-white dark:bg-slate-700 text-amber-700 dark:text-amber-400 shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               In Processing ({processingForms})
