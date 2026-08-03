@@ -39,7 +39,7 @@ export function FormsDirectory({ forms, onAddFormReference, onDeleteFormReferenc
   };
 
   return (
-    <div className="p-8">
+    <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <h1 className="text-2xl font-bold text-slate-900 flex items-center">
           <BookOpen className="w-6 h-6 mr-3 text-blue-600" />

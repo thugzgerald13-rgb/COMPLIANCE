@@ -66,7 +66,7 @@ export function ClientList({
   };
 
   return (
-    <div className="p-8">
+    <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">My Clients</h1>

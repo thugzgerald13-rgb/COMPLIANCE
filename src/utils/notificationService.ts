@@ -134,6 +134,7 @@ export function saveNotificationSettings(settings: NotificationSettings, userEma
 export interface DueItemForNotification {
   clientId: string;
   clientName: string;
+  clientTin?: string;
   clientEmail?: string;
   clientPhone?: string;
   form: BIRForm;
@@ -141,9 +142,10 @@ export interface DueItemForNotification {
   diffDays: number;
   isDueToday: boolean;
   isOverdue: boolean;
+  isUpcoming: boolean;
 }
 
-// Find forms due today or overdue that are NOT filed or paid
+// Find forms due today, overdue, or upcoming in the next 7 days that are NOT filed or paid
 export function getDueFormsForNotification(
   clients: Client[],
   formReferences: FormReference[],
@@ -172,12 +174,14 @@ export function getDueFormsForNotification(
 
       const isDueToday = diffDays === 0;
       const isOverdue = diffDays < 0;
+      const isUpcoming = diffDays > 0 && diffDays <= 7;
 
-      // Include if due today or overdue
-      if (isDueToday || isOverdue) {
+      // Include if due today, overdue, or upcoming within 7 days
+      if (isDueToday || isOverdue || isUpcoming) {
         dueItems.push({
           clientId: client.id,
           clientName: client.name,
+          clientTin: client.tin,
           clientEmail: client.email,
           clientPhone: client.phone,
           form,
@@ -185,15 +189,17 @@ export function getDueFormsForNotification(
           diffDays,
           isDueToday,
           isOverdue,
+          isUpcoming,
         });
       }
     }
   }
 
-  return dueItems;
+  // Sort by urgency: overdue first (most negative diffDays), then due today, then upcoming (1 to 7)
+  return dueItems.sort((a, b) => a.diffDays - b.diffDays);
 }
 
-// Trigger automated email and phone notifications for due/overdue items
+// Trigger automated email and phone notifications for due/overdue/upcoming items
 export function dispatchAutomatedNotifications(
   dueItems: DueItemForNotification[],
   settings: NotificationSettings
@@ -214,7 +220,11 @@ export function dispatchAutomatedNotifications(
       const emailRecipient = item.clientEmail || settings.defaultNotificationEmail;
       const phoneRecipient = item.clientPhone || settings.defaultNotificationPhone;
 
-      const timingText = item.isDueToday ? 'DUE TODAY' : `OVERDUE by ${Math.abs(item.diffDays)} days`;
+      const timingText = item.isDueToday 
+        ? 'DUE TODAY' 
+        : item.isOverdue 
+        ? `OVERDUE by ${Math.abs(item.diffDays)} days` 
+        : `DUE IN ${item.diffDays} DAY${item.diffDays > 1 ? 'S' : ''}`;
 
       const emailMsg = `[AUTOMATED EMAIL SENT] To: ${emailRecipient} | Subject: URGENT: ${item.form.code} is ${timingText} (${item.deadline}) for ${item.clientName}. Status: ${item.form.status}. Please file/pay immediately to prevent BIR fines.`;
 

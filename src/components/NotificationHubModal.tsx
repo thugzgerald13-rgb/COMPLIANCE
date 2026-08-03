@@ -128,6 +128,7 @@ export function NotificationHubModal({
 
   const dueTodayCount = dueItems.filter(i => i.isDueToday).length;
   const overdueCount = dueItems.filter(i => i.isOverdue).length;
+  const upcomingCount = dueItems.filter(i => i.isUpcoming).length;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
@@ -228,7 +229,7 @@ export function NotificationHubModal({
                   <div>
                     <h3 className="text-sm font-bold text-slate-900">Automated Notification Status</h3>
                     <p className="text-xs text-slate-600">
-                      {dueTodayCount} due today, {overdueCount} overdue form(s) currently require email & SMS notifications.
+                      {overdueCount} overdue, {dueTodayCount} due today, and {upcomingCount} upcoming in the next 7 days.
                     </p>
                   </div>
                 </div>
@@ -267,13 +268,19 @@ export function NotificationHubModal({
                         className={`p-4 rounded-xl border transition-all ${
                           item.isOverdue 
                             ? 'bg-red-50/40 border-red-200' 
-                            : 'bg-white border-slate-200'
+                            : item.isDueToday
+                            ? 'bg-amber-50/40 border-amber-200'
+                            : 'bg-blue-50/30 border-blue-100'
                         }`}
                       >
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                           <div className="flex items-start space-x-3">
                             <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
-                              item.isOverdue ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'
+                              item.isOverdue 
+                                ? 'bg-red-100 text-red-700' 
+                                : item.isDueToday
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-blue-100 text-blue-800'
                             }`}>
                               {item.form.code}
                             </div>
@@ -281,9 +288,17 @@ export function NotificationHubModal({
                               <div className="flex items-center space-x-2">
                                 <span className="font-bold text-slate-900 text-sm">{item.clientName}</span>
                                 <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
-                                  item.isOverdue ? 'bg-red-600 text-white' : 'bg-amber-500 text-white'
+                                  item.isOverdue 
+                                    ? 'bg-red-600 text-white' 
+                                    : item.isDueToday 
+                                    ? 'bg-amber-500 text-white' 
+                                    : 'bg-blue-600 text-white'
                                 }`}>
-                                  {item.isDueToday ? 'DUE TODAY' : `OVERDUE ${Math.abs(item.diffDays)}D`}
+                                  {item.isOverdue 
+                                    ? `OVERDUE ${Math.abs(item.diffDays)}D` 
+                                    : item.isDueToday 
+                                    ? 'DUE TODAY' 
+                                    : `DUE IN ${item.diffDays}D`}
                                 </span>
                               </div>
                               <p className="text-xs text-slate-600 mt-0.5">{item.form.description}</p>

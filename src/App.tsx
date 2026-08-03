@@ -30,7 +30,7 @@ function MainContent() {
   }
 
   return (
-    <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
+    <div className="flex flex-col md:flex-row h-screen h-[100dvh] bg-slate-50 font-sans overflow-hidden">
       <Sidebar 
         currentView={currentView} 
         onChangeView={setCurrentView} 
