@@ -1,5 +1,5 @@
 import { LayoutDashboard, Users, FileText, BookOpen, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Calendar, CalendarDays, LogOut, Cloud, Menu, X, Settings, Sun, Moon } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { isSupabaseConfigured } from '../lib/supabase';
@@ -63,9 +63,29 @@ export function Sidebar({
     return name.slice(0, 2).toUpperCase();
   };
 
+  const desktopUserMenuRef = useRef<HTMLDivElement>(null);
+  const mobileUserMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isUserMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        (desktopUserMenuRef.current && desktopUserMenuRef.current.contains(target)) ||
+        (mobileUserMenuRef.current && mobileUserMenuRef.current.contains(target))
+      ) {
+        return;
+      }
+      setIsUserMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isUserMenuOpen]);
+
   const handleNavClick = (view: 'dashboard' | 'clients' | 'forms' | 'calendar') => {
     onChangeView(view);
     setIsMobileOpen(false);
+    setIsUserMenuOpen(false);
   };
 
   return (
@@ -174,7 +194,7 @@ export function Sidebar({
               </button>
             </nav>
 
-            <div className="p-3 border-t border-slate-800 space-y-2">
+            <div ref={mobileUserMenuRef} className="p-3 border-t border-slate-800 space-y-2">
               <div className="flex items-center justify-between px-1 text-[11px] text-slate-400">
                 <div className="flex items-center space-x-1.5">
                   <Cloud className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
@@ -311,7 +331,10 @@ export function Sidebar({
           </div>
 
           <button
-            onClick={() => onChangeView('dashboard')}
+            onClick={() => {
+              onChangeView('dashboard');
+              setIsUserMenuOpen(false);
+            }}
             title={isCollapsed ? "Dashboard" : undefined}
             className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'space-x-3 px-3'} py-3 rounded-lg transition-colors cursor-pointer ${
               currentView === 'dashboard' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
@@ -322,7 +345,10 @@ export function Sidebar({
           </button>
 
           <button
-            onClick={() => onChangeView('calendar')}
+            onClick={() => {
+              onChangeView('calendar');
+              setIsUserMenuOpen(false);
+            }}
             title={isCollapsed ? "Workload Calendar" : undefined}
             className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'space-x-3 px-3'} py-3 rounded-lg transition-colors cursor-pointer ${
               currentView === 'calendar' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
@@ -333,7 +359,10 @@ export function Sidebar({
           </button>
           
           <button
-            onClick={() => onChangeView('clients')}
+            onClick={() => {
+              onChangeView('clients');
+              setIsUserMenuOpen(false);
+            }}
             title={isCollapsed ? "My Clients" : undefined}
             className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'space-x-3 px-3'} py-3 rounded-lg transition-colors cursor-pointer ${
               currentView === 'clients' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
@@ -344,7 +373,10 @@ export function Sidebar({
           </button>
 
           <button
-            onClick={() => onChangeView('forms')}
+            onClick={() => {
+              onChangeView('forms');
+              setIsUserMenuOpen(false);
+            }}
             title={isCollapsed ? "Monitoring Reference" : undefined}
             className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'space-x-3 px-3'} py-3 rounded-lg transition-colors cursor-pointer ${
               currentView === 'forms' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
@@ -356,7 +388,7 @@ export function Sidebar({
         </nav>
 
         {/* User Profile Footer - Clickable for Settings & Notification Hub */}
-        <div className="p-3 border-t border-slate-800 relative space-y-2">
+        <div ref={desktopUserMenuRef} className="p-3 border-t border-slate-800 relative space-y-2">
           {!isCollapsed && (
             <div className="flex items-center justify-between px-1 text-[11px] text-slate-400">
               <div className="flex items-center space-x-1.5">
@@ -371,21 +403,24 @@ export function Sidebar({
 
           {/* Collapsible Menu Options */}
           {isUserMenuOpen && (
-            <div className="bg-slate-800 border border-slate-700 rounded-xl p-1.5 space-y-1 shadow-2xl text-slate-100 animate-in fade-in slide-in-from-bottom-2 duration-150">
+            <div className={`bg-slate-800 border border-slate-700 rounded-xl p-1.5 space-y-1 shadow-2xl text-slate-100 animate-in fade-in slide-in-from-bottom-2 duration-150 ${isCollapsed ? 'flex flex-col items-center justify-center' : ''}`}>
               <button
-                onClick={() => toggleTheme()}
-                className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-slate-700/80 transition-colors cursor-pointer"
-                title="Toggle Dark / Light mode"
+                onClick={() => {
+                  toggleTheme();
+                  setIsUserMenuOpen(false);
+                }}
+                className={`w-full flex items-center ${isCollapsed ? 'justify-center p-2' : 'space-x-2.5 px-3 py-2'} rounded-lg text-xs font-semibold hover:bg-slate-700/80 transition-colors cursor-pointer`}
+                title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
               >
                 {theme === 'dark' ? (
                   <>
-                    <Sun className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>Theme: Light Mode</span>
+                    <Sun className="w-4.5 h-4.5 text-amber-400 shrink-0" />
+                    {!isCollapsed && <span>Theme: Light Mode</span>}
                   </>
                 ) : (
                   <>
-                    <Moon className="w-4 h-4 text-blue-400 shrink-0" />
-                    <span>Theme: Dark Mode</span>
+                    <Moon className="w-4.5 h-4.5 text-blue-400 shrink-0" />
+                    {!isCollapsed && <span>Theme: Dark Mode</span>}
                   </>
                 )}
               </button>
@@ -395,11 +430,11 @@ export function Sidebar({
                   setIsSettingsOpen(true);
                   setIsUserMenuOpen(false);
                 }}
-                className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-slate-700/80 transition-colors cursor-pointer"
+                className={`w-full flex items-center ${isCollapsed ? 'justify-center p-2' : 'space-x-2.5 px-3 py-2'} rounded-lg text-xs font-semibold hover:bg-slate-700/80 transition-colors cursor-pointer`}
                 title="Automated Email & Phone Dispatcher Settings"
               >
-                <Settings className="w-4 h-4 text-blue-400 shrink-0" />
-                <span>Settings</span>
+                <Settings className="w-4.5 h-4.5 text-blue-400 shrink-0" />
+                {!isCollapsed && <span>Settings</span>}
               </button>
 
               <button
@@ -407,11 +442,11 @@ export function Sidebar({
                   setIsUserMenuOpen(false);
                   logout();
                 }}
-                className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-red-400 hover:bg-red-950/40 transition-colors cursor-pointer border-t border-slate-700/50 pt-2 mt-1"
+                className={`w-full flex items-center ${isCollapsed ? 'justify-center p-2' : 'space-x-2.5 px-3 py-2'} rounded-lg text-xs font-semibold text-red-400 hover:bg-red-950/40 transition-colors cursor-pointer border-t border-slate-700/50 pt-2 ${isCollapsed ? 'mt-0' : 'mt-1'}`}
                 title="Sign Out of Account"
               >
-                <LogOut className="w-4 h-4 shrink-0" />
-                <span>Logout</span>
+                <LogOut className="w-4.5 h-4.5 shrink-0" />
+                {!isCollapsed && <span>Logout</span>}
               </button>
             </div>
           )}

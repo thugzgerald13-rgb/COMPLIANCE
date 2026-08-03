@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Sun, Moon } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
 import { CalendarView } from './components/CalendarView';
@@ -46,28 +45,6 @@ function MainContent() {
       />
       
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-        {/* Upper Right Corner Header Theme Toggle */}
-        <div className="absolute top-4 right-4 sm:top-6 sm:right-8 z-30 flex items-center">
-          <button
-            onClick={toggleTheme}
-            className="flex items-center space-x-2 px-3 py-2 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer font-bold text-xs"
-            title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
-            aria-label="Toggle theme mode"
-          >
-            {theme === 'dark' ? (
-              <>
-                <Sun className="w-4 h-4 text-amber-400" />
-                <span>Light Mode</span>
-              </>
-            ) : (
-              <>
-                <Moon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span>Dark Mode</span>
-              </>
-            )}
-          </button>
-        </div>
-
         <main className="flex-1 h-full overflow-y-auto pt-2 sm:pt-0">
           {currentView === 'dashboard' && (
             <Dashboard 
