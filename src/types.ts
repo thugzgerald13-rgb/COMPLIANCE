@@ -51,11 +51,10 @@ export interface NotificationLog {
   clientId: string;
   clientName: string;
   clientEmail?: string;
-  clientPhone?: string;
   formCode: string;
   formDescription: string;
   deadline: string;
-  type: 'Email' | 'Phone (SMS)' | 'Both';
+  type: 'Email';
   status: 'Sent' | 'Delivered' | 'Failed';
   timestamp: string;
   message: string;

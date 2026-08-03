@@ -248,7 +248,6 @@ export function CalendarView({
       soundEnabled: true,
       browserNotificationsEnabled: true,
       defaultNotificationEmail: event.clientEmail || 'client@example.com',
-      defaultNotificationPhone: event.clientPhone || '+639170000000'
     };
 
     const isDueToday = event.deadlineDateStr === todayStr;
@@ -261,7 +260,6 @@ export function CalendarView({
         clientName: event.clientName,
         clientTin: event.clientTin,
         clientEmail: event.clientEmail,
-        clientPhone: event.clientPhone,
         form: event.form,
         deadline: event.deadlineDateStr,
         diffDays: 0,
@@ -271,7 +269,7 @@ export function CalendarView({
       }
     ], settings);
 
-    showToast(`Reminder alert sent to ${event.clientName}!`);
+    showToast(`Email reminder alert sent to ${event.clientName}!`);
   };
 
   const showToast = (msg: string) => {

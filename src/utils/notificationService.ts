@@ -9,7 +9,6 @@ export interface NotificationSettings {
   soundEnabled: boolean;
   browserNotificationsEnabled: boolean;
   defaultNotificationEmail: string;
-  defaultNotificationPhone: string;
 }
 
 export const defaultNotificationSettings: NotificationSettings = {
@@ -17,7 +16,6 @@ export const defaultNotificationSettings: NotificationSettings = {
   soundEnabled: true,
   browserNotificationsEnabled: true,
   defaultNotificationEmail: '',
-  defaultNotificationPhone: '',
 };
 
 // Play audio chime using Web Audio API synthesizer
@@ -97,26 +95,20 @@ export function loadNotificationSettings(userEmail?: string): NotificationSettin
       const email = (parsed.defaultNotificationEmail && parsed.defaultNotificationEmail !== 'compliance@bizcomply.ph')
         ? parsed.defaultNotificationEmail
         : (userEmail || '');
-      const phone = (parsed.defaultNotificationPhone && parsed.defaultNotificationPhone !== '+639171234567')
-        ? parsed.defaultNotificationPhone
-        : '';
       return {
         ...defaultNotificationSettings,
         ...parsed,
         defaultNotificationEmail: email,
-        defaultNotificationPhone: phone,
       };
     }
     return {
       ...defaultNotificationSettings,
       defaultNotificationEmail: userEmail || '',
-      defaultNotificationPhone: '',
     };
   } catch {
     return {
       ...defaultNotificationSettings,
       defaultNotificationEmail: userEmail || '',
-      defaultNotificationPhone: '',
     };
   }
 }
@@ -136,7 +128,6 @@ export interface DueItemForNotification {
   clientName: string;
   clientTin?: string;
   clientEmail?: string;
-  clientPhone?: string;
   form: BIRForm;
   deadline: string;
   diffDays: number;
@@ -183,7 +174,6 @@ export function getDueFormsForNotification(
           clientName: client.name,
           clientTin: client.tin,
           clientEmail: client.email,
-          clientPhone: client.phone,
           form,
           deadline: form.deadline,
           diffDays,
@@ -199,7 +189,7 @@ export function getDueFormsForNotification(
   return dueItems.sort((a, b) => a.diffDays - b.diffDays);
 }
 
-// Trigger automated email and phone notifications for due/overdue/upcoming items
+// Trigger automated email notifications for due/overdue/upcoming items
 export function dispatchAutomatedNotifications(
   dueItems: DueItemForNotification[],
   settings: NotificationSettings
@@ -218,7 +208,6 @@ export function dispatchAutomatedNotifications(
     if (!existingLog) {
       newDispatchesCount++;
       const emailRecipient = item.clientEmail || settings.defaultNotificationEmail;
-      const phoneRecipient = item.clientPhone || settings.defaultNotificationPhone;
 
       const timingText = item.isDueToday 
         ? 'DUE TODAY' 
@@ -226,9 +215,7 @@ export function dispatchAutomatedNotifications(
         ? `OVERDUE by ${Math.abs(item.diffDays)} days` 
         : `DUE IN ${item.diffDays} DAY${item.diffDays > 1 ? 'S' : ''}`;
 
-      const emailMsg = `[AUTOMATED EMAIL SENT] To: ${emailRecipient} | Subject: URGENT: ${item.form.code} is ${timingText} (${item.deadline}) for ${item.clientName}. Status: ${item.form.status}. Please file/pay immediately to prevent BIR fines.`;
-
-      const phoneMsg = `[AUTOMATED SMS SENT] To: ${phoneRecipient} | Alert: BIZ-COMPLY Reminder: BIR Form ${item.form.code} for ${item.clientName} is ${timingText} (${item.deadline}). Unfiled/Unpaid!`;
+      const emailMsg = `[AUTOMATED EMAIL SENT] To: ${emailRecipient || 'Recipient'} | Subject: URGENT: BIR Form ${item.form.code} is ${timingText} (${item.deadline}) for ${item.clientName}. Status: ${item.form.status}. Please file/pay immediately to prevent BIR fines.`;
 
       // Email log
       newLogs.push({
@@ -236,7 +223,6 @@ export function dispatchAutomatedNotifications(
         clientId: item.clientId,
         clientName: item.clientName,
         clientEmail: emailRecipient,
-        clientPhone: phoneRecipient,
         formCode: item.form.code,
         formDescription: item.form.description,
         deadline: item.deadline,
@@ -247,27 +233,10 @@ export function dispatchAutomatedNotifications(
         isOverdue: item.isOverdue,
       });
 
-      // Phone SMS log
-      newLogs.push({
-        id: crypto.randomUUID(),
-        clientId: item.clientId,
-        clientName: item.clientName,
-        clientEmail: emailRecipient,
-        clientPhone: phoneRecipient,
-        formCode: item.form.code,
-        formDescription: item.form.description,
-        deadline: item.deadline,
-        type: 'Phone (SMS)',
-        status: 'Sent',
-        timestamp: new Date().toISOString(),
-        message: phoneMsg,
-        isOverdue: item.isOverdue,
-      });
-
       if (settings.browserNotificationsEnabled) {
         triggerBrowserNotification(
           `BIZ-COMPLY Alert: ${item.form.code} ${timingText}`,
-          `${item.clientName} - Form ${item.form.code} is still ${item.form.status}. Automated email & SMS dispatched.`
+          `${item.clientName} - Form ${item.form.code} is still ${item.form.status}. Automated email notification dispatched.`
         );
       }
     }

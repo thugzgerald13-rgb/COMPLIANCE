@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Client, FormStatus, FormReference, BIRForm } from '../types';
-import { Search, ChevronDown, ChevronRight, FileText, Plus, Trash2, XCircle, Users, Mail, Phone, Edit3 } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, FileText, Plus, Trash2, XCircle, Users, Mail, Edit3 } from 'lucide-react';
 import { AddClientModal } from './AddClientModal';
 import { UpdatePayableModal } from './UpdatePayableModal';
 import { isFormAllowedForTaxpayerType, calculateDeadline, isFormVisibleForPeriod, getEffectiveDeadline, getComplianceStatusInfo, getComplianceDeadlineForPeriod, getFormsForClientAndPeriod } from '../utils';
@@ -189,14 +189,10 @@ export function ClientList({
                   <div className="bg-slate-50 p-4 border-t border-slate-100 pl-10 space-y-4">
                     {/* Contact channels summary banner */}
                     <div className="flex flex-wrap items-center gap-3 bg-white p-2.5 rounded-lg border border-slate-200 text-xs">
-                      <span className="font-semibold text-slate-700">Notification Contacts:</span>
+                      <span className="font-semibold text-slate-700">Notification Email:</span>
                       <span className="flex items-center space-x-1 text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
                         <Mail className="w-3 h-3 text-blue-600" />
                         <span>{client.email || 'Default System Email'}</span>
-                      </span>
-                      <span className="flex items-center space-x-1 text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
-                        <Phone className="w-3 h-3 text-emerald-600" />
-                        <span>{client.phone || 'Default System SMS'}</span>
                       </span>
                     </div>
 
