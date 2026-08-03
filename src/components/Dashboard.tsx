@@ -237,28 +237,6 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Dashboard Overview</h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Click any pending or in-processing reference below to update its compliance status & details</p>
         </div>
-
-        {/* Automated Email & Phone Notification Trigger Hub Button */}
-        <button
-          onClick={() => setIsNotificationHubOpen(true)}
-          className={`flex items-center space-x-2.5 px-4 py-2.5 rounded-xl border transition-all cursor-pointer shadow-sm text-xs font-bold ${
-            dueItems.length > 0 
-              ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-400 shadow-amber-500/20 animate-pulse' 
-              : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-800'
-          }`}
-        >
-          <Bell className="w-4 h-4" />
-          <span>Automated Email & Phone Dispatcher</span>
-          {dueItems.length > 0 ? (
-            <span className="bg-red-600 text-white text-[10px] px-2 py-0.5 rounded-full font-extrabold">
-              {dueItems.length} DUE ALERTS
-            </span>
-          ) : (
-            <span className="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-medium">
-              Active
-            </span>
-          )}
-        </button>
       </div>
       
       {/* Stat Cards */}
@@ -615,17 +593,6 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
           </div>
         </div>
       )}
-
-      {/* Notification Hub Modal */}
-      <NotificationHubModal
-        isOpen={isNotificationHubOpen}
-        onClose={() => setIsNotificationHubOpen(false)}
-        dueItems={dueItems}
-        settings={notificationSettings}
-        onUpdateSettings={setNotificationSettings}
-        onUpdateForm={onUpdateForm}
-        selectedPeriod={selectedPeriod}
-      />
     </div>
   );
 }

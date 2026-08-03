@@ -40,6 +40,9 @@ function MainContent() {
         onChangeView={setCurrentView} 
         selectedPeriod={selectedPeriod}
         onChangePeriod={setSelectedPeriod}
+        clients={clients}
+        formReferences={forms}
+        onUpdateForm={updateForm}
       />
       
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">

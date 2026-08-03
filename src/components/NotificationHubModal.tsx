@@ -41,8 +41,8 @@ export function NotificationHubModal({
   onUpdateForm,
   selectedPeriod
 }: NotificationHubModalProps) {
-  const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'alerts' | 'logs' | 'settings'>('alerts');
+  const { user, logout } = useAuth();
+  const [activeTab, setActiveTab] = useState<'profile' | 'alerts' | 'logs' | 'settings'>('alerts');
   const [logs, setLogs] = useState<NotificationLog[]>(loadNotificationLogs());
   const [isDispatching, setIsDispatching] = useState(false);
   const [dispatchSuccessMsg, setDispatchSuccessMsg] = useState<string | null>(null);
@@ -132,7 +132,7 @@ export function NotificationHubModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150 text-slate-900 dark:text-slate-100">
         
         {/* Header */}
         <div className="p-6 bg-slate-900 text-white flex items-center justify-between relative overflow-hidden">
@@ -140,38 +140,50 @@ export function NotificationHubModal({
           
           <div className="flex items-center space-x-3 z-10">
             <div className="w-12 h-12 bg-blue-600/30 border border-blue-500/40 rounded-xl flex items-center justify-center text-blue-400">
-              <Bell className="w-6 h-6 animate-pulse" />
+              <Settings className="w-6 h-6 animate-pulse" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h2 className="text-xl font-bold tracking-tight text-white">Automated Dispatch Hub</h2>
+                <h2 className="text-xl font-bold tracking-tight text-white">Settings & Dispatcher Hub</h2>
                 <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center space-x-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                  <span>Email & Phone Sync Active</span>
+                  <span>Email & SMS Gateway Active</span>
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Automated email and phone (SMS) alerts for unfiled or unpaid compliance deadlines
+                Manage user profile, system configurations & automated email/phone dispatchers
               </p>
             </div>
           </div>
 
           <button 
             onClick={onClose}
-            className="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition-colors z-10"
+            className="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition-colors z-10 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-slate-100 bg-slate-50 px-6 pt-2">
+        <div className="flex border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-6 pt-2 overflow-x-auto">
+          <button
+            onClick={() => setActiveTab('profile')}
+            className={`px-4 py-3 text-xs font-bold border-b-2 transition-colors flex items-center space-x-2 shrink-0 cursor-pointer ${
+              activeTab === 'profile'
+                ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-900 rounded-t-lg'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
+          >
+            <User className="w-4 h-4 text-blue-500" />
+            <span>User Account</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('alerts')}
-            className={`px-4 py-3 text-xs font-bold border-b-2 transition-colors flex items-center space-x-2 ${
+            className={`px-4 py-3 text-xs font-bold border-b-2 transition-colors flex items-center space-x-2 shrink-0 cursor-pointer ${
               activeTab === 'alerts'
-                ? 'border-blue-600 text-blue-600 bg-white rounded-t-lg'
-                : 'border-transparent text-slate-500 hover:text-slate-900'
+                ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-900 rounded-t-lg'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
             <AlertTriangle className="w-4 h-4 text-amber-500" />
@@ -185,10 +197,10 @@ export function NotificationHubModal({
 
           <button
             onClick={() => setActiveTab('logs')}
-            className={`px-4 py-3 text-xs font-bold border-b-2 transition-colors flex items-center space-x-2 ${
+            className={`px-4 py-3 text-xs font-bold border-b-2 transition-colors flex items-center space-x-2 shrink-0 cursor-pointer ${
               activeTab === 'logs'
-                ? 'border-blue-600 text-blue-600 bg-white rounded-t-lg'
-                : 'border-transparent text-slate-500 hover:text-slate-900'
+                ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-900 rounded-t-lg'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
             <History className="w-4 h-4" />
@@ -197,14 +209,14 @@ export function NotificationHubModal({
 
           <button
             onClick={() => setActiveTab('settings')}
-            className={`px-4 py-3 text-xs font-bold border-b-2 transition-colors flex items-center space-x-2 ${
+            className={`px-4 py-3 text-xs font-bold border-b-2 transition-colors flex items-center space-x-2 shrink-0 cursor-pointer ${
               activeTab === 'settings'
-                ? 'border-blue-600 text-blue-600 bg-white rounded-t-lg'
-                : 'border-transparent text-slate-500 hover:text-slate-900'
+                ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-900 rounded-t-lg'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
             <Settings className="w-4 h-4" />
-            <span>Gateway Settings</span>
+            <span>Gateway Preferences</span>
           </button>
         </div>
 
@@ -212,9 +224,75 @@ export function NotificationHubModal({
         <div className="p-6 overflow-y-auto flex-1 space-y-4">
           
           {dispatchSuccessMsg && (
-            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-xl text-xs flex items-center space-x-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 text-emerald-800 dark:text-emerald-300 p-3 rounded-xl text-xs flex items-center space-x-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span>{dispatchSuccessMsg}</span>
+            </div>
+          )}
+
+          {/* TAB 0: USER PROFILE & ACCOUNT */}
+          {activeTab === 'profile' && (
+            <div className="space-y-4">
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl space-y-4">
+                <div className="flex items-center space-x-4">
+                  <div className="w-14 h-14 bg-blue-600 border-2 border-blue-400 text-white rounded-full flex items-center justify-center font-bold text-lg shadow-sm">
+                    {user?.name ? user.name.slice(0, 2).toUpperCase() : 'U'}
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">{user?.name || 'Compliance Officer'}</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{user?.email || 'user@bizcomply.ph'}</p>
+                    <div className="flex items-center space-x-2 mt-1.5">
+                      <span className="text-[10px] font-bold bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800">
+                        {user?.role || 'Tax & Compliance Lead'}
+                      </span>
+                      <span className="text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                        Active Account
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-200 dark:border-slate-700/60">
+                  <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 text-xs space-y-1">
+                    <span className="text-slate-400 block font-medium">Default Dispatch Email</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{defaultEmail || 'Registered email'}</span>
+                  </div>
+                  <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 text-xs space-y-1">
+                    <span className="text-slate-400 block font-medium">Default Phone / SMS Gateway</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{defaultPhone || 'Not set (Optional)'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2">
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                  Automated Dispatcher System Summary
+                </h4>
+                <div className="flex items-center justify-between text-xs py-1 border-b border-slate-200 dark:border-slate-700/60">
+                  <span className="text-slate-600 dark:text-slate-400">Current Assigned Period</span>
+                  <span className="font-bold text-slate-900 dark:text-white">{selectedPeriod}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs py-1 border-b border-slate-200 dark:border-slate-700/60">
+                  <span className="text-slate-600 dark:text-slate-400">Pending Due Alert Items</span>
+                  <span className="font-bold text-amber-600 dark:text-amber-400">{dueItems.length} items requiring compliance</span>
+                </div>
+                <div className="flex items-center justify-between text-xs py-1">
+                  <span className="text-slate-600 dark:text-slate-400">Auto-Dispatch on Load</span>
+                  <span className={`font-bold ${autoLoad ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500'}`}>
+                    {autoLoad ? 'Enabled' : 'Disabled'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <button
+                  onClick={logout}
+                  className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition-colors shadow-sm flex items-center space-x-2 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                  <span>Sign Out of Account</span>
+                </button>
+              </div>
             </div>
           )}
 

@@ -1,21 +1,55 @@
-import { LayoutDashboard, Users, FileText, BookOpen, ChevronLeft, ChevronRight, Calendar, CalendarDays, LogOut, Cloud, Menu, X, Sun, Moon } from 'lucide-react';
-import React, { useState } from 'react';
+import { LayoutDashboard, Users, FileText, BookOpen, ChevronLeft, ChevronRight, Calendar, CalendarDays, LogOut, Cloud, Menu, X, Settings } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { Client, FormReference, BIRForm } from '../types';
+import { 
+  getDueFormsForNotification, 
+  loadNotificationSettings, 
+  NotificationSettings 
+} from '../utils/notificationService';
+import { NotificationHubModal } from './NotificationHubModal';
 
 interface SidebarProps {
   currentView: 'dashboard' | 'clients' | 'forms' | 'calendar';
   onChangeView: (view: 'dashboard' | 'clients' | 'forms' | 'calendar') => void;
   selectedPeriod: string;
   onChangePeriod: (period: string) => void;
+  clients?: Client[];
+  formReferences?: FormReference[];
+  onUpdateForm?: (
+    clientId: string,
+    formId: string,
+    updates: Partial<BIRForm>,
+    formMeta?: { code: string; description: string; deadline: string; period: string }
+  ) => void;
 }
 
-export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePeriod }: SidebarProps) {
+export function Sidebar({ 
+  currentView, 
+  onChangeView, 
+  selectedPeriod, 
+  onChangePeriod,
+  clients = [],
+  formReferences = [],
+  onUpdateForm
+}: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { user, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(() => 
+    loadNotificationSettings(user?.email)
+  );
+
+  useEffect(() => {
+    if (user?.email) {
+      setNotificationSettings(loadNotificationSettings(user.email));
+    }
+  }, [user?.email]);
+
+  const dueItems = getDueFormsForNotification(clients, formReferences, selectedPeriod);
 
   const getInitials = (name?: string) => {
     if (!name) return 'U';
@@ -33,21 +67,13 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
 
   return (
     <>
-      {/* Mobile Top Header (Visible on screens smaller than md) */}
+      {/* Mobile Top Header */}
       <div className="md:hidden bg-slate-900 text-white w-full px-4 py-3 flex items-center justify-between border-b border-slate-800 shrink-0 sticky top-0 z-40 shadow-sm">
         <div className="flex items-center space-x-2.5">
           <FileText className="w-6 h-6 text-blue-400 shrink-0" />
           <span className="font-bold text-base tracking-tight">BIZ-COMPLY</span>
         </div>
         <div className="flex items-center space-x-2">
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-lg bg-slate-800 text-amber-400 hover:text-amber-300 hover:bg-slate-700 transition-colors focus:outline-none cursor-pointer"
-            title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
-            aria-label="Toggle dark/light mode"
-          >
-            {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-blue-400" />}
-          </button>
           <div className="flex items-center bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs">
             <Calendar className="w-3.5 h-3.5 text-blue-400 mr-1.5 shrink-0" />
             <input
@@ -59,7 +85,7 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
           </div>
           <button
             onClick={() => setIsMobileOpen(!isMobileOpen)}
-            className="p-2 rounded-lg bg-slate-800 text-slate-200 hover:text-white hover:bg-slate-700 transition-colors focus:outline-none"
+            className="p-2 rounded-lg bg-slate-800 text-slate-200 hover:text-white hover:bg-slate-700 transition-colors focus:outline-none cursor-pointer"
             aria-label="Toggle navigation menu"
           >
             {isMobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -106,7 +132,7 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
 
               <button
                 onClick={() => handleNavClick('dashboard')}
-                className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${
+                className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors cursor-pointer ${
                   currentView === 'dashboard' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
                 }`}
               >
@@ -116,7 +142,7 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
 
               <button
                 onClick={() => handleNavClick('calendar')}
-                className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${
+                className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors cursor-pointer ${
                   currentView === 'calendar' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
                 }`}
               >
@@ -126,7 +152,7 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
 
               <button
                 onClick={() => handleNavClick('clients')}
-                className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${
+                className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors cursor-pointer ${
                   currentView === 'clients' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
                 }`}
               >
@@ -136,26 +162,12 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
 
               <button
                 onClick={() => handleNavClick('forms')}
-                className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${
+                className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors cursor-pointer ${
                   currentView === 'forms' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
                 }`}
               >
                 <BookOpen className="w-5 h-5 shrink-0" />
                 <span className="font-medium">Monitoring Reference</span>
-              </button>
-
-              <button
-                onClick={toggleTheme}
-                className="w-full flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors text-slate-300 hover:bg-slate-800 cursor-pointer"
-              >
-                {theme === 'dark' ? (
-                  <Sun className="w-5 h-5 shrink-0 text-amber-400" />
-                ) : (
-                  <Moon className="w-5 h-5 shrink-0 text-blue-400" />
-                )}
-                <span className="font-medium">
-                  {theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-                </span>
               </button>
             </nav>
 
@@ -170,18 +182,35 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
                 </span>
               </div>
 
-              <div className="bg-slate-800/80 rounded-xl p-2.5 flex items-center justify-between border border-slate-700/50">
+              {/* Clickable User Profile Card (Mobile) */}
+              <div 
+                onClick={() => {
+                  setIsSettingsOpen(true);
+                  setIsMobileOpen(false);
+                }}
+                className="bg-slate-800/80 hover:bg-slate-800 rounded-xl p-2.5 flex items-center justify-between border border-slate-700/50 cursor-pointer transition-all hover:border-slate-600 group/user"
+                title="Click to open Settings & Automated Notification Dispatcher"
+              >
                 <div className="flex items-center space-x-3 overflow-hidden">
-                  <div className="w-9 h-9 bg-blue-600/30 border border-blue-500/40 text-blue-300 rounded-full flex items-center justify-center font-semibold text-xs shrink-0">
+                  <div className="w-9 h-9 bg-blue-600/30 border border-blue-500/40 text-blue-300 rounded-full flex items-center justify-center font-semibold text-xs shrink-0 relative">
                     {getInitials(user?.name)}
+                    {dueItems.length > 0 && (
+                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-500 border-2 border-slate-900 rounded-full animate-ping" />
+                    )}
                   </div>
                   <div className="flex-1 overflow-hidden pr-1">
-                    <p className="text-xs font-semibold text-slate-100 truncate">{user?.name || 'User'}</p>
+                    <div className="flex items-center space-x-1">
+                      <p className="text-xs font-semibold text-slate-100 truncate">{user?.name || 'User'}</p>
+                      <Settings className="w-3 h-3 text-slate-400 group-hover/user:text-blue-400 transition-colors" />
+                    </div>
                     <p className="text-[10px] text-slate-400 truncate">{user?.email || user?.role || 'Compliance Officer'}</p>
                   </div>
                 </div>
                 <button
-                  onClick={logout}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    logout();
+                  }}
                   className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-700/80 transition-colors shrink-0"
                   title="Sign Out"
                 >
@@ -208,7 +237,7 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
           )}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors focus:outline-none"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors focus:outline-none cursor-pointer"
             title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
@@ -250,7 +279,7 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
           <button
             onClick={() => onChangeView('dashboard')}
             title={isCollapsed ? "Dashboard" : undefined}
-            className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'space-x-3 px-3'} py-3 rounded-lg transition-colors ${
+            className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'space-x-3 px-3'} py-3 rounded-lg transition-colors cursor-pointer ${
               currentView === 'dashboard' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
             }`}
           >
@@ -261,7 +290,7 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
           <button
             onClick={() => onChangeView('calendar')}
             title={isCollapsed ? "Workload Calendar" : undefined}
-            className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'space-x-3 px-3'} py-3 rounded-lg transition-colors ${
+            className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'space-x-3 px-3'} py-3 rounded-lg transition-colors cursor-pointer ${
               currentView === 'calendar' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
             }`}
           >
@@ -272,7 +301,7 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
           <button
             onClick={() => onChangeView('clients')}
             title={isCollapsed ? "My Clients" : undefined}
-            className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'space-x-3 px-3'} py-3 rounded-lg transition-colors ${
+            className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'space-x-3 px-3'} py-3 rounded-lg transition-colors cursor-pointer ${
               currentView === 'clients' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
             }`}
           >
@@ -283,34 +312,16 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
           <button
             onClick={() => onChangeView('forms')}
             title={isCollapsed ? "Monitoring Reference" : undefined}
-            className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'space-x-3 px-3'} py-3 rounded-lg transition-colors ${
+            className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'space-x-3 px-3'} py-3 rounded-lg transition-colors cursor-pointer ${
               currentView === 'forms' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
             }`}
           >
             <BookOpen className="w-5 h-5 flex-shrink-0" />
             {!isCollapsed && <span className="font-medium truncate">Monitoring Reference</span>}
           </button>
-
-          {/* Theme Toggle Button */}
-          <button
-            onClick={toggleTheme}
-            title={isCollapsed ? (theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode') : undefined}
-            className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'space-x-3 px-3'} py-3 rounded-lg transition-colors text-slate-300 hover:bg-slate-800 hover:text-white cursor-pointer`}
-          >
-            {theme === 'dark' ? (
-              <Sun className="w-5 h-5 flex-shrink-0 text-amber-400" />
-            ) : (
-              <Moon className="w-5 h-5 flex-shrink-0 text-blue-400" />
-            )}
-            {!isCollapsed && (
-              <span className="font-medium truncate">
-                {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-              </span>
-            )}
-          </button>
         </nav>
 
-        {/* User Profile Footer */}
+        {/* User Profile Footer - Clickable for Settings & Notification Hub */}
         <div className="p-3 border-t border-slate-800 relative space-y-2">
           {!isCollapsed && (
             <div className="flex items-center justify-between px-1 text-[11px] text-slate-400">
@@ -324,28 +335,54 @@ export function Sidebar({ currentView, onChangeView, selectedPeriod, onChangePer
             </div>
           )}
 
-          <div className={`bg-slate-800/80 rounded-xl p-2.5 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} border border-slate-700/50`}>
+          <div 
+            onClick={() => setIsSettingsOpen(true)}
+            className={`bg-slate-800/80 hover:bg-slate-800 rounded-xl p-2.5 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} border border-slate-700/50 cursor-pointer transition-all hover:border-slate-600 group/user relative`}
+            title="Click to open Settings & Automated Notification Dispatcher"
+          >
             <div className="flex items-center space-x-3 overflow-hidden">
-              <div className="w-9 h-9 bg-blue-600/30 border border-blue-500/40 text-blue-300 rounded-full flex items-center justify-center font-semibold text-xs flex-shrink-0">
+              <div className="w-9 h-9 bg-blue-600/30 border border-blue-500/40 text-blue-300 rounded-full flex items-center justify-center font-semibold text-xs flex-shrink-0 relative">
                 {getInitials(user?.name)}
+                {dueItems.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-500 border-2 border-slate-900 rounded-full animate-ping" />
+                )}
               </div>
               {!isCollapsed && (
                 <div className="flex-1 overflow-hidden pr-1">
-                  <p className="text-xs font-semibold text-slate-100 truncate">{user?.name || 'User'}</p>
+                  <div className="flex items-center space-x-1">
+                    <p className="text-xs font-semibold text-slate-100 truncate">{user?.name || 'User'}</p>
+                    <Settings className="w-3.5 h-3.5 text-slate-400 group-hover/user:text-blue-400 transition-colors shrink-0" />
+                  </div>
                   <p className="text-[10px] text-slate-400 truncate">{user?.email || user?.role || 'Compliance Officer'}</p>
                 </div>
               )}
             </div>
-            <button
-              onClick={logout}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-700/80 transition-colors focus:outline-none flex-shrink-0"
-              title="Sign Out"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+            {!isCollapsed && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  logout();
+                }}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-700/80 transition-colors focus:outline-none flex-shrink-0 cursor-pointer"
+                title="Sign Out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Settings & Notification Dispatcher Hub Modal */}
+      <NotificationHubModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        dueItems={dueItems}
+        settings={notificationSettings}
+        onUpdateSettings={setNotificationSettings}
+        onUpdateForm={onUpdateForm}
+        selectedPeriod={selectedPeriod}
+      />
     </>
   );
 }
