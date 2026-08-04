@@ -25,7 +25,8 @@ import {
   User, 
   FileText,
   CheckCircle2,
-  ShieldAlert
+  ShieldAlert,
+  Trash2
 } from 'lucide-react';
 import { dispatchAutomatedNotifications, NotificationSettings } from '../utils/notificationService';
 
@@ -40,6 +41,7 @@ interface CalendarViewProps {
     updates: Partial<BIRForm>, 
     referenceData?: { code: string; description: string; deadline?: string; period?: string }
   ) => void;
+  onRemoveFormFromClient?: (clientId: string, formId: string, formCode?: string) => void;
 }
 
 export interface CalendarEvent {
@@ -65,7 +67,8 @@ export function CalendarView({
   formReferences,
   selectedPeriod,
   onChangePeriod,
-  onUpdateForm
+  onUpdateForm,
+  onRemoveFormFromClient
 }: CalendarViewProps) {
   const [viewMode, setViewMode] = useState<'grid' | 'agenda'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
@@ -73,6 +76,7 @@ export function CalendarView({
   const [selectedClientFilter, setSelectedClientFilter] = useState<string>('all');
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [confirmDeleteCalendarForm, setConfirmDeleteCalendarForm] = useState(false);
   const [actionToast, setActionToast] = useState<string | null>(null);
 
   // Parse Year and Month from selectedPeriod ("YYYY-MM")
@@ -817,28 +821,52 @@ export function CalendarView({
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={() => {
-                    handleSendReminder(selectedEvent);
-                    setSelectedEvent(null);
-                  }}
-                  className="flex-1 bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white text-xs font-bold py-2.5 rounded-xl transition-all flex items-center justify-center space-x-2 cursor-pointer"
-                >
-                  <Send className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Send Alert Reminder</span>
-                </button>
-
-                {selectedEvent.form.status !== 'Filed' && selectedEvent.form.status !== 'Paid' && (
+              <div className="flex flex-col space-y-2.5">
+                <div className="flex items-center space-x-3">
                   <button
                     onClick={() => {
-                      handleMarkFiled(selectedEvent);
+                      handleSendReminder(selectedEvent);
                       setSelectedEvent(null);
                     }}
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2.5 rounded-xl transition-all flex items-center justify-center space-x-2 cursor-pointer"
+                    className="flex-1 bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white text-xs font-bold py-2.5 rounded-xl transition-all flex items-center justify-center space-x-2 cursor-pointer"
                   >
-                    <CheckCircle className="w-3.5 h-3.5" />
-                    <span>Mark as Filed</span>
+                    <Send className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Send Alert Reminder</span>
+                  </button>
+
+                  {selectedEvent.form.status !== 'Filed' && selectedEvent.form.status !== 'Paid' && (
+                    <button
+                      onClick={() => {
+                        handleMarkFiled(selectedEvent);
+                        setSelectedEvent(null);
+                      }}
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2.5 rounded-xl transition-all flex items-center justify-center space-x-2 cursor-pointer"
+                    >
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      <span>Mark as Filed</span>
+                    </button>
+                  )}
+                </div>
+
+                {onRemoveFormFromClient && (
+                  <button
+                    onClick={() => {
+                      if (confirmDeleteCalendarForm) {
+                        onRemoveFormFromClient(selectedEvent.clientId, selectedEvent.form.id, selectedEvent.form.code);
+                        setSelectedEvent(null);
+                        setConfirmDeleteCalendarForm(false);
+                      } else {
+                        setConfirmDeleteCalendarForm(true);
+                      }
+                    }}
+                    className={`w-full text-xs font-bold py-2 rounded-xl transition-all flex items-center justify-center space-x-2 cursor-pointer ${
+                      confirmDeleteCalendarForm
+                        ? 'bg-red-600 text-white hover:bg-red-700 shadow-sm'
+                        : 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 border border-red-200 dark:border-red-900/50'
+                    }`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>{confirmDeleteCalendarForm ? 'Confirm Delete Erroneous Assignment?' : 'Delete Erroneous Form Assignment'}</span>
                   </button>
                 )}
               </div>

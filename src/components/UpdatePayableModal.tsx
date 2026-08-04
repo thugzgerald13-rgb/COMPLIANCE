@@ -1,32 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { BIRForm, FormStatus } from '../types';
-import { X, Save, Calendar, DollarSign, Hash, FileText, CheckCircle, Clock } from 'lucide-react';
+import { X, Save, Calendar, DollarSign, Hash, FileText, CheckCircle, Clock, Trash2 } from 'lucide-react';
 
 interface UpdatePayableModalProps {
   isOpen: boolean;
   onClose: () => void;
   form: BIRForm | null;
+  clientId?: string;
   clientName?: string;
   clientTin?: string;
   onSave: (
     formId: string, 
     updates: Partial<BIRForm>
   ) => void;
+  onDeleteForm?: (clientId: string, formId: string, formCode?: string) => void;
 }
 
 export function UpdatePayableModal({
   isOpen,
   onClose,
   form,
+  clientId,
   clientName,
   clientTin,
-  onSave
+  onSave,
+  onDeleteForm
 }: UpdatePayableModalProps) {
   const [dateFiled, setDateFiled] = useState('');
   const [datePaid, setDatePaid] = useState('');
   const [amountPaid, setAmountPaid] = useState('');
   const [referenceNo, setReferenceNo] = useState('');
   const [notes, setNotes] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     if (form) {
@@ -35,6 +40,7 @@ export function UpdatePayableModal({
       setAmountPaid(form.amount !== undefined && form.amount !== null ? String(form.amount) : '');
       setReferenceNo(form.referenceNo || form.confirmationNo || '');
       setNotes(form.notes || '');
+      setConfirmDelete(false);
     }
   }, [form]);
 
@@ -203,21 +209,48 @@ export function UpdatePayableModal({
           </div>
 
           {/* Footer Buttons */}
-          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end space-x-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 rounded-xl transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors flex items-center space-x-1.5 shadow-sm cursor-pointer"
-            >
-              <Save className="w-4 h-4" />
-              <span>Save Entry Details</span>
-            </button>
+          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <div>
+              {onDeleteForm && clientId && form && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirmDelete) {
+                      onDeleteForm(clientId, form.id, form.code);
+                      onClose();
+                    } else {
+                      setConfirmDelete(true);
+                    }
+                  }}
+                  className={`px-3 py-2 text-xs font-bold rounded-xl transition-all flex items-center space-x-1.5 cursor-pointer ${
+                    confirmDelete 
+                      ? 'bg-red-600 text-white hover:bg-red-700 shadow-sm' 
+                      : 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 border border-red-200 dark:border-red-900/50'
+                  }`}
+                  title="Remove this form if it was assigned erroneously"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{confirmDelete ? 'Confirm Delete Form?' : 'Delete Erroneous Form'}</span>
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 rounded-xl transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors flex items-center space-x-1.5 shadow-sm cursor-pointer"
+              >
+                <Save className="w-4 h-4" />
+                <span>Save Entry Details</span>
+              </button>
+            </div>
           </div>
         </form>
       </div>

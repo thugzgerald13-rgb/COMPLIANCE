@@ -19,7 +19,7 @@ interface ClientListProps {
   onDeleteClient: (clientId: string) => void;
   onClearAllClients?: () => void;
   onAddFormToClient: (clientId: string, formRef: FormReference, deadline?: string, period?: string, assignedPeriod?: string) => void;
-  onRemoveFormFromClient: (clientId: string, formId: string) => void;
+  onRemoveFormFromClient: (clientId: string, formId: string, formCode?: string) => void;
   selectedPeriod: string;
 }
 
@@ -38,6 +38,7 @@ export function ClientList({
   const [expandedClient, setExpandedClient] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedRefToAdd, setSelectedRefToAdd] = useState<{ [clientId: string]: string }>({});
+  const [deletingFormState, setDeletingFormState] = useState<{ clientId: string; formId: string; formCode: string; clientName: string } | null>(null);
   const [payableModalForm, setPayableModalForm] = useState<{
     clientId: string;
     clientName: string;
@@ -364,11 +365,11 @@ export function ClientList({
                                 </select>
 
                                 <button
-                                  onClick={() => onRemoveFormFromClient(client.id, form.id)}
-                                  className="text-slate-400 hover:text-red-500 p-1 rounded hover:bg-red-50 transition-colors"
-                                  title="Remove Form from Client"
+                                  onClick={() => setDeletingFormState({ clientId: client.id, formId: form.id, formCode: form.code, clientName: client.name })}
+                                  className="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                                  title="Delete erroneous compliance form assignment"
                                 >
-                                  <XCircle className="w-4 h-4" />
+                                  <Trash2 className="w-4 h-4 text-slate-400 hover:text-red-600 dark:hover:text-red-400" />
                                 </button>
                               </div>
                             </div>
@@ -404,6 +405,7 @@ export function ClientList({
           isOpen={!!payableModalForm}
           onClose={() => setPayableModalForm(null)}
           form={payableModalForm.form}
+          clientId={payableModalForm.clientId}
           clientName={payableModalForm.clientName}
           clientTin={payableModalForm.clientTin}
           onSave={(formId, updates) => {
@@ -414,7 +416,58 @@ export function ClientList({
               payableModalForm.formMeta
             );
           }}
+          onDeleteForm={(clientId, formId, formCode) => {
+            onRemoveFormFromClient(clientId, formId, formCode);
+            setPayableModalForm(null);
+          }}
         />
+      )}
+
+      {/* Delete Form Confirmation Modal */}
+      {deletingFormState && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-md w-full overflow-hidden p-6 animate-in zoom-in-95 duration-150 text-slate-900 dark:text-slate-100">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-950/80 text-red-600 dark:text-red-400 flex items-center justify-center">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">Delete Erroneous Form?</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{deletingFormState.clientName}</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 mb-5 text-xs text-slate-700 dark:text-slate-300">
+              <p className="font-bold text-slate-900 dark:text-white">
+                BIR Form {deletingFormState.formCode}
+              </p>
+              <p className="text-slate-600 dark:text-slate-400 mt-1">
+                Are you sure you want to remove this compliance form assignment? This will permanently delete this form from <span className="font-semibold text-slate-800 dark:text-slate-200">{deletingFormState.clientName}</span>'s active requirements.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setDeletingFormState(null)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 rounded-xl transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onRemoveFormFromClient(deletingFormState.clientId, deletingFormState.formId, deletingFormState.formCode);
+                  setDeletingFormState(null);
+                }}
+                className="px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors shadow-sm cursor-pointer flex items-center space-x-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Form</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

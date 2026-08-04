@@ -309,20 +309,31 @@ export function useClients() {
     saveClients(updatedClients);
   };
 
-  const removeFormFromClient = (clientId: string, formId: string) => {
+  const removeFormFromClient = (clientId: string, formId: string, formCode?: string) => {
     const updatedClients = clients.map(client => {
       if (client.id === clientId) {
         const targetForm = client.forms.find(f => f.id === formId);
-        let targetCode = targetForm?.code;
+        let targetCode = formCode || targetForm?.code;
+
         if (!targetCode && formId.includes('-')) {
-          const parts = formId.split('-');
-          if (parts.length >= 2) {
-            targetCode = parts[1];
+          if (formId.startsWith(`${clientId}-`)) {
+            const remainder = formId.substring(clientId.length + 1);
+            const existingCodes = client.forms.map(f => f.code);
+            const matchedCode = existingCodes.find(c => remainder.startsWith(`${c}-`));
+            if (matchedCode) {
+              targetCode = matchedCode;
+            } else {
+              const periodMatch = remainder.match(/(.+)-\d{4}-\d{2}$/);
+              if (periodMatch) {
+                targetCode = periodMatch[1];
+              }
+            }
           }
         }
+
         return {
           ...client,
-          forms: client.forms.filter(f => f.id !== formId && f.code !== targetCode)
+          forms: client.forms.filter(f => f.id !== formId && (targetCode ? f.code !== targetCode : true))
         };
       }
       return client;

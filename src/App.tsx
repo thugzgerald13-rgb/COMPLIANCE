@@ -52,6 +52,7 @@ function MainContent() {
               formReferences={forms} 
               selectedPeriod={selectedPeriod} 
               onUpdateForm={updateForm}
+              onRemoveFormFromClient={removeFormFromClient}
             />
           )}
 
@@ -62,6 +63,7 @@ function MainContent() {
               selectedPeriod={selectedPeriod}
               onChangePeriod={setSelectedPeriod}
               onUpdateForm={updateForm}
+              onRemoveFormFromClient={removeFormFromClient}
             />
           )}
           
