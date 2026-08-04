@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Client, FormReference, FormStatus, BIRForm } from '../types';
-import { Users, FileClock, CheckCircle, AlertCircle, Calendar, Edit3, X, Save, FileText, Building, Check, Bell, Mail, ShieldAlert, Clock, AlertTriangle, CheckCircle2, Trash2 } from 'lucide-react';
+import { Users, FileClock, CheckCircle, AlertCircle, Calendar, Edit3, X, Save, FileText, Building, Check, Bell, Mail, ShieldAlert, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { getComplianceStatusInfo, getFormsForClientAndPeriod } from '../utils';
 import { 
   getDueFormsForNotification, 
@@ -34,8 +34,6 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
   const { user } = useAuth();
   const [filterStatus, setFilterStatus] = useState<'all' | 'Pending' | 'Processing'>('all');
   const [editingForm, setEditingForm] = useState<SelectedDashboardForm | null>(null);
-  const [confirmDeleteModal, setConfirmDeleteModal] = useState(false);
-  const [deletingFormState, setDeletingFormState] = useState<{ clientId: string; formId: string; formCode: string; clientName: string } | null>(null);
   const [isNotificationHubOpen, setIsNotificationHubOpen] = useState(false);
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(() => 
     loadNotificationSettings(user?.email)
@@ -101,7 +99,6 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
 
   const handleOpenEditModal = (form: SelectedDashboardForm) => {
     setEditingForm(form);
-    setConfirmDeleteModal(false);
     const taxStatus = form.taxStatus || 'With Payable';
     setEditTaxStatus(taxStatus);
     setEditDeadline(form.deadline || '');
@@ -457,24 +454,6 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
                       <option value="Filed" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100">Filed</option>
                       {item.taxStatus !== 'W/O Payable' && <option value="Paid" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100">Paid</option>}
                     </select>
-
-                    {onRemoveFormFromClient && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeletingFormState({
-                            clientId: item.clientId,
-                            formId: item.id,
-                            formCode: item.code,
-                            clientName: item.clientName
-                          });
-                        }}
-                        className="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer ml-1"
-                        title="Delete erroneous compliance form assignment"
-                      >
-                        <Trash2 className="w-4 h-4 text-slate-400 hover:text-red-600 dark:hover:text-red-400" />
-                      </button>
-                    )}
                   </div>
                 </div>
               );
@@ -595,99 +574,23 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
                 </>
               )}
 
-              <div className="pt-4 flex items-center justify-between border-t border-slate-100 dark:border-slate-800">
-                <div>
-                  {onRemoveFormFromClient && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (confirmDeleteModal) {
-                          onRemoveFormFromClient(editingForm.clientId, editingForm.id, editingForm.code);
-                          setEditingForm(null);
-                        } else {
-                          setConfirmDeleteModal(true);
-                        }
-                      }}
-                      className={`px-3 py-2 text-xs font-bold rounded-xl transition-all flex items-center space-x-1.5 cursor-pointer ${
-                        confirmDeleteModal
-                          ? 'bg-red-600 text-white hover:bg-red-700 shadow-sm'
-                          : 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 border border-red-200 dark:border-red-900/50'
-                      }`}
-                      title="Delete this compliance form if assigned erroneously"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>{confirmDeleteModal ? 'Confirm Delete Form?' : 'Delete Erroneous Form'}</span>
-                    </button>
-                  )}
-                </div>
-
-                <div className="flex items-center space-x-3">
-                  <button
-                    type="button"
-                    onClick={() => setEditingForm(null)}
-                    className="px-4 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 rounded-xl transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors flex items-center space-x-1.5 shadow-sm cursor-pointer"
-                  >
-                    <Save className="w-4 h-4" />
-                    <span>Save Changes</span>
-                  </button>
-                </div>
+              <div className="pt-4 flex items-center justify-end space-x-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setEditingForm(null)}
+                  className="px-4 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors flex items-center space-x-1.5 shadow-sm cursor-pointer"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>Save Changes</span>
+                </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Form Confirmation Modal */}
-      {deletingFormState && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-md w-full overflow-hidden p-6 animate-in zoom-in-95 duration-150 text-slate-900 dark:text-slate-100">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-950/80 text-red-600 dark:text-red-400 flex items-center justify-center">
-                <Trash2 className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">Delete Erroneous Form?</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">{deletingFormState.clientName}</p>
-              </div>
-            </div>
-
-            <div className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 mb-5 text-xs text-slate-700 dark:text-slate-300">
-              <p className="font-bold text-slate-900 dark:text-white">
-                BIR Form {deletingFormState.formCode}
-              </p>
-              <p className="text-slate-600 dark:text-slate-400 mt-1">
-                Are you sure you want to remove this compliance form assignment? This will permanently delete this form from <span className="font-semibold text-slate-800 dark:text-slate-200">{deletingFormState.clientName}</span>'s active requirements.
-              </p>
-            </div>
-
-            <div className="flex items-center justify-end space-x-3">
-              <button
-                type="button"
-                onClick={() => setDeletingFormState(null)}
-                className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 rounded-xl transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (onRemoveFormFromClient) {
-                    onRemoveFormFromClient(deletingFormState.clientId, deletingFormState.formId, deletingFormState.formCode);
-                  }
-                  setDeletingFormState(null);
-                }}
-                className="px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors shadow-sm cursor-pointer flex items-center space-x-1.5"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Delete Form</span>
-              </button>
-            </div>
           </div>
         </div>
       )}
