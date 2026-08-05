@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../types';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { logError, safeJsonParse, toErrorMessage } from '../lib/errors';
 
 interface AuthContextType {
   user: User | null;
@@ -46,14 +47,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshUsersList = () => {
     const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
     if (!rawUsers) {
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(DEFAULT_USERS));
+      try {
+        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(DEFAULT_USERS));
+      } catch (error) {
+        logError('auth:seed-users', error);
+      }
       setAllUsers(DEFAULT_USERS.map(({ password, ...u }) => u));
     } else {
-      try {
-        const parsed = JSON.parse(rawUsers);
-        setAllUsers(parsed.map(({ password, ...u }: any) => u));
-      } catch (e) {
+      const parsed = safeJsonParse<Array<User & { password?: string }>>(rawUsers, 'auth:parse-users');
+      if ('error' in parsed) {
         setAllUsers(DEFAULT_USERS.map(({ password, ...u }) => u));
+      } else {
+        setAllUsers(parsed.value.map(({ password, ...u }) => u));
       }
     }
   };
@@ -63,7 +68,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (supabase && isSupabaseConfigured) {
       // Supabase authentication listener
-      supabase.auth.getSession().then(({ data: { session } }) => {
+      supabase.auth.getSession().then(({ data: { session }, error }) => {
+        if (error) {
+          logError('auth:get-session', error);
+        }
         if (session?.user) {
           const u: User = {
             id: session.user.id,
@@ -76,6 +84,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Fallback to local
           loadLocalUser();
         }
+        setIsAuthLoaded(true);
+      }).catch(err => {
+        logError('auth:get-session', err);
+        loadLocalUser();
         setIsAuthLoaded(true);
       });
 
@@ -106,11 +118,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadLocalUser = () => {
     const storedCurrentUser = localStorage.getItem(CURRENT_USER_KEY);
     if (storedCurrentUser) {
-      try {
-        setUser(JSON.parse(storedCurrentUser));
-      } catch (e) {
+      const parsed = safeJsonParse<User>(storedCurrentUser, 'auth:parse-current-user');
+      if ('error' in parsed) {
         localStorage.removeItem(CURRENT_USER_KEY);
+      } else {
+        setUser(parsed.value);
       }
+    }
+  };
+
+  // Reads the local user directory, falling back to the defaults on corrupted storage.
+  const readLocalUsers = (): Array<User & { password?: string }> => {
+    const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
+    if (!rawUsers) return DEFAULT_USERS;
+    const parsed = safeJsonParse<Array<User & { password?: string }>>(rawUsers, 'auth:parse-users');
+    return 'error' in parsed ? DEFAULT_USERS : parsed.value;
+  };
+
+  const persistCurrentUser = (authenticatedUser: User) => {
+    setUser(authenticatedUser);
+    try {
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
+    } catch (error) {
+      logError('auth:persist-current-user', error);
     }
   };
 
@@ -132,18 +162,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: data.user.email || email,
           role: data.user.user_metadata?.role || 'Compliance Officer',
         };
-        setUser(authenticatedUser);
-        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
+        persistCurrentUser(authenticatedUser);
         return { success: true };
       }
+
+      return { success: false, message: 'Sign in did not return an account. Please try again.' };
     }
 
     // Local fallback
-    const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
-    const usersList = rawUsers ? JSON.parse(rawUsers) : DEFAULT_USERS;
+    const usersList = readLocalUsers();
 
     const normalizedEmail = email.toLowerCase().trim();
-    const foundUser = usersList.find((u: any) => u.email.toLowerCase().trim() === normalizedEmail);
+    const foundUser = usersList.find(u => u.email.toLowerCase().trim() === normalizedEmail);
 
     if (!foundUser) {
       return { success: false, message: 'No account found with this email address. Please register first.' };
@@ -160,8 +190,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role: foundUser.role || 'Compliance Officer',
     };
 
-    setUser(authenticatedUser);
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
+    persistCurrentUser(authenticatedUser);
     return { success: true };
   };
 
@@ -189,18 +218,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: data.user.email || email,
           role: role.trim() || 'Compliance Officer',
         };
-        setUser(authenticatedUser);
-        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
+        persistCurrentUser(authenticatedUser);
         return { success: true };
       }
+
+      return { success: false, message: 'Registration did not return an account. Please check your email for a confirmation link.' };
     }
 
     // Local fallback
-    const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
-    const usersList = rawUsers ? JSON.parse(rawUsers) : DEFAULT_USERS;
+    const usersList = readLocalUsers();
 
     const normalizedEmail = email.toLowerCase().trim();
-    const existing = usersList.find((u: any) => u.email.toLowerCase().trim() === normalizedEmail);
+    const existing = usersList.find(u => u.email.toLowerCase().trim() === normalizedEmail);
 
     if (existing) {
       return { success: false, message: 'An account with this email already exists. Try signing in instead.' };
@@ -215,7 +244,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     const updatedUsers = [...usersList, newUserObj];
-    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
+    try {
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
+    } catch (error) {
+      return { success: false, message: `Could not save your account on this device: ${toErrorMessage(error)}` };
+    }
     refreshUsersList();
 
     const authenticatedUser: User = {
@@ -225,8 +258,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role: newUserObj.role,
     };
 
-    setUser(authenticatedUser);
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
+    persistCurrentUser(authenticatedUser);
     return { success: true };
   };
 
@@ -249,10 +281,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const googleEmail = email.trim().toLowerCase();
     const googleName = name?.trim() || (googleEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
     
-    const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
-    const usersList = rawUsers ? JSON.parse(rawUsers) : DEFAULT_USERS;
+    const usersList = readLocalUsers();
 
-    let existing = usersList.find((u: any) => u.email.toLowerCase().trim() === googleEmail);
+    const existing = usersList.find(u => u.email.toLowerCase().trim() === googleEmail);
     let googleUser: User;
 
     if (existing) {
@@ -271,7 +302,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: 'Compliance Specialist',
       };
       usersList.push(newUserObj);
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
+      try {
+        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
+      } catch (error) {
+        return { success: false, message: `Could not save your account on this device: ${toErrorMessage(error)}` };
+      }
       googleUser = {
         id: newUserObj.id,
         name: newUserObj.name,
@@ -281,15 +316,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     refreshUsersList();
-    setUser(googleUser);
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(googleUser));
+    persistCurrentUser(googleUser);
     return { success: true };
   };
 
   const switchUser = (userId: string) => {
-    const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
-    const usersList = rawUsers ? JSON.parse(rawUsers) : DEFAULT_USERS;
-    const target = usersList.find((u: any) => u.id === userId);
+    const usersList = readLocalUsers();
+    const target = usersList.find(u => u.id === userId);
     if (target) {
       const authenticatedUser: User = {
         id: target.id,
@@ -297,14 +330,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: target.email,
         role: target.role || 'Compliance Officer',
       };
-      setUser(authenticatedUser);
-      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
+      persistCurrentUser(authenticatedUser);
     }
   };
 
   const logout = async () => {
     if (supabase && isSupabaseConfigured) {
-      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        logError('auth:sign-out', error);
+      }
     }
     setUser(null);
     localStorage.removeItem(CURRENT_USER_KEY);
