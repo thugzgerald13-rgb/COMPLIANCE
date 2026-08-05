@@ -1,4 +1,5 @@
-import { TaxPayerType, BIRForm, FormReference, Client } from './types';
+import { TaxPayerType, BIRForm, FormReference, Client, FormStatus } from './types';
+import { todayISO, formatYMD, formatYM, parsePeriod, daysUntilDeadline } from './dateUtils';
 
 export interface ComplianceStatusInfo {
   label: string;
@@ -7,14 +8,7 @@ export interface ComplianceStatusInfo {
 }
 
 export function getComplianceStatusInfo(form: BIRForm, effectiveDeadline: string): ComplianceStatusInfo {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const deadDate = new Date(effectiveDeadline);
-  deadDate.setHours(0, 0, 0, 0);
-
-  const diffTime = deadDate.getTime() - today.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const diffDays = daysUntilDeadline(effectiveDeadline);
 
   // If compliance is still Pending or Processing
   if (form.status === 'Pending' || form.status === 'Processing') {
@@ -47,7 +41,7 @@ export function getComplianceStatusInfo(form: BIRForm, effectiveDeadline: string
   }
 
   // If status is 'Filed' or 'Paid'
-  const dateFiledStr = form.dateFiled || new Date().toISOString().split('T')[0];
+  const dateFiledStr = form.dateFiled || todayISO();
   const isFiledOnTime = dateFiledStr <= effectiveDeadline;
 
   const isNoPayable = form.taxStatus === 'W/O Payable';
@@ -68,7 +62,7 @@ export function getComplianceStatusInfo(form: BIRForm, effectiveDeadline: string
     }
   }
 
-  const datePaidStr = form.datePaid || (form.status === 'Paid' ? (form.dateFiled || new Date().toISOString().split('T')[0]) : undefined);
+  const datePaidStr = form.datePaid || (form.status === 'Paid' ? (form.dateFiled || todayISO()) : undefined);
   
   if (!datePaidStr && form.status === 'Filed') {
     if (isFiledOnTime) {
@@ -169,10 +163,7 @@ export function adjustDeadlineForWeekend(dateStr: string): string {
   } else {
     return dateStr;
   }
-  const rYear = date.getFullYear();
-  const rMonth = String(date.getMonth() + 1).padStart(2, '0');
-  const rDay = String(date.getDate()).padStart(2, '0');
-  return `${rYear}-${rMonth}-${rDay}`;
+  return formatYMD(date);
 }
 
 export function getFormsForClientAndPeriod(
@@ -247,9 +238,7 @@ export function getFormsForClientAndPeriod(
 export function getComplianceDeadlineForPeriod(ref: FormReference, selectedPeriod: string): { isDue: boolean; deadline: string; period: string } {
   if (!selectedPeriod) return { isDue: false, deadline: '', period: '' };
   
-  const [yearStr, monthStr] = selectedPeriod.split('-');
-  const year = parseInt(yearStr, 10);
-  const month = parseInt(monthStr, 10);
+  const { year, month } = parsePeriod(selectedPeriod);
 
   const freq = (ref.frequency || '').toLowerCase().trim();
   const code = (ref.code || '').toUpperCase().trim();
@@ -261,7 +250,7 @@ export function getComplianceDeadlineForPeriod(ref: FormReference, selectedPerio
     const targetYear = prevD.getFullYear();
     const validMonths = [1, 2, 4, 5, 7, 8, 10, 11];
     if (validMonths.includes(targetMonth)) {
-      const targetPeriod = `${targetYear}-${String(targetMonth).padStart(2, '0')}`;
+      const targetPeriod = formatYM(targetYear, targetMonth);
       const dl = calculateDeadline(targetPeriod, ref.frequency, ref.deadlineRule);
       return { isDue: true, deadline: dl, period: targetPeriod };
     } else {
@@ -300,53 +289,27 @@ export function getComplianceDeadlineForPeriod(ref: FormReference, selectedPerio
   // 4. Monthly forms (like 1601-C)
   if (freq === 'monthly') {
     const prevD = new Date(year, month - 2, 1);
-    const targetPeriod = `${prevD.getFullYear()}-${String(prevD.getMonth() + 1).padStart(2, '0')}`;
+    const targetPeriod = formatYM(prevD.getFullYear(), prevD.getMonth() + 1);
     const dl = calculateDeadline(targetPeriod, ref.frequency, ref.deadlineRule);
     return { isDue: true, deadline: dl, period: targetPeriod };
   }
 
   // 5. Quarterly forms (like 1601-EQ, 2550Q, 2551Q)
   if (freq === 'quarterly') {
-    const testPeriods = [
-      `${year - 1}-12`,
-      `${year}-03`,
-      `${year}-06`,
-      `${year}-09`,
-      `${year}-12`
-    ];
-    for (const p of testPeriods) {
-      const dl = calculateDeadline(p, ref.frequency, ref.deadlineRule);
-      const rawMonth = calculateRawDeadlineMonth(p, ref.frequency, ref.deadlineRule);
-      if (dl.startsWith(selectedPeriod) || rawMonth === selectedPeriod) {
-        return { isDue: true, deadline: dl, period: p };
-      }
-    }
-    return { isDue: false, deadline: '', period: '' };
+    return findDueFromCandidates(
+      [`${year - 1}-12`, `${year}-03`, `${year}-06`, `${year}-09`, `${year}-12`],
+      ref,
+      selectedPeriod
+    );
   }
 
   // 6. Annual forms (like 1701, 1702-RT, 0605)
   if (freq === 'annually' || freq === 'annual') {
-    const testPeriods = [`${year - 1}-12`, `${year}-12`, `${year}-01`];
-    for (const p of testPeriods) {
-      const dl = calculateDeadline(p, ref.frequency, ref.deadlineRule);
-      const rawMonth = calculateRawDeadlineMonth(p, ref.frequency, ref.deadlineRule);
-      if (dl.startsWith(selectedPeriod) || rawMonth === selectedPeriod) {
-        return { isDue: true, deadline: dl, period: p };
-      }
-    }
-    return { isDue: false, deadline: '', period: '' };
+    return findDueFromCandidates([`${year - 1}-12`, `${year}-12`, `${year}-01`], ref, selectedPeriod);
   }
 
   if (freq === 'semi-annually' || freq === 'semi-annual') {
-    const testPeriods = [`${year - 1}-12`, `${year}-06`, `${year}-12`];
-    for (const p of testPeriods) {
-      const dl = calculateDeadline(p, ref.frequency, ref.deadlineRule);
-      const rawMonth = calculateRawDeadlineMonth(p, ref.frequency, ref.deadlineRule);
-      if (dl.startsWith(selectedPeriod) || rawMonth === selectedPeriod) {
-        return { isDue: true, deadline: dl, period: p };
-      }
-    }
-    return { isDue: false, deadline: '', period: '' };
+    return findDueFromCandidates([`${year - 1}-12`, `${year}-06`, `${year}-12`], ref, selectedPeriod);
   }
 
   const dl = calculateDeadline(selectedPeriod, ref.frequency, ref.deadlineRule);
@@ -358,39 +321,48 @@ export function getComplianceDeadlineForPeriod(ref: FormReference, selectedPerio
   return { isDue: false, deadline: dl, period: selectedPeriod };
 }
 
-// Helper to determine the unadjusted target month (YYYY-MM) before weekend shifting
-function calculateRawDeadlineMonth(period: string, frequency: string, rule: string): string {
-  if (!period) return '';
-  const [yearStr, monthStr] = period.split('-');
-  const year = parseInt(yearStr, 10);
-  const month = parseInt(monthStr, 10);
-  let resultDate = new Date(year, month - 1, 15);
-  const lowerRule = (rule || '').toLowerCase();
+// Iterate candidate transaction periods and return the first whose computed
+// deadline (or raw deadline month) falls within the selected period.
+function findDueFromCandidates(
+  candidates: string[],
+  ref: FormReference,
+  selectedPeriod: string
+): { isDue: boolean; deadline: string; period: string } {
+  for (const p of candidates) {
+    const dl = calculateDeadline(p, ref.frequency, ref.deadlineRule);
+    const rawMonth = calculateRawDeadlineMonth(p, ref.frequency, ref.deadlineRule);
+    if (dl.startsWith(selectedPeriod) || rawMonth === selectedPeriod) {
+      return { isDue: true, deadline: dl, period: p };
+    }
+  }
+  return { isDue: false, deadline: '', period: '' };
+}
 
-  if (lowerRule.includes('10th') && (lowerRule.includes('following') || lowerRule.includes('next'))) {
+// Resolve a deadline rule into a concrete (unadjusted) Date for a given period.
+// Shared by calculateDeadline and calculateRawDeadlineMonth. The `useFallback`
+// flag reproduces calculateDeadline's extra day-number parsing so that the raw
+// month helper keeps its original (fallback-free) behavior.
+function resolveDeadlineDate(period: string, rule: string, useFallback: boolean): Date {
+  const { year, month } = parsePeriod(period);
+
+  // Default to 15th of the selected period
+  let resultDate = new Date(year, month - 1, 15);
+
+  const lowerRule = (rule || '').toLowerCase();
+  const isFollowing = lowerRule.includes('following') || lowerRule.includes('next');
+
+  if (lowerRule.includes('10th') && isFollowing) {
     resultDate = new Date(year, month, 10);
   } else if (lowerRule.includes('last day') || lowerRule.includes('end of')) {
-    if (lowerRule.includes('following') || lowerRule.includes('next')) {
-      resultDate = new Date(year, month + 1, 0);
-    } else {
-      resultDate = new Date(year, month, 0);
-    }
+    resultDate = isFollowing ? new Date(year, month + 1, 0) : new Date(year, month, 0);
   } else if (lowerRule.includes('25th')) {
-    if (lowerRule.includes('following') || lowerRule.includes('next')) {
-      resultDate = new Date(year, month, 25);
-    } else {
-      resultDate = new Date(year, month - 1, 25);
-    }
+    resultDate = isFollowing ? new Date(year, month, 25) : new Date(year, month - 1, 25);
   } else if (lowerRule.includes('15th')) {
-    if (lowerRule.includes('following') || lowerRule.includes('next')) {
-      resultDate = new Date(year, month, 15);
-    } else {
-      resultDate = new Date(year, month - 1, 15);
-    }
-  } else if (lowerRule.includes('60 days') && (lowerRule.includes('following') || lowerRule.includes('next'))) {
+    resultDate = isFollowing ? new Date(year, month, 15) : new Date(year, month - 1, 15);
+  } else if (lowerRule.includes('60 days') && isFollowing) {
     const endOfMonth = new Date(year, month, 0);
     resultDate = new Date(endOfMonth.getTime() + 60 * 24 * 60 * 60 * 1000);
-  } else if (lowerRule.includes('april 15') && (lowerRule.includes('following') || lowerRule.includes('next'))) {
+  } else if (lowerRule.includes('april 15') && isFollowing) {
     resultDate = new Date(year + 1, 3, 15);
   } else if (lowerRule.includes('15th day of the 4th month')) {
     resultDate = new Date(year + 1, 3, 15);
@@ -402,11 +374,25 @@ function calculateRawDeadlineMonth(period: string, frequency: string, rule: stri
     resultDate = new Date(year + 1, 0, 20);
   } else if (lowerRule.includes('march 1')) {
     resultDate = new Date(year + 1, 2, 1);
+  } else if (useFallback) {
+    // Basic fallback parsing
+    const dayMatch = lowerRule.match(/(\d+)(st|nd|rd|th)?/);
+    if (dayMatch) {
+      const day = parseInt(dayMatch[1], 10);
+      if (day > 0 && day <= 31) {
+        resultDate = isFollowing ? new Date(year, month, day) : new Date(year, month - 1, day);
+      }
+    }
   }
 
-  const rYear = resultDate.getFullYear();
-  const rMonth = String(resultDate.getMonth() + 1).padStart(2, '0');
-  return `${rYear}-${rMonth}`;
+  return resultDate;
+}
+
+// Helper to determine the unadjusted target month (YYYY-MM) before weekend shifting
+function calculateRawDeadlineMonth(period: string, frequency: string, rule: string): string {
+  if (!period) return '';
+  const resultDate = resolveDeadlineDate(period, rule, false);
+  return formatYM(resultDate.getFullYear(), resultDate.getMonth() + 1);
 }
 
 export function getEffectiveDeadline(form: BIRForm, formReferences: FormReference[], selectedPeriod: string): string {
@@ -421,76 +407,31 @@ export function getEffectiveDeadline(form: BIRForm, formReferences: FormReferenc
     }
     return adjustDeadlineForWeekend(calculateDeadline(selectedPeriod, ref.frequency, ref.deadlineRule));
   }
-  return adjustDeadlineForWeekend(form.deadline || new Date().toISOString().split('T')[0]);
+  return adjustDeadlineForWeekend(form.deadline || todayISO());
 }
 
 export function calculateDeadline(period: string, frequency: string, rule: string): string {
-  if (!period) return new Date().toISOString().split('T')[0];
-  const [yearStr, monthStr] = period.split('-');
-  const year = parseInt(yearStr, 10);
-  const month = parseInt(monthStr, 10); // 1-12
+  if (!period) return todayISO();
+  const resultDate = resolveDeadlineDate(period, rule, true);
+  return adjustDeadlineForWeekend(formatYMD(resultDate));
+}
 
-  // Default to 15th of the selected period
-  let resultDate = new Date(year, month - 1, 15);
-
-  const lowerRule = (rule || '').toLowerCase();
-
-  if (lowerRule.includes('10th') && (lowerRule.includes('following') || lowerRule.includes('next'))) {
-    resultDate = new Date(year, month, 10);
-  } else if (lowerRule.includes('last day') || lowerRule.includes('end of')) {
-    if (lowerRule.includes('following') || lowerRule.includes('next')) {
-      resultDate = new Date(year, month + 1, 0); // Last day of next month
-    } else {
-      resultDate = new Date(year, month, 0); // Last day of selected month
-    }
-  } else if (lowerRule.includes('25th')) {
-    if (lowerRule.includes('following') || lowerRule.includes('next')) {
-      resultDate = new Date(year, month, 25);
-    } else {
-      resultDate = new Date(year, month - 1, 25);
-    }
-  } else if (lowerRule.includes('15th')) {
-    if (lowerRule.includes('following') || lowerRule.includes('next')) {
-      resultDate = new Date(year, month, 15);
-    } else {
-      resultDate = new Date(year, month - 1, 15);
-    }
-  } else if (lowerRule.includes('60 days') && (lowerRule.includes('following') || lowerRule.includes('next'))) {
-    const endOfMonth = new Date(year, month, 0);
-    resultDate = new Date(endOfMonth.getTime() + 60 * 24 * 60 * 60 * 1000);
-  } else if (lowerRule.includes('april 15') && (lowerRule.includes('following') || lowerRule.includes('next'))) {
-    resultDate = new Date(year + 1, 3, 15);
-  } else if (lowerRule.includes('15th day of the 4th month')) {
-    resultDate = new Date(year + 1, 3, 15);
-  } else if (lowerRule.includes('january 31')) {
-    resultDate = new Date(year + 1, 0, 31);
-  } else if (lowerRule.includes('january 30')) {
-    resultDate = new Date(year + 1, 0, 30);
-  } else if (lowerRule.includes('january 20')) {
-    resultDate = new Date(year + 1, 0, 20);
-  } else if (lowerRule.includes('march 1')) {
-    resultDate = new Date(year + 1, 2, 1);
-  } else {
-    // Basic fallback parsing
-    const dayMatch = lowerRule.match(/(\d+)(st|nd|rd|th)?/);
-    if (dayMatch) {
-      const day = parseInt(dayMatch[1], 10);
-      if (day > 0 && day <= 31) {
-        if (lowerRule.includes('following') || lowerRule.includes('next')) {
-          resultDate = new Date(year, month, day);
-        } else {
-          resultDate = new Date(year, month - 1, day);
-        }
-      }
-    }
-  }
-
-  const rYear = resultDate.getFullYear();
-  const rMonth = String(resultDate.getMonth() + 1).padStart(2, '0');
-  const rDay = String(resultDate.getDate()).padStart(2, '0');
-
-  const rawDeadline = `${rYear}-${rMonth}-${rDay}`;
-  return adjustDeadlineForWeekend(rawDeadline);
+// Derive the compliance status for a "With Payable" form: it is only 'Paid'
+// once all four proof-of-payment details are present, otherwise 'Processing'.
+export function deriveWithPayableStatus(fields: {
+  dateFiled?: string;
+  datePaid?: string;
+  amount?: number | string;
+  referenceNo?: string;
+}): FormStatus {
+  const numericAmount = typeof fields.amount === 'string'
+    ? (fields.amount ? parseFloat(fields.amount) : undefined)
+    : fields.amount;
+  const hasDateFiled = Boolean(fields.dateFiled && fields.dateFiled.trim());
+  const hasDatePaid = Boolean(fields.datePaid && fields.datePaid.trim());
+  const hasAmount = Boolean(numericAmount !== undefined && numericAmount > 0);
+  const hasRefNo = Boolean(fields.referenceNo && fields.referenceNo.trim());
+  return hasDateFiled && hasDatePaid && hasAmount && hasRefNo ? 'Paid' : 'Processing';
 }
 
 // Format TIN to 000-000-000-00000 format (digits only)

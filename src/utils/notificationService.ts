@@ -1,5 +1,6 @@
 import { Client, FormReference, NotificationLog, BIRForm } from '../types';
 import { getFormsForClientAndPeriod } from '../utils';
+import { todayISO, daysUntilDeadline } from '../dateUtils';
 
 const LOGS_STORAGE_KEY = 'bizcomply_notification_logs_v1';
 const SETTINGS_STORAGE_KEY = 'bizcomply_notification_settings_v1';
@@ -131,7 +132,7 @@ export async function sendTestWebPushNotification(): Promise<{ success: boolean;
     clientEmail: 'webpush@bizcomply.ph',
     formCode: 'WEB-PUSH',
     formDescription: 'BIR Tax Compliance Push Alert',
-    deadline: new Date().toISOString().split('T')[0],
+    deadline: todayISO(),
     type: 'Web Push',
     status: 'Sent',
     timestamp: new Date().toISOString(),
@@ -237,9 +238,6 @@ export function getDueFormsForNotification(
   formReferences: FormReference[],
   selectedPeriod: string
 ): DueItemForNotification[] {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
   const dueItems: DueItemForNotification[] = [];
 
   for (const client of clients) {
@@ -252,11 +250,7 @@ export function getDueFormsForNotification(
 
       if (!form.deadline) continue;
 
-      const deadDate = new Date(form.deadline);
-      deadDate.setHours(0, 0, 0, 0);
-
-      const diffTime = deadDate.getTime() - today.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const diffDays = daysUntilDeadline(form.deadline);
 
       const isDueToday = diffDays === 0;
       const isOverdue = diffDays < 0;
@@ -290,7 +284,7 @@ export function dispatchAutomatedNotifications(
   settings: NotificationSettings
 ): { logs: NotificationLog[]; newDispatchesCount: number } {
   const currentLogs = loadNotificationLogs();
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = todayISO();
   const newLogs: NotificationLog[] = [];
   let newDispatchesCount = 0;
 

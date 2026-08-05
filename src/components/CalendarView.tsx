@@ -5,6 +5,7 @@ import {
   getComplianceStatusInfo, 
   isFormAllowedForTaxpayerType 
 } from '../utils';
+import { todayISO, formatYM } from '../dateUtils';
 import { getRDOLocationDisplay } from '../rdoData';
 import { 
   Calendar as CalendarIcon, 
@@ -95,7 +96,7 @@ export function CalendarView({
       newMonth = 12;
       newYear -= 1;
     }
-    onChangePeriod(`${newYear}-${String(newMonth).padStart(2, '0')}`);
+    onChangePeriod(formatYM(newYear, newMonth));
   };
 
   const handleNextMonth = () => {
@@ -105,12 +106,12 @@ export function CalendarView({
       newMonth = 1;
       newYear += 1;
     }
-    onChangePeriod(`${newYear}-${String(newMonth).padStart(2, '0')}`);
+    onChangePeriod(formatYM(newYear, newMonth));
   };
 
   const handleToday = () => {
     const today = new Date();
-    onChangePeriod(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`);
+    onChangePeriod(formatYM(today.getFullYear(), today.getMonth() + 1));
   };
 
   // Month metadata
@@ -127,10 +128,7 @@ export function CalendarView({
     return new Date(year, month - 1, 1).getDay(); // 0 = Sunday
   }, [year, month]);
 
-  const todayStr = useMemo(() => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
-  }, []);
+  const todayStr = useMemo(() => todayISO(), []);
 
   // Compute all deadline calendar events for the selected period
   const calendarEvents = useMemo(() => {
@@ -229,7 +227,7 @@ export function CalendarView({
   // Actions
   const handleMarkFiled = (event: CalendarEvent) => {
     if (!onUpdateForm) return;
-    const todayFormatted = new Date().toISOString().split('T')[0];
+    const todayFormatted = todayISO();
     onUpdateForm(
       event.clientId,
       event.form.id,

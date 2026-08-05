@@ -5,6 +5,7 @@ import {
   Settings, History, Volume2, VolumeX, ShieldCheck, 
   Trash2, ExternalLink, Calendar, User, FileText, Check, Send, AlertCircle, Info, RefreshCw
 } from 'lucide-react';
+import { MODAL_OVERLAY } from './ui';
 import { 
   DueItemForNotification, 
   NotificationSettings, 
@@ -116,7 +117,7 @@ export function NotificationHubModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+    <div className={MODAL_OVERLAY}>
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150 text-slate-900 dark:text-slate-100">
         
         {/* Header */}
