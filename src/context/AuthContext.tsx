@@ -37,20 +37,6 @@ const DEFAULT_USERS = [
     password: 'password123',
     role: 'Super Admin',
   },
-  {
-    id: '1',
-    name: 'Juan Dela Cruz',
-    email: 'juan@example.com',
-    password: 'password123',
-    role: 'Admin',
-  },
-  {
-    id: '2',
-    name: 'Maria Santos',
-    email: 'maria@example.com',
-    password: 'password123',
-    role: 'Compliance Officer',
-  },
 ];
 
 const USERS_STORAGE_KEY = 'bir_monitor_users_v1';
@@ -76,6 +62,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         usersList = DEFAULT_USERS;
       }
     }
+
+    // Filter out example emails
+    usersList = usersList.filter((u: any) => u.email && !u.email.toLowerCase().endsWith('@example.com'));
 
     // Ensure super admin emails are present and have Super Admin role
     SUPER_ADMIN_EMAILS.forEach((saEmail) => {
