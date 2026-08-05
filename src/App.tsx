@@ -8,6 +8,7 @@ import { AuthPage } from './components/AuthPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { useClients, useFormReferences } from './store';
+import { AppLockShield } from './components/AppLockShield';
 
 function MainContent() {
   const { user, isAuthLoaded } = useAuth();
@@ -100,6 +101,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <AppLockShield />
         <MainContent />
       </AuthProvider>
     </ThemeProvider>
