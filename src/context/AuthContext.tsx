@@ -9,31 +9,74 @@ interface AuthContextType {
   register: (name: string, email: string, password: string, role: string) => Promise<{ success: boolean; message?: string }> | { success: boolean; message?: string };
   loginWithGoogle: (email: string, name?: string) => Promise<{ success: boolean; message?: string }> | { success: boolean; message?: string };
   logout: () => void;
-  switchUser: (userId: string) => void;
   isAuthLoaded: boolean;
   isSupabaseConnected: boolean;
 }
 
 
-const DEFAULT_USERS = [
-  {
-    id: '1',
-    name: 'Juan Dela Cruz',
-    email: 'juan@example.com',
-    password: 'password123',
-    role: 'Admin',
-  },
-  {
-    id: '2',
-    name: 'Maria Santos',
-    email: 'maria@example.com',
-    password: 'password123',
-    role: 'Compliance Officer',
-  },
+interface StoredUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  passwordHash?: string;
+  passwordSalt?: string;
+  /** Legacy plaintext credential, migrated to a salted hash on next sign-in. */
+  password?: string;
+}
+
+const env = (import.meta as any).env || {};
+const DEMO_PASSWORD: string | undefined = env.DEV ? env.VITE_DEMO_PASSWORD : undefined;
+
+const DEMO_USERS: StoredUser[] = [
+  { id: '1', name: 'Juan Dela Cruz', email: 'juan@example.com', role: 'Admin' },
+  { id: '2', name: 'Maria Santos', email: 'maria@example.com', role: 'Compliance Officer' },
 ];
 
 const USERS_STORAGE_KEY = 'bir_monitor_users_v1';
 const CURRENT_USER_KEY = 'bir_monitor_current_user_v1';
+
+function toHex(buffer: ArrayBuffer): string {
+  return Array.from(new Uint8Array(buffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+async function hashPassword(password: string, salt: string): Promise<string> {
+  const encoded = new TextEncoder().encode(`${salt}:${password}`);
+  return toHex(await crypto.subtle.digest('SHA-256', encoded));
+}
+
+function newSalt(): string {
+  return toHex(crypto.getRandomValues(new Uint8Array(16)).buffer);
+}
+
+function publicUser(u: StoredUser): User {
+  return {
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    role: u.role || 'Compliance Officer',
+  };
+}
+
+function readStoredUsers(): StoredUser[] {
+  const raw = localStorage.getItem(USERS_STORAGE_KEY);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+async function seedDemoUsers(): Promise<StoredUser[]> {
+  if (!DEMO_PASSWORD) return [];
+  const salt = newSalt();
+  const passwordHash = await hashPassword(DEMO_PASSWORD, salt);
+  return DEMO_USERS.map(u => ({ ...u, passwordSalt: salt, passwordHash }));
+}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -42,24 +85,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isAuthLoaded, setIsAuthLoaded] = useState(false);
 
-  // Sync users list to state
+  // Sync users list to state, never exposing credential material
   const refreshUsersList = () => {
-    const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
-    if (!rawUsers) {
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(DEFAULT_USERS));
-      setAllUsers(DEFAULT_USERS.map(({ password, ...u }) => u));
-    } else {
-      try {
-        const parsed = JSON.parse(rawUsers);
-        setAllUsers(parsed.map(({ password, ...u }: any) => u));
-      } catch (e) {
-        setAllUsers(DEFAULT_USERS.map(({ password, ...u }) => u));
-      }
-    }
+    setAllUsers(readStoredUsers().map(publicUser));
   };
 
   useEffect(() => {
-    refreshUsersList();
+    if (!localStorage.getItem(USERS_STORAGE_KEY)) {
+      seedDemoUsers().then(seeded => {
+        if (seeded.length > 0) {
+          localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(seeded));
+        }
+        refreshUsersList();
+      });
+    } else {
+      refreshUsersList();
+    }
 
     if (supabase && isSupabaseConfigured) {
       // Supabase authentication listener
@@ -139,26 +180,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     // Local fallback
-    const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
-    const usersList = rawUsers ? JSON.parse(rawUsers) : DEFAULT_USERS;
+    const usersList = readStoredUsers();
 
     const normalizedEmail = email.toLowerCase().trim();
-    const foundUser = usersList.find((u: any) => u.email.toLowerCase().trim() === normalizedEmail);
+    const foundUser = usersList.find(u => u.email.toLowerCase().trim() === normalizedEmail);
+
+    const invalidCredentials = { success: false, message: 'Incorrect email or password.' };
 
     if (!foundUser) {
-      return { success: false, message: 'No account found with this email address. Please register first.' };
+      return invalidCredentials;
     }
 
-    if (foundUser.password && foundUser.password !== password) {
-      return { success: false, message: 'Incorrect password. Please try again.' };
+    if (foundUser.password) {
+      if (foundUser.password !== password) {
+        return invalidCredentials;
+      }
+      const passwordSalt = newSalt();
+      foundUser.passwordSalt = passwordSalt;
+      foundUser.passwordHash = await hashPassword(password, passwordSalt);
+      delete foundUser.password;
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
+    } else {
+      if (!foundUser.passwordHash || !foundUser.passwordSalt) {
+        return invalidCredentials;
+      }
+      const candidateHash = await hashPassword(password, foundUser.passwordSalt);
+      if (candidateHash !== foundUser.passwordHash) {
+        return invalidCredentials;
+      }
     }
 
-    const authenticatedUser: User = {
-      id: foundUser.id,
-      name: foundUser.name,
-      email: foundUser.email,
-      role: foundUser.role || 'Compliance Officer',
-    };
+    const authenticatedUser = publicUser(foundUser);
 
     setUser(authenticatedUser);
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
@@ -196,21 +248,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     // Local fallback
-    const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
-    const usersList = rawUsers ? JSON.parse(rawUsers) : DEFAULT_USERS;
+    const usersList = readStoredUsers();
 
     const normalizedEmail = email.toLowerCase().trim();
-    const existing = usersList.find((u: any) => u.email.toLowerCase().trim() === normalizedEmail);
+    const existing = usersList.find(u => u.email.toLowerCase().trim() === normalizedEmail);
 
     if (existing) {
       return { success: false, message: 'An account with this email already exists. Try signing in instead.' };
     }
 
-    const newUserObj = {
+    const passwordSalt = newSalt();
+    const newUserObj: StoredUser = {
       id: crypto.randomUUID(),
       name: name.trim(),
       email: normalizedEmail,
-      password,
+      passwordSalt,
+      passwordHash: await hashPassword(password, passwordSalt),
       role: role.trim() || 'Compliance Officer',
     };
 
@@ -218,12 +271,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
     refreshUsersList();
 
-    const authenticatedUser: User = {
-      id: newUserObj.id,
-      name: newUserObj.name,
-      email: newUserObj.email,
-      role: newUserObj.role,
-    };
+    const authenticatedUser = publicUser(newUserObj);
 
     setUser(authenticatedUser);
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
@@ -249,57 +297,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const googleEmail = email.trim().toLowerCase();
     const googleName = name?.trim() || (googleEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
     
-    const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
-    const usersList = rawUsers ? JSON.parse(rawUsers) : DEFAULT_USERS;
+    const usersList = readStoredUsers();
 
-    let existing = usersList.find((u: any) => u.email.toLowerCase().trim() === googleEmail);
+    const existing = usersList.find(u => u.email.toLowerCase().trim() === googleEmail);
     let googleUser: User;
 
     if (existing) {
+      // An unverified email is not proof of ownership: refuse to take over
+      // an account that is protected by a password.
+      if (existing.passwordHash || existing.password) {
+        return { success: false, message: 'This email is registered with a password. Please sign in with your password.' };
+      }
       googleUser = {
-        id: existing.id,
+        ...publicUser(existing),
         name: existing.name || googleName,
-        email: existing.email,
         role: existing.role || 'Compliance Specialist',
       };
     } else {
-      const newUserObj = {
+      const newUserObj: StoredUser = {
         id: 'google_' + crypto.randomUUID(),
         name: googleName,
         email: googleEmail,
-        password: '',
         role: 'Compliance Specialist',
       };
       usersList.push(newUserObj);
       localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
-      googleUser = {
-        id: newUserObj.id,
-        name: newUserObj.name,
-        email: newUserObj.email,
-        role: newUserObj.role,
-      };
+      googleUser = publicUser(newUserObj);
     }
 
     refreshUsersList();
     setUser(googleUser);
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(googleUser));
     return { success: true };
-  };
-
-  const switchUser = (userId: string) => {
-    const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
-    const usersList = rawUsers ? JSON.parse(rawUsers) : DEFAULT_USERS;
-    const target = usersList.find((u: any) => u.id === userId);
-    if (target) {
-      const authenticatedUser: User = {
-        id: target.id,
-        name: target.name,
-        email: target.email,
-        role: target.role || 'Compliance Officer',
-      };
-      setUser(authenticatedUser);
-      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
-    }
   };
 
   const logout = async () => {
@@ -318,7 +347,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       loginWithGoogle,
       logout,
-      switchUser,
       isAuthLoaded,
       isSupabaseConnected: isSupabaseConfigured,
     }}>
