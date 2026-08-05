@@ -4,6 +4,7 @@ import { Search, ChevronDown, ChevronRight, FileText, Plus, Trash2, XCircle, Use
 import { AddClientModal } from './AddClientModal';
 import { UpdatePayableModal } from './UpdatePayableModal';
 import { isFormAllowedForTaxpayerType, calculateDeadline, isFormVisibleForPeriod, getEffectiveDeadline, getComplianceStatusInfo, getComplianceDeadlineForPeriod, getFormsForClientAndPeriod } from '../utils';
+import { todayISO } from '../dateUtils';
 import { getRDOLocationDisplay } from '../rdoData';
 
 interface ClientListProps {
@@ -592,10 +593,10 @@ export function ClientList({
                                   onChange={(e) => {
                                     const newStatus = e.target.value as FormStatus;
                                     const updates: Partial<BIRForm> = { status: newStatus };
-                                    if (newStatus === 'Filed' && !form.dateFiled) updates.dateFiled = new Date().toISOString().split('T')[0];
+                                    if (newStatus === 'Filed' && !form.dateFiled) updates.dateFiled = todayISO();
                                     if (newStatus === 'Paid') {
-                                      if (!form.dateFiled) updates.dateFiled = new Date().toISOString().split('T')[0];
-                                      if (!form.datePaid) updates.datePaid = new Date().toISOString().split('T')[0];
+                                      if (!form.dateFiled) updates.dateFiled = todayISO();
+                                      if (!form.datePaid) updates.datePaid = todayISO();
                                     }
                                     onUpdateForm(client.id, form.id, updates, formMeta);
                                   }}

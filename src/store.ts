@@ -3,6 +3,7 @@ import { Client, FormStatus, FormReference, BIRForm } from './types';
 import { commonForms } from './data';
 import { useAuth } from './context/AuthContext';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
+import { isoDaysFromNow } from './dateUtils';
 
 const FORMS_STORAGE_KEY = 'bir_monitor_forms_v2';
 
@@ -282,7 +283,7 @@ export function useClients() {
     period?: string,
     assignedPeriod?: string
   ) => {
-    const defaultDeadline = deadline || new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0];
+    const defaultDeadline = deadline || isoDaysFromNow(15);
     const targetAssignedPeriod = assignedPeriod || period || '2026-01';
     const newForm: BIRForm = {
       id: crypto.randomUUID(),

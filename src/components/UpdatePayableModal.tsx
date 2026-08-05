@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BIRForm, FormStatus } from '../types';
+import { deriveWithPayableStatus } from '../utils';
+import { MODAL_OVERLAY, FIELD_INPUT_COMPACT } from './ui';
 import { X, Save, Calendar, DollarSign, Hash, FileText, CheckCircle, Clock, Trash2 } from 'lucide-react';
 
 interface UpdatePayableModalProps {
@@ -52,8 +54,13 @@ export function UpdatePayableModal({
   const hasAmount = Boolean(numericAmount !== undefined && numericAmount > 0);
   const hasRefNo = Boolean(referenceNo && referenceNo.trim());
 
-  const isComplete = hasDateFiled && hasDatePaid && hasAmount && hasRefNo;
-  const calculatedStatus: FormStatus = isComplete ? 'Paid' : 'Processing';
+  const calculatedStatus: FormStatus = deriveWithPayableStatus({
+    dateFiled,
+    datePaid,
+    amount: amountPaid,
+    referenceNo,
+  });
+  const isComplete = calculatedStatus === 'Paid';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,7 +81,7 @@ export function UpdatePayableModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+    <div className={`${MODAL_OVERLAY} animate-in fade-in duration-200`}>
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="p-5 bg-slate-900 text-white flex items-center justify-between">
@@ -140,7 +147,7 @@ export function UpdatePayableModal({
                 type="date"
                 value={dateFiled}
                 onChange={(e) => setDateFiled(e.target.value)}
-                className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                className={`${FIELD_INPUT_COMPACT} font-medium`}
               />
             </div>
 
@@ -154,7 +161,7 @@ export function UpdatePayableModal({
                 type="date"
                 value={datePaid}
                 onChange={(e) => setDatePaid(e.target.value)}
-                className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                className={`${FIELD_INPUT_COMPACT} font-medium`}
               />
             </div>
           </div>
@@ -173,7 +180,7 @@ export function UpdatePayableModal({
                 placeholder="0.00"
                 value={amountPaid}
                 onChange={(e) => setAmountPaid(e.target.value)}
-                className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                className={`${FIELD_INPUT_COMPACT} font-medium`}
               />
             </div>
 
@@ -188,7 +195,7 @@ export function UpdatePayableModal({
                 placeholder="e.g. BIR-2026-991204"
                 value={referenceNo}
                 onChange={(e) => setReferenceNo(e.target.value)}
-                className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium font-mono"
+                className={`${FIELD_INPUT_COMPACT} font-medium font-mono`}
               />
             </div>
           </div>
@@ -204,7 +211,7 @@ export function UpdatePayableModal({
               placeholder="Enter optional compliance notes, bank receipt details, or audit remarks..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-medium"
+              className={`${FIELD_INPUT_COMPACT} resize-none font-medium`}
             />
           </div>
 

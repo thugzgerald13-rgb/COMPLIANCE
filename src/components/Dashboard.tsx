@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Client, FormReference, FormStatus, BIRForm } from '../types';
 import { Users, FileClock, CheckCircle, AlertCircle, Calendar, Edit3, X, Save, FileText, Building, Check, Bell, Mail, ShieldAlert, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
-import { getComplianceStatusInfo, getFormsForClientAndPeriod } from '../utils';
+import { getComplianceStatusInfo, getFormsForClientAndPeriod, deriveWithPayableStatus } from '../utils';
+import { todayISO } from '../dateUtils';
+import { MODAL_OVERLAY, FIELD_INPUT_COMPACT } from './ui';
 import { 
   getDueFormsForNotification, 
   loadNotificationSettings, 
@@ -159,17 +161,12 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
     if (editTaxStatus === 'W/O Payable') {
       finalStatus = editDateFiled ? 'Filed' : 'Processing';
     } else {
-      const numericAmount = editAmount ? parseFloat(editAmount) : undefined;
-      const hasDateFiled = Boolean(editDateFiled && editDateFiled.trim());
-      const hasDatePaid = Boolean(editDatePaid && editDatePaid.trim());
-      const hasAmount = Boolean(numericAmount !== undefined && numericAmount > 0);
-      const hasRefNo = Boolean(editRefNo && editRefNo.trim());
-
-      if (hasDateFiled && hasDatePaid && hasAmount && hasRefNo) {
-        finalStatus = 'Paid';
-      } else {
-        finalStatus = 'Processing';
-      }
+      finalStatus = deriveWithPayableStatus({
+        dateFiled: editDateFiled,
+        datePaid: editDatePaid,
+        amount: editAmount,
+        referenceNo: editRefNo,
+      });
     }
 
     const updates: Partial<BIRForm> = {
@@ -211,10 +208,10 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
     const updates: Partial<BIRForm> = { status: newStatus };
 
     if (newStatus === 'Filed' && !formItem.dateFiled) {
-      updates.dateFiled = new Date().toISOString().split('T')[0];
+      updates.dateFiled = todayISO();
     } else if (newStatus === 'Paid') {
-      if (!formItem.dateFiled) updates.dateFiled = new Date().toISOString().split('T')[0];
-      if (!formItem.datePaid) updates.datePaid = new Date().toISOString().split('T')[0];
+      if (!formItem.dateFiled) updates.dateFiled = todayISO();
+      if (!formItem.datePaid) updates.datePaid = todayISO();
     }
 
     onUpdateForm(
@@ -464,7 +461,7 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
 
       {/* Edit Reference Modal */}
       {editingForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+        <div className={MODAL_OVERLAY}>
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-slate-900 dark:text-slate-100">
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
               <div className="flex items-center space-x-3">
@@ -521,7 +518,7 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
                         type="date"
                         value={editDateFiled}
                         onChange={(e) => handleDateFiledSelectChange(e.target.value)}
-                        className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                        className={`${FIELD_INPUT_COMPACT} font-medium`}
                       />
                     </div>
 
@@ -531,7 +528,7 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
                         type="date"
                         value={editDatePaid}
                         onChange={(e) => setEditDatePaid(e.target.value)}
-                        className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                        className={`${FIELD_INPUT_COMPACT} font-medium`}
                       />
                     </div>
                   </div>
@@ -545,7 +542,7 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
                         placeholder="0.00"
                         value={editAmount}
                         onChange={(e) => setEditAmount(e.target.value)}
-                        className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-emerald-700 dark:text-emerald-400"
+                        className={`${FIELD_INPUT_COMPACT} font-medium text-emerald-700 dark:text-emerald-400`}
                       />
                     </div>
 
@@ -556,7 +553,7 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
                         placeholder="e.g. BIR-2026-9921"
                         value={editRefNo}
                         onChange={(e) => setEditRefNo(e.target.value)}
-                        className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                        className={`${FIELD_INPUT_COMPACT} font-mono`}
                       />
                     </div>
                   </div>
@@ -568,7 +565,7 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
                       placeholder="Add optional notes or compliance instructions..."
                       value={editNotes}
                       onChange={(e) => setEditNotes(e.target.value)}
-                      className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                      className={`${FIELD_INPUT_COMPACT} resize-none`}
                     />
                   </div>
                 </>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FormReference } from '../types';
 import { X } from 'lucide-react';
+import { MODAL_OVERLAY_SUBTLE, FIELD_LABEL, FIELD_INPUT, FIELD_SELECT, BTN_CANCEL, BTN_PRIMARY } from './ui';
 
 interface AddReferenceModalProps {
   isOpen: boolean;
@@ -59,7 +60,7 @@ export function AddReferenceModal({ isOpen, onClose, onAdd, initialData }: AddRe
   const isEditing = !!initialData;
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+    <div className={MODAL_OVERLAY_SUBTLE}>
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800">
           <h2 className="text-lg font-bold text-slate-900 dark:text-white">{isEditing ? 'Edit Compliance Reference' : 'Add Compliance Reference'}</h2>
@@ -70,25 +71,25 @@ export function AddReferenceModal({ isOpen, onClose, onAdd, initialData }: AddRe
         
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Form Code</label>
+            <label className={FIELD_LABEL}>Form Code</label>
             <input 
               required
               disabled={isEditing}
               type="text" 
               value={code}
               onChange={e => setCode(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 dark:disabled:bg-slate-800/50 disabled:text-slate-500 dark:disabled:text-slate-400 font-medium text-sm"
+              className={`${FIELD_INPUT} disabled:bg-slate-100 dark:disabled:bg-slate-800/50 disabled:text-slate-500 dark:disabled:text-slate-400`}
               placeholder="e.g. 1601-C"
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Description</label>
+            <label className={FIELD_LABEL}>Description</label>
             <textarea 
               required
               value={description}
               onChange={e => setDescription(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-sm"
+              className={FIELD_INPUT}
               placeholder="e.g. Monthly Remittance Return..."
               rows={3}
             />
@@ -96,11 +97,11 @@ export function AddReferenceModal({ isOpen, onClose, onAdd, initialData }: AddRe
           
           <div className="grid grid-cols-1 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Frequency</label>
+              <label className={FIELD_LABEL}>Frequency</label>
               <select 
                 value={frequency}
                 onChange={e => setFrequency(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-sm"
+                className={FIELD_SELECT}
               >
                 <option value="Monthly" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100">Monthly</option>
                 <option value="Quarterly" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100">Quarterly</option>
@@ -110,25 +111,25 @@ export function AddReferenceModal({ isOpen, onClose, onAdd, initialData }: AddRe
             </div>
             {frequency === 'Others' && (
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">How often</label>
+                <label className={FIELD_LABEL}>How often</label>
                 <input 
                   required
                   type="text" 
                   value={customFrequency}
                   onChange={e => setCustomFrequency(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-sm"
+                  className={FIELD_INPUT}
                   placeholder="e.g. Every 6 months, As needed, One-time"
                 />
               </div>
             )}
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Deadline Rule</label>
+              <label className={FIELD_LABEL}>Deadline Rule</label>
               <input 
                 required
                 type="text" 
                 value={deadlineRule}
                 onChange={e => setDeadlineRule(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-sm"
+                className={FIELD_INPUT}
                 placeholder="e.g. 10th day of the following month"
               />
             </div>
@@ -138,13 +139,13 @@ export function AddReferenceModal({ isOpen, onClose, onAdd, initialData }: AddRe
             <button 
               type="button" 
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+              className={BTN_CANCEL}
             >
               Cancel
             </button>
             <button 
               type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm cursor-pointer"
+              className={BTN_PRIMARY}
             >
               {isEditing ? 'Save Changes' : 'Add Reference'}
             </button>
