@@ -297,6 +297,16 @@ export function getComplianceDeadlineForPeriod(ref: FormReference, selectedPerio
     return { isDue: false, deadline: '', period: '' };
   }
 
+  // 3b. 1702-RT / 1701 / Annual Income Tax Returns (Due April 15 of following year for calendar year period Dec 31)
+  if (code === '1702-RT' || code === '1701' || (code.startsWith('1702') && !code.endsWith('Q')) || (code.startsWith('1701') && !code.endsWith('Q'))) {
+    if (month === 4) {
+      const targetPeriod = `${year - 1}-12`;
+      const dl = calculateDeadline(targetPeriod, ref.frequency, ref.deadlineRule);
+      return { isDue: true, deadline: dl, period: targetPeriod };
+    }
+    return { isDue: false, deadline: '', period: '' };
+  }
+
   // 4. Monthly forms (like 1601-C)
   if (freq === 'monthly') {
     const prevD = new Date(year, month - 2, 1);
@@ -324,7 +334,7 @@ export function getComplianceDeadlineForPeriod(ref: FormReference, selectedPerio
     return { isDue: false, deadline: '', period: '' };
   }
 
-  // 6. Annual forms (like 1701, 1702-RT, 0605)
+  // 6. Annual forms (like 1604-C, 1604-F, 1604-E, Inventory List, Business Permit)
   if (freq === 'annually' || freq === 'annual') {
     const testPeriods = [`${year - 1}-12`, `${year}-12`, `${year}-01`];
     for (const p of testPeriods) {
@@ -367,7 +377,22 @@ function calculateRawDeadlineMonth(period: string, frequency: string, rule: stri
   let resultDate = new Date(year, month - 1, 15);
   const lowerRule = (rule || '').toLowerCase();
 
-  if (lowerRule.includes('10th') && (lowerRule.includes('following') || lowerRule.includes('next'))) {
+  if (lowerRule.includes('15th day of the 4th month') || lowerRule.includes('4th month following')) {
+    resultDate = new Date(year + 1, 3, 15);
+  } else if (lowerRule.includes('april 15')) {
+    resultDate = new Date(year + 1, 3, 15);
+  } else if (lowerRule.includes('january 31')) {
+    resultDate = new Date(year + 1, 0, 31);
+  } else if (lowerRule.includes('january 30')) {
+    resultDate = new Date(year + 1, 0, 30);
+  } else if (lowerRule.includes('january 20')) {
+    resultDate = new Date(year + 1, 0, 20);
+  } else if (lowerRule.includes('march 1')) {
+    resultDate = new Date(year + 1, 2, 1);
+  } else if (lowerRule.includes('60 days') && (lowerRule.includes('following') || lowerRule.includes('next'))) {
+    const endOfMonth = new Date(year, month, 0);
+    resultDate = new Date(endOfMonth.getTime() + 60 * 24 * 60 * 60 * 1000);
+  } else if (lowerRule.includes('10th') && (lowerRule.includes('following') || lowerRule.includes('next'))) {
     resultDate = new Date(year, month, 10);
   } else if (lowerRule.includes('last day') || lowerRule.includes('end of')) {
     if (lowerRule.includes('following') || lowerRule.includes('next')) {
@@ -387,21 +412,6 @@ function calculateRawDeadlineMonth(period: string, frequency: string, rule: stri
     } else {
       resultDate = new Date(year, month - 1, 15);
     }
-  } else if (lowerRule.includes('60 days') && (lowerRule.includes('following') || lowerRule.includes('next'))) {
-    const endOfMonth = new Date(year, month, 0);
-    resultDate = new Date(endOfMonth.getTime() + 60 * 24 * 60 * 60 * 1000);
-  } else if (lowerRule.includes('april 15') && (lowerRule.includes('following') || lowerRule.includes('next'))) {
-    resultDate = new Date(year + 1, 3, 15);
-  } else if (lowerRule.includes('15th day of the 4th month')) {
-    resultDate = new Date(year + 1, 3, 15);
-  } else if (lowerRule.includes('january 31')) {
-    resultDate = new Date(year + 1, 0, 31);
-  } else if (lowerRule.includes('january 30')) {
-    resultDate = new Date(year + 1, 0, 30);
-  } else if (lowerRule.includes('january 20')) {
-    resultDate = new Date(year + 1, 0, 20);
-  } else if (lowerRule.includes('march 1')) {
-    resultDate = new Date(year + 1, 2, 1);
   }
 
   const rYear = resultDate.getFullYear();
@@ -435,7 +445,22 @@ export function calculateDeadline(period: string, frequency: string, rule: strin
 
   const lowerRule = (rule || '').toLowerCase();
 
-  if (lowerRule.includes('10th') && (lowerRule.includes('following') || lowerRule.includes('next'))) {
+  if (lowerRule.includes('15th day of the 4th month') || lowerRule.includes('4th month following')) {
+    resultDate = new Date(year + 1, 3, 15);
+  } else if (lowerRule.includes('april 15')) {
+    resultDate = new Date(year + 1, 3, 15);
+  } else if (lowerRule.includes('january 31')) {
+    resultDate = new Date(year + 1, 0, 31);
+  } else if (lowerRule.includes('january 30')) {
+    resultDate = new Date(year + 1, 0, 30);
+  } else if (lowerRule.includes('january 20')) {
+    resultDate = new Date(year + 1, 0, 20);
+  } else if (lowerRule.includes('march 1')) {
+    resultDate = new Date(year + 1, 2, 1);
+  } else if (lowerRule.includes('60 days') && (lowerRule.includes('following') || lowerRule.includes('next'))) {
+    const endOfMonth = new Date(year, month, 0);
+    resultDate = new Date(endOfMonth.getTime() + 60 * 24 * 60 * 60 * 1000);
+  } else if (lowerRule.includes('10th') && (lowerRule.includes('following') || lowerRule.includes('next'))) {
     resultDate = new Date(year, month, 10);
   } else if (lowerRule.includes('last day') || lowerRule.includes('end of')) {
     if (lowerRule.includes('following') || lowerRule.includes('next')) {
@@ -455,21 +480,6 @@ export function calculateDeadline(period: string, frequency: string, rule: strin
     } else {
       resultDate = new Date(year, month - 1, 15);
     }
-  } else if (lowerRule.includes('60 days') && (lowerRule.includes('following') || lowerRule.includes('next'))) {
-    const endOfMonth = new Date(year, month, 0);
-    resultDate = new Date(endOfMonth.getTime() + 60 * 24 * 60 * 60 * 1000);
-  } else if (lowerRule.includes('april 15') && (lowerRule.includes('following') || lowerRule.includes('next'))) {
-    resultDate = new Date(year + 1, 3, 15);
-  } else if (lowerRule.includes('15th day of the 4th month')) {
-    resultDate = new Date(year + 1, 3, 15);
-  } else if (lowerRule.includes('january 31')) {
-    resultDate = new Date(year + 1, 0, 31);
-  } else if (lowerRule.includes('january 30')) {
-    resultDate = new Date(year + 1, 0, 30);
-  } else if (lowerRule.includes('january 20')) {
-    resultDate = new Date(year + 1, 0, 20);
-  } else if (lowerRule.includes('march 1')) {
-    resultDate = new Date(year + 1, 2, 1);
   } else {
     // Basic fallback parsing
     const dayMatch = lowerRule.match(/(\d+)(st|nd|rd|th)?/);
