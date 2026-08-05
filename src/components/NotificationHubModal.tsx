@@ -3,7 +3,8 @@ import { Client, FormReference, BIRForm, NotificationLog } from '../types';
 import { 
   X, Bell, Mail, CheckCircle2, 
   Settings, History, Volume2, VolumeX, ShieldCheck, 
-  Trash2, ExternalLink, Calendar, User, FileText, Check, Send, AlertCircle, Info, RefreshCw
+  Trash2, ExternalLink, Calendar, User, FileText, Check, Send, AlertCircle, Info, RefreshCw,
+  Smartphone, Share2, HelpCircle, AlertTriangle, CheckCircle, SmartphoneNfc
 } from 'lucide-react';
 import { 
   DueItemForNotification, 
@@ -44,7 +45,7 @@ export function NotificationHubModal({
   selectedPeriod
 }: NotificationHubModalProps) {
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<'profile' | 'logs' | 'settings'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'mobile' | 'logs' | 'settings'>('mobile');
   const [logs, setLogs] = useState<NotificationLog[]>(loadNotificationLogs());
   const [dispatchSuccessMsg, setDispatchSuccessMsg] = useState<string | null>(null);
 
@@ -59,11 +60,49 @@ export function NotificationHubModal({
     return 'unsupported';
   });
 
+  // Mobile Diagnostic State
+  const [mobileDeviceInfo, setMobileDeviceInfo] = useState<{
+    isMobile: boolean;
+    isIOS: boolean;
+    isAndroid: boolean;
+    isIframe: boolean;
+    isStandalone: boolean;
+    hasSW: boolean;
+    hasNotificationAPI: boolean;
+  }>({
+    isMobile: false,
+    isIOS: false,
+    isAndroid: false,
+    isIframe: false,
+    isStandalone: false,
+    hasSW: false,
+    hasNotificationAPI: false
+  });
+
   useEffect(() => {
     if (isOpen) {
       setLogs(loadNotificationLogs());
-      if (typeof window !== 'undefined' && 'Notification' in window) {
-        setPushPermission(Notification.permission);
+      if (typeof window !== 'undefined') {
+        const ua = navigator.userAgent || '';
+        const isIOSDevice = /iPhone|iPad|iPod/i.test(ua);
+        const isAndroidDevice = /Android/i.test(ua);
+        const isMobileDev = isIOSDevice || isAndroidDevice || /Mobi|Android/i.test(ua);
+        const isInIframe = window.self !== window.top;
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
+
+        setMobileDeviceInfo({
+          isMobile: isMobileDev,
+          isIOS: isIOSDevice,
+          isAndroid: isAndroidDevice,
+          isIframe: isInIframe,
+          isStandalone,
+          hasSW: 'serviceWorker' in navigator,
+          hasNotificationAPI: 'Notification' in window
+        });
+
+        if ('Notification' in window) {
+          setPushPermission(Notification.permission);
+        }
       }
     }
   }, [isOpen]);
@@ -125,18 +164,18 @@ export function NotificationHubModal({
           
           <div className="flex items-center space-x-3 z-10">
             <div className="w-12 h-12 bg-blue-600/30 border border-blue-500/40 rounded-xl flex items-center justify-center text-blue-400">
-              <Settings className="w-6 h-6 animate-pulse" />
+              <Bell className="w-6 h-6 animate-pulse text-amber-400" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h2 className="text-xl font-bold tracking-tight text-white">Settings & Web Push Notification Hub</h2>
+                <h2 className="text-xl font-bold tracking-tight text-white">Web Push Notification Hub</h2>
                 <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center space-x-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                  <span>Web Push Service Active</span>
+                  <span>Web Push Engine</span>
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Automated Web Push notification engine for BIR tax compliance deadlines
+                Automated mobile & desktop web push notifications for BIR tax compliance deadlines
               </p>
             </div>
           </div>
@@ -152,6 +191,18 @@ export function NotificationHubModal({
         {/* Navigation Tabs */}
         <div className="flex border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-6 pt-2 overflow-x-auto">
           <button
+            onClick={() => setActiveTab('mobile')}
+            className={`px-4 py-3 text-xs font-bold border-b-2 transition-colors flex items-center space-x-2 shrink-0 cursor-pointer ${
+              activeTab === 'mobile'
+                ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-900 rounded-t-lg'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
+          >
+            <Smartphone className="w-4 h-4 text-blue-500" />
+            <span>📱 Mobile Push Guide</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('profile')}
             className={`px-4 py-3 text-xs font-bold border-b-2 transition-colors flex items-center space-x-2 shrink-0 cursor-pointer ${
               activeTab === 'profile'
@@ -159,7 +210,7 @@ export function NotificationHubModal({
                 : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
-            <User className="w-4 h-4 text-blue-500" />
+            <User className="w-4 h-4 text-slate-500" />
             <span>User Account</span>
           </button>
 
@@ -172,7 +223,7 @@ export function NotificationHubModal({
             }`}
           >
             <History className="w-4 h-4" />
-            <span>Web Push Audit Logs ({logs.length})</span>
+            <span>Audit Logs ({logs.length})</span>
           </button>
 
           <button
@@ -184,7 +235,7 @@ export function NotificationHubModal({
             }`}
           >
             <Settings className="w-4 h-4" />
-            <span>Gateway Preferences</span>
+            <span>Gateway Settings</span>
           </button>
         </div>
 
@@ -195,6 +246,113 @@ export function NotificationHubModal({
             <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 text-emerald-800 dark:text-emerald-300 p-3 rounded-xl text-xs flex items-center space-x-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span>{dispatchSuccessMsg}</span>
+            </div>
+          )}
+
+          {/* TAB: MOBILE PUSH SETUP GUIDE & DIAGNOSTIC */}
+          {activeTab === 'mobile' && (
+            <div className="space-y-4">
+              
+              {/* Diagnostic Box */}
+              <div className="p-4 bg-slate-900 text-slate-100 rounded-xl space-y-3 border border-slate-800">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Smartphone className="w-5 h-5 text-blue-400" />
+                    <h3 className="text-sm font-bold text-white">Mobile Phone Push Status Diagnostic</h3>
+                  </div>
+                  <button
+                    onClick={() => window.open(window.location.href, '_blank')}
+                    className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center space-x-1"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Open in Direct New Tab</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs pt-1">
+                  <div className="p-2 bg-slate-800 rounded-lg border border-slate-700">
+                    <span className="text-[10px] text-slate-400 block uppercase font-mono">Environment</span>
+                    <span className="font-bold text-white flex items-center gap-1 mt-0.5">
+                      {mobileDeviceInfo.isIframe ? (
+                        <span className="text-amber-400 flex items-center gap-1">⚠️ In Embedded iFrame</span>
+                      ) : (
+                        <span className="text-emerald-400 flex items-center gap-1">✓ Direct Web View</span>
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="p-2 bg-slate-800 rounded-lg border border-slate-700">
+                    <span className="text-[10px] text-slate-400 block uppercase font-mono">Mobile OS</span>
+                    <span className="font-bold text-white mt-0.5 block">
+                      {mobileDeviceInfo.isIOS ? ' Apple iOS' : mobileDeviceInfo.isAndroid ? '🤖 Android OS' : '💻 Desktop Browser'}
+                    </span>
+                  </div>
+
+                  <div className="p-2 bg-slate-800 rounded-lg border border-slate-700 col-span-2 sm:col-span-1">
+                    <span className="text-[10px] text-slate-400 block uppercase font-mono">Push Permission</span>
+                    <span className={`font-bold text-xs mt-0.5 block ${
+                      pushPermission === 'granted' ? 'text-emerald-400' : 'text-amber-400'
+                    }`}>
+                      {pushPermission === 'granted' ? '✓ Granted & Active' : pushPermission === 'denied' ? '🚫 Permission Blocked' : '⚠️ Action Needed'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex flex-wrap gap-2 items-center justify-between border-t border-slate-800 text-xs">
+                  <span className="text-slate-400 text-[11px]">
+                    Test Web Push notification directly on your phone:
+                  </span>
+                  <button
+                    onClick={handleSendTestPush}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg transition-colors cursor-pointer flex items-center space-x-1.5"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Send Test Phone Push</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Step-by-Step Mobile Instructions */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center">
+                  <HelpCircle className="w-4 h-4 mr-1.5 text-blue-500" /> Why standard push notifications don't pop up on mobile phones:
+                </h4>
+
+                {/* 1. iOS iPhones / iPads */}
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl space-y-2.5">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-6 h-6 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center"></span>
+                    <h5 className="text-xs font-bold text-slate-900 dark:text-white">iPhone / iPad (Apple iOS Safari / Chrome)</h5>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                    Apple iOS (iOS 16.4+) strictly disables Web Push Notifications in browser tabs. Web push notifications will <strong>only pop up on an iPhone if you add the app to your Home Screen</strong>:
+                  </p>
+                  <ol className="list-decimal list-inside text-xs text-slate-700 dark:text-slate-300 space-y-1.5 pl-1 font-medium">
+                    <li>Tap <strong className="text-blue-600 dark:text-blue-400">Open App in New Tab</strong> button above to open full site in Safari.</li>
+                    <li>In Safari, tap the <strong className="text-blue-600 dark:text-blue-400">Share button <Share2 className="w-3.5 h-3.5 inline text-blue-500" /></strong> at the bottom bar.</li>
+                    <li>Scroll down and tap <strong className="text-blue-600 dark:text-blue-400">"Add to Home Screen"</strong>.</li>
+                    <li>Launch <strong>BIZ-COMPLY</strong> from your iPhone Home Screen and tap <strong className="text-emerald-600 dark:text-emerald-400">Enable Web Push</strong> in settings!</li>
+                  </ol>
+                </div>
+
+                {/* 2. Android Phones */}
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl space-y-2.5">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-6 h-6 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center">🤖</span>
+                    <h5 className="text-xs font-bold text-slate-900 dark:text-white">Android Phones (Google Chrome / Samsung / Firefox)</h5>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                    Android phones block push prompts when opened inside embedded preview windows (iframes). To allow push popups:
+                  </p>
+                  <ol className="list-decimal list-inside text-xs text-slate-700 dark:text-slate-300 space-y-1.5 pl-1 font-medium">
+                    <li>Tap <strong className="text-blue-600 dark:text-blue-400">Open App in New Tab</strong> above to open direct URL in Chrome.</li>
+                    <li>Tap <strong className="text-emerald-600 dark:text-emerald-400">Enable Web Push</strong> when prompted.</li>
+                    <li>If notifications were blocked previously: Tap the <strong>Lock / Tune icon</strong> near Chrome's address bar &gt; <strong>Site Settings</strong> &gt; <strong>Allow Notifications</strong>.</li>
+                    <li>In Android Phone Settings: Ensure <strong>Settings &gt; Notifications &gt; Chrome</strong> is ON and <i>Do Not Disturb</i> is disabled.</li>
+                  </ol>
+                </div>
+              </div>
+
             </div>
           )}
 
