@@ -4,7 +4,7 @@ import {
   X, Bell, Mail, CheckCircle2, 
   Settings, History, Volume2, VolumeX, ShieldCheck, 
   Trash2, ExternalLink, Calendar, User, FileText, Check, Send, AlertCircle, Info, RefreshCw,
-  Smartphone, Share2, HelpCircle, AlertTriangle, CheckCircle, SmartphoneNfc
+  Smartphone, Share2, HelpCircle, AlertTriangle, CheckCircle, SmartphoneNfc, Crown, Shield
 } from 'lucide-react';
 import { 
   DueItemForNotification, 
@@ -44,7 +44,7 @@ export function NotificationHubModal({
   onUpdateForm,
   selectedPeriod
 }: NotificationHubModalProps) {
-  const { user, logout } = useAuth();
+  const { user, logout, allUsers, switchUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'mobile' | 'logs' | 'settings'>('mobile');
   const [logs, setLogs] = useState<NotificationLog[]>(loadNotificationLogs());
   const [dispatchSuccessMsg, setDispatchSuccessMsg] = useState<string | null>(null);
@@ -361,23 +361,118 @@ export function NotificationHubModal({
             <div className="space-y-4">
               <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl space-y-4">
                 <div className="flex items-center space-x-4">
-                  <div className="w-14 h-14 bg-blue-600 border-2 border-blue-400 text-white rounded-full flex items-center justify-center font-bold text-lg shadow-sm">
+                  <div className="w-14 h-14 bg-blue-600 border-2 border-blue-400 text-white rounded-full flex items-center justify-center font-bold text-lg shadow-sm relative">
                     {user?.name ? user.name.slice(0, 2).toUpperCase() : 'U'}
+                    {(user?.role?.includes('Admin') || user?.email?.includes('gerald13')) && (
+                      <span className="absolute -bottom-1 -right-1 bg-amber-500 text-slate-900 rounded-full p-1 border-2 border-white dark:border-slate-900 shadow-sm">
+                        <Crown className="w-3.5 h-3.5 text-slate-900" />
+                      </span>
+                    )}
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">{user?.name || 'Compliance Officer'}</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{user?.email || 'user@bizcomply.ph'}</p>
+                    <div className="flex items-center space-x-2">
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white">{user?.name || 'Compliance Officer'}</h3>
+                      {(user?.role?.includes('Admin') || user?.email?.includes('gerald13')) && (
+                        <span className="bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center shadow-xs">
+                          <Crown className="w-3 h-3 mr-1 text-amber-500" />
+                          <span>SUPER ADMIN / OWNER</span>
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{user?.email || 'user@bizcomply.ph'}</p>
                     <div className="flex items-center space-x-2 mt-1.5">
                       <span className="text-[10px] font-bold bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800">
                         {user?.role || 'Tax & Compliance Lead'}
                       </span>
-                      <span className="text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
-                        Active Account
+                      <span className="text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 flex items-center space-x-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span>Active Account</span>
                       </span>
                     </div>
                   </div>
                 </div>
               </div>
+
+              {/* Super Admin Control Section */}
+              {(user?.role?.includes('Admin') || user?.email?.includes('gerald13')) && (
+                <div className="p-4 bg-gradient-to-br from-amber-500/10 via-slate-900 to-slate-950 text-white rounded-xl space-y-3 border border-amber-500/30 shadow-lg">
+                  <div className="flex items-center justify-between border-b border-amber-500/20 pb-2">
+                    <div className="flex items-center space-x-2">
+                      <Crown className="w-5 h-5 text-amber-400 animate-pulse" />
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-amber-300">
+                        Super Admin Privileges & System Management
+                      </h4>
+                    </div>
+                    <span className="text-[10px] font-mono bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/40">
+                      MASTER ACCESS
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Super Admin privileges are permanently bound to <strong>thugz.gerald13@gmail.com</strong> and <strong>tagz.gerald13@gmail.com</strong>. You possess full administrative control over client files, BIR compliance forms, and user permissions.
+                  </p>
+
+                  {/* Registered Accounts Quick Switcher */}
+                  {allUsers && allUsers.length > 0 && (
+                    <div className="pt-2">
+                      <label className="block text-[11px] font-bold text-amber-200 uppercase tracking-wider mb-2">
+                        Registered System Accounts ({allUsers.length})
+                      </label>
+                      <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                        {allUsers.map((u) => {
+                          const isCurrent = user?.id === u.id;
+                          const isSuper = u.role?.includes('Admin') || u.email?.includes('gerald13');
+                          return (
+                            <div
+                              key={u.id}
+                              className={`p-2.5 rounded-lg border flex items-center justify-between text-xs transition-colors ${
+                                isCurrent
+                                  ? 'bg-amber-500/20 border-amber-500/50 text-white'
+                                  : 'bg-slate-800/80 border-slate-700/60 text-slate-300 hover:bg-slate-800'
+                              }`}
+                            >
+                              <div className="flex items-center space-x-2 overflow-hidden">
+                                <div className="w-7 h-7 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center font-bold text-[11px] shrink-0 text-slate-200">
+                                  {u.name[0].toUpperCase()}
+                                </div>
+                                <div className="overflow-hidden">
+                                  <div className="flex items-center space-x-1">
+                                    <span className="font-semibold text-slate-100 truncate">{u.name}</span>
+                                    {isSuper && (
+                                      <Crown className="w-3 h-3 text-amber-400 shrink-0" />
+                                    )}
+                                  </div>
+                                  <p className="text-[10px] text-slate-400 truncate">{u.email}</p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center space-x-2 shrink-0">
+                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${
+                                  isSuper
+                                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                                    : 'bg-slate-700 text-slate-300 border-slate-600'
+                                }`}>
+                                  {u.role}
+                                </span>
+
+                                {!isCurrent && (
+                                  <button
+                                    type="button"
+                                    onClick={() => switchUser(u.id)}
+                                    className="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold rounded transition-colors cursor-pointer"
+                                  >
+                                    Switch
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2">
                 <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">

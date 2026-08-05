@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, FileText, BookOpen, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Calendar, CalendarDays, LogOut, Cloud, Menu, X, Settings, Sun, Moon } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, BookOpen, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Calendar, CalendarDays, LogOut, Cloud, Menu, X, Settings, Sun, Moon, Crown } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -280,7 +280,15 @@ export function Sidebar({
                     )}
                   </div>
                   <div className="flex-1 overflow-hidden pr-1">
-                    <p className="text-xs font-semibold text-slate-100 truncate">{user?.name || 'User'}</p>
+                    <div className="flex items-center space-x-1">
+                      <p className="text-xs font-semibold text-slate-100 truncate">{user?.name || 'User'}</p>
+                      {(user?.role?.includes('Admin') || user?.email?.includes('gerald13')) && (
+                        <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[9px] font-bold px-1.5 py-0.2 rounded-full flex items-center shrink-0">
+                          <Crown className="w-2.5 h-2.5 mr-0.5 text-amber-400" />
+                          <span>Admin</span>
+                        </span>
+                      )}
+                    </div>
                     <p className="text-[10px] text-slate-400 truncate">{user?.email || user?.role || 'Compliance Officer'}</p>
                   </div>
                 </div>
@@ -501,7 +509,15 @@ export function Sidebar({
               </div>
               {!isCollapsed && (
                 <div className="flex-1 overflow-hidden pr-1">
-                  <p className="text-xs font-semibold text-slate-100 truncate">{user?.name || 'User'}</p>
+                  <div className="flex items-center space-x-1">
+                    <p className="text-xs font-semibold text-slate-100 truncate">{user?.name || 'User'}</p>
+                    {(user?.role?.includes('Admin') || user?.email?.includes('gerald13')) && (
+                      <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[9px] font-bold px-1.5 py-0.2 rounded-full flex items-center shrink-0">
+                        <Crown className="w-2.5 h-2.5 mr-0.5 text-amber-400" />
+                        <span>Admin</span>
+                      </span>
+                    )}
+                  </div>
                   <p className="text-[10px] text-slate-400 truncate">{user?.email || user?.role || 'Compliance Officer'}</p>
                 </div>
               )}

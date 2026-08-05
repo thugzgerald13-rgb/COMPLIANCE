@@ -15,7 +15,28 @@ interface AuthContextType {
 }
 
 
+const SUPER_ADMIN_EMAILS = ['thugz.gerald13@gmail.com', 'tagz.gerald13@gmail.com'];
+
+const isSuperAdminEmail = (email?: string) => {
+  if (!email) return false;
+  return SUPER_ADMIN_EMAILS.includes(email.trim().toLowerCase());
+};
+
 const DEFAULT_USERS = [
+  {
+    id: 'super_admin_thugz',
+    name: 'Gerald (Super Admin)',
+    email: 'thugz.gerald13@gmail.com',
+    password: 'password123',
+    role: 'Super Admin',
+  },
+  {
+    id: 'super_admin_tagz',
+    name: 'Gerald (Super Admin)',
+    email: 'tagz.gerald13@gmail.com',
+    password: 'password123',
+    role: 'Super Admin',
+  },
   {
     id: '1',
     name: 'Juan Dela Cruz',
@@ -45,17 +66,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Sync users list to state
   const refreshUsersList = () => {
     const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
+    let usersList: any[] = [];
     if (!rawUsers) {
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(DEFAULT_USERS));
-      setAllUsers(DEFAULT_USERS.map(({ password, ...u }) => u));
+      usersList = DEFAULT_USERS;
     } else {
       try {
-        const parsed = JSON.parse(rawUsers);
-        setAllUsers(parsed.map(({ password, ...u }: any) => u));
+        usersList = JSON.parse(rawUsers);
       } catch (e) {
-        setAllUsers(DEFAULT_USERS.map(({ password, ...u }) => u));
+        usersList = DEFAULT_USERS;
       }
     }
+
+    // Ensure super admin emails are present and have Super Admin role
+    SUPER_ADMIN_EMAILS.forEach((saEmail) => {
+      const existingIdx = usersList.findIndex((u: any) => u.email?.toLowerCase().trim() === saEmail);
+      if (existingIdx >= 0) {
+        usersList[existingIdx].role = 'Super Admin';
+      } else {
+        usersList.unshift({
+          id: 'super_admin_' + saEmail.split('@')[0],
+          name: 'Gerald (Super Admin)',
+          email: saEmail,
+          password: 'password123',
+          role: 'Super Admin',
+        });
+      }
+    });
+
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
+    setAllUsers(usersList.map(({ password, ...u }: any) => u));
   };
 
   useEffect(() => {
@@ -65,11 +104,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Supabase authentication listener
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session?.user) {
+          const userEmail = session.user.email || '';
           const u: User = {
             id: session.user.id,
             name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
-            email: session.user.email || '',
-            role: session.user.user_metadata?.role || 'Compliance Officer',
+            email: userEmail,
+            role: isSuperAdminEmail(userEmail) ? 'Super Admin' : (session.user.user_metadata?.role || 'Compliance Officer'),
           };
           setUser(u);
         } else {
@@ -81,11 +121,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
         if (session?.user) {
+          const userEmail = session.user.email || '';
           const u: User = {
             id: session.user.id,
             name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
-            email: session.user.email || '',
-            role: session.user.user_metadata?.role || 'Compliance Officer',
+            email: userEmail,
+            role: isSuperAdminEmail(userEmail) ? 'Super Admin' : (session.user.user_metadata?.role || 'Compliance Officer'),
           };
           setUser(u);
         } else {
@@ -107,7 +148,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedCurrentUser = localStorage.getItem(CURRENT_USER_KEY);
     if (storedCurrentUser) {
       try {
-        setUser(JSON.parse(storedCurrentUser));
+        const parsed: User = JSON.parse(storedCurrentUser);
+        if (isSuperAdminEmail(parsed.email)) {
+          parsed.role = 'Super Admin';
+          localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(parsed));
+        }
+        setUser(parsed);
       } catch (e) {
         localStorage.removeItem(CURRENT_USER_KEY);
       }
@@ -126,11 +172,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (data.user) {
+        const userEmail = data.user.email || email;
         const authenticatedUser: User = {
           id: data.user.id,
           name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User',
-          email: data.user.email || email,
-          role: data.user.user_metadata?.role || 'Compliance Officer',
+          email: userEmail,
+          role: isSuperAdminEmail(userEmail) ? 'Super Admin' : (data.user.user_metadata?.role || 'Compliance Officer'),
         };
         setUser(authenticatedUser);
         localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
@@ -157,7 +204,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       id: foundUser.id,
       name: foundUser.name,
       email: foundUser.email,
-      role: foundUser.role || 'Compliance Officer',
+      role: isSuperAdminEmail(foundUser.email) ? 'Super Admin' : (foundUser.role || 'Compliance Officer'),
     };
 
     setUser(authenticatedUser);
@@ -166,14 +213,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const register = async (name: string, email: string, password: string, role: string) => {
+    const normalizedEmail = email.toLowerCase().trim();
+    const isSuper = isSuperAdminEmail(normalizedEmail);
+    const assignedRole = isSuper ? 'Super Admin' : (role.trim() || 'Compliance Officer');
+
     if (supabase && isSupabaseConfigured) {
       const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
+        email: normalizedEmail,
         password,
         options: {
           data: {
             full_name: name.trim(),
-            role: role.trim() || 'Compliance Officer',
+            role: assignedRole,
           },
         },
       });
@@ -186,8 +237,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const authenticatedUser: User = {
           id: data.user.id,
           name: name.trim(),
-          email: data.user.email || email,
-          role: role.trim() || 'Compliance Officer',
+          email: data.user.email || normalizedEmail,
+          role: assignedRole,
         };
         setUser(authenticatedUser);
         localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
@@ -199,7 +250,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
     const usersList = rawUsers ? JSON.parse(rawUsers) : DEFAULT_USERS;
 
-    const normalizedEmail = email.toLowerCase().trim();
     const existing = usersList.find((u: any) => u.email.toLowerCase().trim() === normalizedEmail);
 
     if (existing) {
@@ -211,7 +261,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       name: name.trim(),
       email: normalizedEmail,
       password,
-      role: role.trim() || 'Compliance Officer',
+      role: assignedRole,
     };
 
     const updatedUsers = [...usersList, newUserObj];
@@ -247,6 +297,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Local fallback
     const googleEmail = email.trim().toLowerCase();
+    const isSuper = isSuperAdminEmail(googleEmail);
+    const defaultRole = isSuper ? 'Super Admin' : 'Compliance Specialist';
     const googleName = name?.trim() || (googleEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
     
     const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
@@ -256,11 +308,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let googleUser: User;
 
     if (existing) {
+      if (isSuper) {
+        existing.role = 'Super Admin';
+      }
       googleUser = {
         id: existing.id,
         name: existing.name || googleName,
         email: existing.email,
-        role: existing.role || 'Compliance Specialist',
+        role: existing.role || defaultRole,
       };
     } else {
       const newUserObj = {
@@ -268,7 +323,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name: googleName,
         email: googleEmail,
         password: '',
-        role: 'Compliance Specialist',
+        role: defaultRole,
       };
       usersList.push(newUserObj);
       localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
