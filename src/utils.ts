@@ -375,6 +375,8 @@ function calculateRawDeadlineMonth(period: string, frequency: string, rule: stri
     } else {
       resultDate = new Date(year, month, 0);
     }
+  } else if (lowerRule.includes('15th day of the 4th month')) {
+    resultDate = new Date(year + 1, 3, 15);
   } else if (lowerRule.includes('25th')) {
     if (lowerRule.includes('following') || lowerRule.includes('next')) {
       resultDate = new Date(year, month, 25);
@@ -391,8 +393,6 @@ function calculateRawDeadlineMonth(period: string, frequency: string, rule: stri
     const endOfMonth = new Date(year, month, 0);
     resultDate = new Date(endOfMonth.getTime() + 60 * 24 * 60 * 60 * 1000);
   } else if (lowerRule.includes('april 15') && (lowerRule.includes('following') || lowerRule.includes('next'))) {
-    resultDate = new Date(year + 1, 3, 15);
-  } else if (lowerRule.includes('15th day of the 4th month')) {
     resultDate = new Date(year + 1, 3, 15);
   } else if (lowerRule.includes('january 31')) {
     resultDate = new Date(year + 1, 0, 31);
@@ -443,6 +443,8 @@ export function calculateDeadline(period: string, frequency: string, rule: strin
     } else {
       resultDate = new Date(year, month, 0); // Last day of selected month
     }
+  } else if (lowerRule.includes('15th day of the 4th month')) {
+    resultDate = new Date(year + 1, 3, 15);
   } else if (lowerRule.includes('25th')) {
     if (lowerRule.includes('following') || lowerRule.includes('next')) {
       resultDate = new Date(year, month, 25);
@@ -459,8 +461,6 @@ export function calculateDeadline(period: string, frequency: string, rule: strin
     const endOfMonth = new Date(year, month, 0);
     resultDate = new Date(endOfMonth.getTime() + 60 * 24 * 60 * 60 * 1000);
   } else if (lowerRule.includes('april 15') && (lowerRule.includes('following') || lowerRule.includes('next'))) {
-    resultDate = new Date(year + 1, 3, 15);
-  } else if (lowerRule.includes('15th day of the 4th month')) {
     resultDate = new Date(year + 1, 3, 15);
   } else if (lowerRule.includes('january 31')) {
     resultDate = new Date(year + 1, 0, 31);

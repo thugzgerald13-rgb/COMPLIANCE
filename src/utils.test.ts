@@ -165,6 +165,7 @@ describe('calculateDeadline', () => {
 
   it('handles fixed annual calendar rules', () => {
     expect(calculateDeadline('2025-12', 'Annually', 'April 15 of the following year')).toBe('2026-04-15');
+    expect(calculateDeadline('2025-12', 'Annually', '15th day of the 4th month following the close of the taxable year')).toBe('2026-04-15');
     // 2026-01-31 is a Saturday
     expect(calculateDeadline('2025-12', 'Annually', 'January 31 of the following year')).toBe('2026-02-02');
     expect(calculateDeadline('2025-12', 'Annually', 'January 30 of the following year')).toBe('2026-01-30');
@@ -173,11 +174,9 @@ describe('calculateDeadline', () => {
     expect(calculateDeadline('2025-12', 'Annually', 'March 1 of the following year')).toBe('2026-03-02');
   });
 
-  // Known limitation: the generic "15th" branch is evaluated before the
-  // "15th day of the 4th month" branch, so the 4th-month rule used by 1702-RT
-  // resolves to the 15th of the month following the period instead of April 15.
-  it('resolves the 4th-month rule via the generic 15th branch', () => {
-    expect(calculateDeadline('2025-12', 'Annually', '15th day of the 4th month following the close of the taxable year')).toBe('2026-01-15');
+  it('resolves the 4th-month rule ahead of the generic 15th rule', () => {
+    expect(calculateDeadline('2026-12', 'Annually', '15th day of the 4th month following the close of the taxable year')).toBe('2027-04-15');
+    expect(calculateDeadline('2026-12', 'Annually', '15th day of the following month')).toBe('2027-01-15');
   });
 
   it('parses an arbitrary day-of-month from an unrecognized rule', () => {
@@ -280,6 +279,21 @@ describe('getComplianceDeadlineForPeriod', () => {
       period: '2025-12',
     });
     expect(getComplianceDeadlineForPeriod(ANNUAL_1701, '2026-07').isDue).toBe(false);
+  });
+
+  it('reports 1702-RT in April, not January', () => {
+    const ref: FormReference = {
+      code: '1702-RT',
+      description: 'Annual Income Tax Return (Corporations)',
+      frequency: 'Annually',
+      deadlineRule: '15th day of the 4th month following the close of the taxable year',
+    };
+    expect(getComplianceDeadlineForPeriod(ref, '2027-04')).toEqual({
+      isDue: true,
+      deadline: '2027-04-15',
+      period: '2026-12',
+    });
+    expect(getComplianceDeadlineForPeriod(ref, '2027-01').isDue).toBe(false);
   });
 
   it('matches semi-annual forms to their filing month', () => {
