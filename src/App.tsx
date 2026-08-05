@@ -17,8 +17,13 @@ function MainContent() {
     const today = new Date();
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
   });
-  const { clients, isLoaded, updateForm, addClient, deleteClient, clearAllClients, addFormToClient, removeFormFromClient } = useClients();
-  const { forms, isLoaded: formsLoaded, addFormReference, deleteFormReference, updateFormReference } = useFormReferences();
+  const { clients, isLoaded, syncError: clientsSyncError, dismissSyncError: dismissClientsSyncError, updateForm, addClient, deleteClient, clearAllClients, addFormToClient, removeFormFromClient } = useClients();
+  const { forms, isLoaded: formsLoaded, syncError: formsSyncError, dismissSyncError: dismissFormsSyncError, addFormReference, deleteFormReference, updateFormReference } = useFormReferences();
+  const syncError = clientsSyncError || formsSyncError;
+  const dismissSyncError = () => {
+    dismissClientsSyncError();
+    dismissFormsSyncError();
+  };
 
   if (!isAuthLoaded || !isLoaded || !formsLoaded) {
     return (
@@ -45,6 +50,21 @@ function MainContent() {
       />
       
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+        {syncError && (
+          <div
+            role="alert"
+            className="flex items-start gap-3 px-4 py-3 bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-100 border-b border-amber-300 dark:border-amber-700 text-sm"
+          >
+            <span className="flex-1">{syncError}</span>
+            <button
+              type="button"
+              onClick={dismissSyncError}
+              className="font-semibold underline underline-offset-2"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
         <main className="flex-1 h-full overflow-y-auto pt-2 sm:pt-0">
           {currentView === 'dashboard' && (
             <Dashboard 

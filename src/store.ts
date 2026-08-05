@@ -3,6 +3,7 @@ import { Client, FormStatus, FormReference, BIRForm } from './types';
 import { commonForms } from './data';
 import { useAuth } from './context/AuthContext';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
+import { logError, safeJsonParse, writeLocalStorage } from './lib/errors';
 
 const FORMS_STORAGE_KEY = 'bir_monitor_forms_v2';
 
@@ -10,6 +11,7 @@ export function useFormReferences() {
   const { user } = useAuth();
   const [forms, setForms] = useState<FormReference[]>(commonForms);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -17,33 +19,43 @@ export function useFormReferences() {
     const stored = localStorage.getItem(userFormsKey) || localStorage.getItem(FORMS_STORAGE_KEY);
     
     if (stored) {
-      try {
-        const parsed: FormReference[] = JSON.parse(stored);
-        const existingCodes = new Set(parsed.map(f => f.code));
+      const parsed = safeJsonParse<FormReference[]>(stored, 'forms:parse-cache');
+      if ('error' in parsed) {
+        setForms(commonForms);
+        setSyncError('Saved form references were corrupted and have been reset to the defaults.');
+      } else {
+        const existingCodes = new Set(parsed.value.map(f => f.code));
         const missingCommon = commonForms.filter(f => !existingCodes.has(f.code));
-        const merged = missingCommon.length > 0 ? [...parsed, ...missingCommon] : parsed;
+        const merged = missingCommon.length > 0 ? [...parsed.value, ...missingCommon] : parsed.value;
         setForms(merged);
         if (missingCommon.length > 0) {
-          localStorage.setItem(userFormsKey, JSON.stringify(merged));
+          writeLocalStorage(userFormsKey, JSON.stringify(merged), 'forms:write-cache');
         }
-      } catch (e) {
-        setForms(commonForms);
       }
     } else {
       setForms(commonForms);
     }
 
     if (supabase && isSupabaseConfigured && user) {
-      supabase.auth.getUser().then(({ data: { user: supabaseUser } }) => {
-        if (supabaseUser?.user_metadata?.custom_forms && isMounted) {
+      supabase.auth.getUser().then(({ data: { user: supabaseUser }, error }) => {
+        if (!isMounted) return;
+        if (error) {
+          setSyncError(`Could not load your form references from the cloud: ${logError('forms:load-remote', error)}`);
+          return;
+        }
+        if (supabaseUser?.user_metadata?.custom_forms) {
           const remoteForms: FormReference[] = supabaseUser.user_metadata.custom_forms;
           const existingCodes = new Set(remoteForms.map(f => f.code));
           const missingCommon = commonForms.filter(f => !existingCodes.has(f.code));
           const merged = missingCommon.length > 0 ? [...remoteForms, ...missingCommon] : remoteForms;
           setForms(merged);
-          localStorage.setItem(userFormsKey, JSON.stringify(merged));
+          writeLocalStorage(userFormsKey, JSON.stringify(merged), 'forms:write-cache');
         }
-      }).catch(() => {});
+      }).catch(err => {
+        if (isMounted) {
+          setSyncError(`Could not load your form references from the cloud: ${logError('forms:load-remote', err)}`);
+        }
+      });
     }
 
     setIsLoaded(true);
@@ -55,50 +67,60 @@ export function useFormReferences() {
 
   const saveForms = async (updatedForms: FormReference[]) => {
     setForms(updatedForms);
+    setSyncError(null);
     const userFormsKey = user ? `bir_monitor_forms_u_${user.id}` : FORMS_STORAGE_KEY;
-    localStorage.setItem(userFormsKey, JSON.stringify(updatedForms));
+    const writeError = writeLocalStorage(userFormsKey, JSON.stringify(updatedForms), 'forms:write-cache');
+    if (writeError) {
+      setSyncError(`Your form references could not be saved on this device: ${writeError}`);
+    }
 
     if (supabase && isSupabaseConfigured && user) {
       try {
         // Sync to Supabase Storage bucket
         const blob = new Blob([JSON.stringify(updatedForms, null, 2)], { type: 'application/json' });
-        await supabase.storage
+        const { error: storageError } = await supabase.storage
           .from('bizcomply-data')
-          .upload(`users/${user.id}/forms.json`, blob, { upsert: true, contentType: 'application/json' })
-          .catch(() => {});
+          .upload(`users/${user.id}/forms.json`, blob, { upsert: true, contentType: 'application/json' });
+        if (storageError) {
+          logError('forms:upload-storage', storageError);
+        }
 
         // Centralized metadata sync
-        await supabase.auth.updateUser({
+        const { error: metadataError } = await supabase.auth.updateUser({
           data: { custom_forms: updatedForms }
         });
+        if (metadataError) {
+          throw metadataError;
+        }
       } catch (e) {
-        console.warn('Could not sync forms reference to Supabase:', e);
+        setSyncError(`Your form references were saved on this device but could not be synced to the cloud: ${logError('forms:sync', e)}`);
       }
     }
   };
 
   const addFormReference = (formRef: FormReference) => {
     const updatedForms = [...forms, formRef];
-    saveForms(updatedForms);
+    return saveForms(updatedForms);
   };
 
   const deleteFormReference = (code: string) => {
     const updatedForms = forms.filter(f => f.code !== code);
-    saveForms(updatedForms);
+    return saveForms(updatedForms);
   };
 
   const updateFormReference = (updatedFormRef: FormReference) => {
     const updatedForms = forms.map(f => f.code === updatedFormRef.code ? updatedFormRef : f);
-    saveForms(updatedForms);
+    return saveForms(updatedForms);
   };
 
-  return { forms, isLoaded, addFormReference, deleteFormReference, updateFormReference };
+  return { forms, isLoaded, syncError, dismissSyncError: () => setSyncError(null), addFormReference, deleteFormReference, updateFormReference };
 }
 
 export function useClients() {
   const { user } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   const userKey = user ? `bir_monitor_clients_u_${user.id}` : 'bir_monitor_clients_guest';
 
@@ -116,10 +138,13 @@ export function useClients() {
       const stored = localStorage.getItem(userKey);
       let localClients: Client[] = [];
       if (stored) {
-        try {
-          localClients = JSON.parse(stored);
-        } catch (e) {
-          localClients = [];
+        const parsed = safeJsonParse<Client[]>(stored, 'clients:parse-cache');
+        if ('error' in parsed) {
+          if (isMounted) {
+            setSyncError('Locally cached client data was corrupted and has been discarded.');
+          }
+        } else {
+          localClients = parsed.value;
         }
       }
 
@@ -135,40 +160,54 @@ export function useClients() {
             .from('bizcomply-data')
             .download(`users/${user.id}/clients.json`);
 
-          if (storageFile && !storageErr) {
+          if (storageErr) {
+            logError('clients:download-storage', storageErr);
+          } else if (storageFile) {
             const text = await storageFile.text();
-            const remoteClients = JSON.parse(text);
-            if (Array.isArray(remoteClients) && isMounted) {
-              setClients(remoteClients);
-              localStorage.setItem(userKey, JSON.stringify(remoteClients));
+            const parsedRemote = safeJsonParse<Client[]>(text, 'clients:parse-remote');
+            if ('error' in parsedRemote) {
+              if (isMounted) {
+                setSyncError('Cloud client data could not be read and was ignored; showing locally cached data.');
+              }
+            } else if (Array.isArray(parsedRemote.value) && isMounted) {
+              setClients(parsedRemote.value);
+              writeLocalStorage(userKey, JSON.stringify(parsedRemote.value), 'clients:write-cache');
               setIsLoaded(true);
               return;
             }
           }
 
           // Attempt 2: Check Supabase User Metadata cloud storage
-          const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+          const { data: { user: supabaseUser }, error: userErr } = await supabase.auth.getUser();
+          if (userErr) {
+            throw userErr;
+          }
           if (supabaseUser?.user_metadata?.clients && Array.isArray(supabaseUser.user_metadata.clients)) {
             const remoteClients = supabaseUser.user_metadata.clients as Client[];
             if (isMounted) {
               setClients(remoteClients);
-              localStorage.setItem(userKey, JSON.stringify(remoteClients));
+              writeLocalStorage(userKey, JSON.stringify(remoteClients), 'clients:write-cache');
             }
           } else {
             // Attempt 3: Fetch from Supabase database table 'user_clients'
-            const { data } = await supabase
+            const { data, error: tableErr } = await supabase
               .from('user_clients')
               .select('clients_data')
               .eq('user_id', user.id)
               .maybeSingle();
 
-            if (data?.clients_data && Array.isArray(data.clients_data) && isMounted) {
+            if (tableErr) {
+              // The table is optional; storage and user metadata are the primary sources.
+              logError('clients:select-table', tableErr);
+            } else if (data?.clients_data && Array.isArray(data.clients_data) && isMounted) {
               setClients(data.clients_data);
-              localStorage.setItem(userKey, JSON.stringify(data.clients_data));
+              writeLocalStorage(userKey, JSON.stringify(data.clients_data), 'clients:write-cache');
             }
           }
         } catch (err) {
-          console.warn('Supabase client data sync warning:', err);
+          if (isMounted) {
+            setSyncError(`Could not load your clients from the cloud, showing locally cached data: ${logError('clients:load-remote', err)}`);
+          }
         }
       }
 
@@ -177,7 +216,12 @@ export function useClients() {
       }
     }
 
-    loadClientData();
+    loadClientData().catch(err => {
+      if (isMounted) {
+        setSyncError(`Could not load your clients: ${logError('clients:load', err)}`);
+        setIsLoaded(true);
+      }
+    });
 
     return () => {
       isMounted = false;
@@ -186,8 +230,12 @@ export function useClients() {
 
   const saveClients = async (updated: Client[]) => {
     setClients(updated);
+    setSyncError(null);
     if (userKey) {
-      localStorage.setItem(userKey, JSON.stringify(updated));
+      const writeError = writeLocalStorage(userKey, JSON.stringify(updated), 'clients:write-cache');
+      if (writeError) {
+        setSyncError(`Your changes could not be saved on this device: ${writeError}`);
+      }
     }
 
     // Sync to Supabase centralized cloud storage & database if Supabase is connected
@@ -196,29 +244,34 @@ export function useClients() {
         // 1. Save to Supabase Storage Bucket 'bizcomply-data'
         const jsonContent = JSON.stringify(updated, null, 2);
         const blob = new Blob([jsonContent], { type: 'application/json' });
-        await supabase.storage
+        const { error: storageError } = await supabase.storage
           .from('bizcomply-data')
-          .upload(`users/${user.id}/clients.json`, blob, { upsert: true, contentType: 'application/json' })
-          .catch(() => {});
+          .upload(`users/${user.id}/clients.json`, blob, { upsert: true, contentType: 'application/json' });
+        if (storageError) {
+          throw storageError;
+        }
 
         // 2. Centralized sync to Supabase user metadata (accessible on any device/login)
-        await supabase.auth.updateUser({
+        const { error: metadataError } = await supabase.auth.updateUser({
           data: { clients: updated }
         });
+        if (metadataError) {
+          throw metadataError;
+        }
 
         // 3. Save to Supabase 'user_clients' table if provisioned
-        try {
-          await supabase
-            .from('user_clients')
-            .upsert(
-              { user_id: user.id, clients_data: updated, updated_at: new Date().toISOString() },
-              { onConflict: 'user_id' }
-            );
-        } catch (dbErr) {
+        const { error: tableError } = await supabase
+          .from('user_clients')
+          .upsert(
+            { user_id: user.id, clients_data: updated, updated_at: new Date().toISOString() },
+            { onConflict: 'user_id' }
+          );
+        if (tableError) {
           // Table might not exist yet, metadata/storage sync serves as fallback
+          logError('clients:upsert-table', tableError);
         }
       } catch (e) {
-        console.warn('Could not sync clients to Supabase:', e);
+        setSyncError(`Your changes were saved on this device but could not be synced to the cloud: ${logError('clients:sync', e)}`);
       }
     }
   };
@@ -258,21 +311,21 @@ export function useClients() {
       return client;
     });
     
-    saveClients(updatedClients);
+    return saveClients(updatedClients);
   };
 
   const addClient = (client: Client) => {
     const updatedClients = [client, ...clients];
-    saveClients(updatedClients);
+    return saveClients(updatedClients);
   };
 
   const deleteClient = (clientId: string) => {
     const updatedClients = clients.filter(c => c.id !== clientId);
-    saveClients(updatedClients);
+    return saveClients(updatedClients);
   };
 
   const clearAllClients = () => {
-    saveClients([]);
+    return saveClients([]);
   };
 
   const addFormToClient = (
@@ -306,7 +359,7 @@ export function useClients() {
       }
       return client;
     });
-    saveClients(updatedClients);
+    return saveClients(updatedClients);
   };
 
   const removeFormFromClient = (clientId: string, formId: string, formCode?: string) => {
@@ -338,9 +391,9 @@ export function useClients() {
       }
       return client;
     });
-    saveClients(updatedClients);
+    return saveClients(updatedClients);
   };
 
-  return { clients, isLoaded, updateForm, addClient, deleteClient, clearAllClients, addFormToClient, removeFormFromClient };
+  return { clients, isLoaded, syncError, dismissSyncError: () => setSyncError(null), updateForm, addClient, deleteClient, clearAllClients, addFormToClient, removeFormFromClient };
 }
 
