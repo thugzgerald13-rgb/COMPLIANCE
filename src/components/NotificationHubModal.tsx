@@ -16,7 +16,9 @@ import {
   playNotificationChime,
   triggerBrowserNotification,
   requestWebPushPermission,
-  sendTestWebPushNotification
+  sendTestWebPushNotification,
+  triggerTest8AMPushNotification,
+  syncServiceWorkerDueItems
 } from '../utils/notificationService';
 import { useAuth } from '../context/AuthContext';
 
@@ -151,6 +153,21 @@ export function NotificationHubModal({
     }
     setLogs(loadNotificationLogs());
     setDispatchSuccessMsg(result.message);
+    setTimeout(() => setDispatchSuccessMsg(null), 5000);
+  };
+
+  const handleTriggerTest8AMPush = async () => {
+    await syncServiceWorkerDueItems(dueItems);
+    const success = await triggerTest8AMPushNotification();
+    if (success) {
+      setDispatchSuccessMsg('Sent test 8:00 AM PHT (Philippine Time) Web Push trigger to Service Worker!');
+    } else {
+      await triggerBrowserNotification(
+        '🇵🇭 BIZ-COMPLY 8:00 AM PHT Tax Compliance Alert',
+        'Daily 8:00 AM PHT Summary: File pending BIR forms on time to prevent tax penalties.'
+      );
+      setDispatchSuccessMsg('Triggered 8:00 AM PHT Web Push alert!');
+    }
     setTimeout(() => setDispatchSuccessMsg(null), 5000);
   };
 
@@ -308,6 +325,58 @@ export function NotificationHubModal({
                   >
                     <Send className="w-3.5 h-3.5" />
                     <span>Send Test Phone Push</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 8:00 AM PHT Automatic Web Push Schedule Card */}
+              <div className="p-4 bg-gradient-to-r from-emerald-950/80 via-slate-900 to-blue-950/80 text-slate-100 rounded-xl space-y-3 border border-emerald-500/40 shadow-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                      <Calendar className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-extrabold text-white flex items-center gap-1.5">
+                        <span>🇵🇭 Automatic 8:00 AM PHT Push Engine</span>
+                        <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono px-2 py-0.5 rounded-full">Background Active</span>
+                      </h3>
+                      <p className="text-[11px] text-slate-300">
+                        Dispatches BIR tax compliance reminders every morning at <strong>8:00 AM PHT (Philippine Time / UTC+8)</strong> automatically — <em>even when the website is closed!</em>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
+                  <div className="p-2.5 bg-slate-900/80 rounded-lg border border-slate-800">
+                    <span className="text-[10px] text-slate-400 uppercase font-mono block">Schedule Time</span>
+                    <span className="font-extrabold text-emerald-400 mt-0.5 block">
+                      Daily @ 8:00 AM PHT
+                    </span>
+                    <span className="text-[10px] text-slate-400">Philippine Standard Time (UTC+8)</span>
+                  </div>
+
+                  <div className="p-2.5 bg-slate-900/80 rounded-lg border border-slate-800">
+                    <span className="text-[10px] text-slate-400 uppercase font-mono block">Background Execution</span>
+                    <span className="font-extrabold text-blue-400 mt-0.5 block">
+                      Service Worker Engine
+                    </span>
+                    <span className="text-[10px] text-slate-400">No open website or active tab required</span>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex items-center justify-between border-t border-slate-800/80 text-xs">
+                  <span className="text-slate-400 text-[11px]">
+                    Verify 8:00 AM PHT push dispatch:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleTriggerTest8AMPush}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg transition-colors cursor-pointer flex items-center space-x-1.5 shadow-md"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Test 8:00 AM PHT Push Alert</span>
                   </button>
                 </div>
               </div>

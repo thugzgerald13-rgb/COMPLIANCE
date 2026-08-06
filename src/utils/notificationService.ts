@@ -59,11 +59,81 @@ export async function requestWebPushPermission(): Promise<NotificationPermission
     return 'unsupported';
   }
   try {
-    return await Notification.requestPermission();
+    const perm = await Notification.requestPermission();
+    if (perm === 'granted' && 'serviceWorker' in navigator) {
+      // Register or ensure service worker is active for background 8:00 AM GMT+8 push
+      const reg = await navigator.serviceWorker.register('/sw.js').catch(() => null);
+      if (reg && 'periodicSync' in reg) {
+        try {
+          await (reg as any).periodicSync.register('bizcomply-daily-8am-push', {
+            minInterval: 12 * 60 * 60 * 1000, // 12 hours
+          });
+        } catch {
+          // Ignore periodic sync error if PWA is not installed
+        }
+      }
+    }
+    return perm;
   } catch (e) {
     console.warn('Error requesting Web Push notification permission:', e);
     return 'denied';
   }
+}
+
+// Sync compliance due items to the Service Worker for automatic 8:00 AM Philippine Time (GMT+8) execution
+export async function syncServiceWorkerDueItems(dueItems: DueItemForNotification[]): Promise<boolean> {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+    return false;
+  }
+
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    if (reg && reg.active) {
+      reg.active.postMessage({
+        type: 'SYNC_DUE_ITEMS',
+        dueItems,
+        userTimezone: 'Asia/Manila'
+      });
+    } else if (navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'SYNC_DUE_ITEMS',
+        dueItems,
+        userTimezone: 'Asia/Manila'
+      });
+    }
+
+    if (reg && 'periodicSync' in reg) {
+      try {
+        await (reg as any).periodicSync.register('bizcomply-daily-8am-push', {
+          minInterval: 12 * 60 * 60 * 1000,
+        });
+      } catch {
+        // Ignore if unsupported in standalone mode
+      }
+    }
+    return true;
+  } catch (e) {
+    console.warn('Failed to sync due items to Service Worker:', e);
+    return false;
+  }
+}
+
+// Trigger immediate test of the 8:00 AM Philippine Time (GMT+8) Web Push Notification
+export async function triggerTest8AMPushNotification(): Promise<boolean> {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+    return false;
+  }
+
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    if (reg && reg.active) {
+      reg.active.postMessage({ type: 'TEST_8AM_PUSH' });
+      return true;
+    }
+  } catch (e) {
+    console.warn('Failed to trigger test 8:00 AM push:', e);
+  }
+  return false;
 }
 
 // Trigger Web Browser Native & Push Notification

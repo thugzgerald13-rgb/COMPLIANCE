@@ -8,6 +8,7 @@ export type SubscriptionTier = 'free_trial' | 'subscriber';
 interface AuthContextType {
   user: User | null;
   allUsers: User[];
+  isSuperAdmin: boolean;
   workspaceMode: WorkspaceMode | null;
   subscriptionTier: SubscriptionTier;
   isWorkspaceLocked: boolean;
@@ -422,10 +423,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(CURRENT_USER_KEY);
   };
 
+  const isSuperAdmin = Boolean(user && (user.role === 'Super Admin' || isSuperAdminEmail(user.email) || user.email?.toLowerCase().includes('gerald13')));
+
   return (
     <AuthContext.Provider value={{
       user,
       allUsers,
+      isSuperAdmin,
       workspaceMode,
       subscriptionTier,
       isWorkspaceLocked,

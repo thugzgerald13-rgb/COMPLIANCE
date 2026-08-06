@@ -1,15 +1,18 @@
-import { LayoutDashboard, Users, User, FileText, BookOpen, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Calendar, CalendarDays, LogOut, Cloud, Menu, X, Settings, Sun, Moon, Crown, Lock, Sparkles, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Users, User, FileText, BookOpen, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Calendar, CalendarDays, LogOut, Cloud, Menu, X, Settings, Sun, Moon, Crown, Lock, Sparkles, ShieldCheck, Rocket, Zap } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useFeatureRelease } from '../context/FeatureReleaseContext';
 import { useTheme } from '../context/ThemeContext';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { Client, FormReference, BIRForm } from '../types';
 import { 
   getDueFormsForNotification, 
   loadNotificationSettings, 
-  NotificationSettings 
+  NotificationSettings,
+  syncServiceWorkerDueItems 
 } from '../utils/notificationService';
 import { NotificationHubModal } from './NotificationHubModal';
+import { AdminFeatureReleaseModal } from './AdminFeatureReleaseModal';
 
 interface SidebarProps {
   currentView: 'dashboard' | 'clients' | 'forms' | 'calendar';
@@ -38,10 +41,12 @@ export function Sidebar({
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isAdminReleaseModalOpen, setIsAdminReleaseModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [showLockedNotice, setShowLockedNotice] = useState(false);
   const { 
     user, 
+    isSuperAdmin,
     logout, 
     workspaceMode, 
     resetWorkspaceMode, 
@@ -50,6 +55,7 @@ export function Sidebar({
     upgradeToSubscriber, 
     unlockWorkspaceMode 
   } = useAuth();
+  const { featureUpdates } = useFeatureRelease();
   const { theme, toggleTheme } = useTheme();
 
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(() => 
@@ -63,6 +69,13 @@ export function Sidebar({
   }, [user?.email]);
 
   const dueItems = getDueFormsForNotification(clients, formReferences, selectedPeriod);
+
+  // Automatically sync tax compliance items to Service Worker for background 8:00 AM Philippine Time (GMT+8) push
+  useEffect(() => {
+    if (dueItems && dueItems.length >= 0) {
+      syncServiceWorkerDueItems(dueItems);
+    }
+  }, [clients, formReferences, selectedPeriod]);
 
   const getInitials = (name?: string) => {
     if (!name) return 'U';
@@ -631,6 +644,26 @@ export function Sidebar({
                 {!isCollapsed && <span>Settings</span>}
               </button>
 
+              {/* Super Admin Feature Release Portal Trigger */}
+              {isSuperAdmin && (
+                <button
+                  onClick={() => {
+                    setIsAdminReleaseModalOpen(true);
+                    setIsUserMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center ${isCollapsed ? 'justify-center p-2' : 'space-x-2.5 px-3 py-2'} rounded-lg text-xs font-bold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/40 transition-colors cursor-pointer`}
+                  title="Super Admin Release Control Center: Manage Web App Updates & Early Access"
+                >
+                  <Crown className="w-4.5 h-4.5 text-amber-400 shrink-0 fill-amber-400" />
+                  {!isCollapsed && (
+                    <div className="flex-1 text-left flex items-center justify-between">
+                      <span>Release Control Portal</span>
+                      <span className="text-[9px] bg-amber-500/30 text-amber-200 px-1.5 py-0.5 rounded font-mono font-bold">Super Admin</span>
+                    </div>
+                  )}
+                </button>
+              )}
+
               {/* Workspace Mode Switch / Locked Option */}
               {subscriptionTier === 'free_trial' ? (
                 <button
@@ -740,6 +773,12 @@ export function Sidebar({
         onUpdateSettings={setNotificationSettings}
         onUpdateForm={onUpdateForm}
         selectedPeriod={selectedPeriod}
+      />
+
+      {/* Super Admin Feature Release Control Modal */}
+      <AdminFeatureReleaseModal
+        isOpen={isAdminReleaseModalOpen}
+        onClose={() => setIsAdminReleaseModalOpen(false)}
       />
     </>
   );

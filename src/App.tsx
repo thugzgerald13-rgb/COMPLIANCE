@@ -7,6 +7,7 @@ import { FormsDirectory } from './components/FormsDirectory';
 import { AuthPage } from './components/AuthPage';
 import { WorkspaceModeSelectionModal } from './components/WorkspaceModeSelectionModal';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { FeatureReleaseProvider } from './context/FeatureReleaseContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { useClients, useFormReferences } from './store';
 import { AppLockShield } from './components/AppLockShield';
@@ -106,8 +107,10 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <AppLockShield />
-        <MainContent />
+        <FeatureReleaseProvider>
+          <AppLockShield />
+          <MainContent />
+        </FeatureReleaseProvider>
       </AuthProvider>
     </ThemeProvider>
   );
