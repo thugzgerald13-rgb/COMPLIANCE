@@ -47,7 +47,9 @@ function MainContent() {
           formReferences={forms} 
           selectedPeriod={selectedPeriod} 
           onChangePeriod={setSelectedPeriod}
-          onUpdateForm={updateForm} 
+          onUpdateForm={updateForm}
+          onAddFormToClient={addFormToClient}
+          onRemoveFormFromClient={removeFormFromClient}
         />
       </div>
     );

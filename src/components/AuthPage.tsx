@@ -19,7 +19,6 @@ export function AuthPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [role, setRole] = useState('Compliance Officer');
   const [showPassword, setShowPassword] = useState(false);
 
   // UI status states
@@ -73,7 +72,8 @@ export function AuthPage() {
 
     try {
       if (isRegister) {
-        const res = await register(name, email, password, role);
+        const assignedRole = portalType === 'client' ? 'Client' : 'Compliance Officer';
+        const res = await register(name, email, password, assignedRole);
         if (!res.success) {
           setError(res.message || 'Registration failed.');
         }
@@ -219,40 +219,24 @@ export function AuthPage() {
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             {isRegister && (
-              <>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-                    Full Name / Company Name
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <UserIcon className="h-4 w-4 text-slate-500" />
-                    </div>
-                    <input
-                      type="text"
-                      required
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="e.g. Juan Dela Cruz or Acme Corp"
-                      className="block w-full pl-9 pr-3 py-2.5 bg-slate-800/80 border border-slate-700/80 rounded-xl text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors"
-                    />
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
+                  Full Name / Company Name
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <UserIcon className="h-4 w-4 text-slate-500" />
                   </div>
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Juan Dela Cruz or Acme Corp"
+                    className="block w-full pl-9 pr-3 py-2.5 bg-slate-800/80 border border-slate-700/80 rounded-xl text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors"
+                  />
                 </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-                    Account Type / Role
-                  </label>
-                  <select
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    className="block w-full px-3 py-2.5 bg-slate-800/80 border border-slate-700/80 rounded-xl text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors cursor-pointer"
-                  >
-                    <option value="Compliance Officer">Compliance Officer / Accountant</option>
-                    <option value="Client">Client / Taxpayer Entity</option>
-                  </select>
-                </div>
-              </>
+              </div>
             )}
 
             <div>
