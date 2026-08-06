@@ -18,6 +18,7 @@ export function AddClientModal({ isOpen, onClose, onAdd, formReferences, selecte
   const [rdo, setRdo] = useState('039');
   const [isCustomRdo, setIsCustomRdo] = useState(false);
   const [type, setType] = useState<TaxPayerType>('Individual');
+  const [organizationId, setOrganizationId] = useState('org_main_practice');
   const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
 
   const allowedFormReferences = formReferences.filter(f => isFormAllowedForTaxpayerType(f.code, type));
@@ -81,6 +82,7 @@ export function AddClientModal({ isOpen, onClose, onAdd, formReferences, selecte
       tin,
       rdo,
       type,
+      organization_id: organizationId || 'org_main_practice',
       forms: clientForms
     };
     onAdd(newClient);
@@ -188,6 +190,17 @@ export function AddClientModal({ isOpen, onClose, onAdd, formReferences, selecte
                 <option value="Corporate" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100">Corporate</option>
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Organization ID</label>
+            <input 
+              type="text"
+              value={organizationId}
+              onChange={e => setOrganizationId(e.target.value)}
+              placeholder="e.g. org_main_practice or org_branch_01"
+              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+            />
           </div>
 
           <div>

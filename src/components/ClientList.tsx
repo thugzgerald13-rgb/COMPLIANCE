@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Client, FormStatus, FormReference, BIRForm, TaxPayerType } from '../types';
+import { useAuth } from '../context/AuthContext';
 import { Search, ChevronDown, ChevronRight, FileText, Plus, Trash2, XCircle, Users, Mail, Edit3, Building2, Filter, ArrowUpDown, Clock, Calendar, RotateCcw, X, CheckCircle2 } from 'lucide-react';
 import { AddClientModal } from './AddClientModal';
 import { UpdatePayableModal } from './UpdatePayableModal';
@@ -34,6 +35,7 @@ export function ClientList({
   onRemoveFormFromClient,
   selectedPeriod
 }: ClientListProps) {
+  const { loginAsClientPortal } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedClient, setExpandedClient] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -428,21 +430,42 @@ export function ClientList({
                 {isExpanded && (
                   <div className="bg-slate-50 dark:bg-slate-950/40 p-4 border-t border-slate-200 dark:border-slate-800 pl-10 space-y-4">
                     {/* Contact channels & RDO summary banner */}
-                    <div className="flex flex-wrap items-center gap-3 bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 text-xs">
-                      <div className="flex items-center space-x-1.5">
-                        <Building2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                        <span className="font-semibold text-slate-700 dark:text-slate-200">BIR RDO Office:</span>
-                        <span className="bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800/50">
-                          RDO {client.rdo} — {getRDOLocationDisplay(client.rdo)}
-                        </span>
+                    <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 text-xs">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex items-center space-x-1.5">
+                          <Building2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                          <span className="font-semibold text-slate-700 dark:text-slate-200">BIR RDO Office:</span>
+                          <span className="bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800/50">
+                            RDO {client.rdo} — {getRDOLocationDisplay(client.rdo)}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-1.5 ml-0 sm:ml-2">
+                          <Mail className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                          <span className="font-semibold text-slate-700 dark:text-slate-200">Email:</span>
+                          <span className="text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                            {client.email || 'Default System Email'}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-1.5 ml-0 sm:ml-2">
+                          <span className="font-semibold text-slate-700 dark:text-slate-200">Org ID:</span>
+                          <span className="text-indigo-600 dark:text-indigo-400 font-mono bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-800/50">
+                            {client.organization_id || 'org_main_practice'}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-1.5 ml-0 sm:ml-2">
-                        <Mail className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-                        <span className="font-semibold text-slate-700 dark:text-slate-200">Email:</span>
-                        <span className="text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
-                          {client.email || 'Default System Email'}
-                        </span>
-                      </div>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          loginAsClientPortal(client.id, client.name, client.tin, client.email);
+                        }}
+                        className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 transition-colors cursor-pointer"
+                        title="Sign in as client to test Client Portal view"
+                      >
+                        <Building2 className="w-3.5 h-3.5" />
+                        <span>Launch Client Portal</span>
+                      </button>
                     </div>
 
                     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">

@@ -19,6 +19,7 @@ interface AuthContextType {
   unlockWorkspaceMode: () => void;
   downgradeToFreeTrial: () => void;
   login: (email: string, password: string) => Promise<{ success: boolean; message?: string }> | { success: boolean; message?: string };
+  loginAsClientPortal: (clientId: string, clientName: string, clientTin: string, clientEmail?: string) => void;
   register: (name: string, email: string, password: string, role: string) => Promise<{ success: boolean; message?: string }> | { success: boolean; message?: string };
   loginWithGoogle: (email: string, name?: string) => Promise<{ success: boolean; message?: string }> | { success: boolean; message?: string };
   logout: () => void;
@@ -256,24 +257,69 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const normalizedEmail = email.toLowerCase().trim();
     const foundUser = usersList.find((u: any) => u.email.toLowerCase().trim() === normalizedEmail);
 
-    if (!foundUser) {
-      return { success: false, message: 'No account found with this email address. Please register first.' };
+    if (foundUser) {
+      if (foundUser.password && foundUser.password !== password) {
+        return { success: false, message: 'Incorrect password. Please try again.' };
+      }
+
+      const authenticatedUser: User = {
+        id: foundUser.id,
+        name: foundUser.name,
+        email: foundUser.email,
+        role: isSuperAdminEmail(foundUser.email) ? 'Super Admin' : (foundUser.role || 'Compliance Officer'),
+        organization_id: foundUser.organization_id || 'org_main_practice',
+        clientId: foundUser.clientId,
+        tin: foundUser.tin,
+      };
+
+      setUser(authenticatedUser);
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
+      return { success: true };
     }
 
-    if (foundUser.password && foundUser.password !== password) {
-      return { success: false, message: 'Incorrect password. Please try again.' };
+    // Check if input matches a Client TIN or Email across client stores
+    const cleanDigits = email.replace(/[^0-9]/g, '');
+    let matchedClient: any = null;
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.includes('bir_monitor_clients')) {
+        try {
+          const storedClients = JSON.parse(localStorage.getItem(key) || '[]');
+          if (Array.isArray(storedClients)) {
+            const found = storedClients.find((c: any) => 
+              (cleanDigits.length >= 7 && c.tin?.replace(/[^0-9]/g, '').includes(cleanDigits)) ||
+              (c.email && c.email.toLowerCase().trim() === normalizedEmail) ||
+              (c.name && c.name.toLowerCase().trim() === normalizedEmail)
+            );
+            if (found) {
+              matchedClient = found;
+              break;
+            }
+          }
+        } catch (e) {}
+      }
     }
 
-    const authenticatedUser: User = {
-      id: foundUser.id,
-      name: foundUser.name,
-      email: foundUser.email,
-      role: isSuperAdminEmail(foundUser.email) ? 'Super Admin' : (foundUser.role || 'Compliance Officer'),
+    if (matchedClient) {
+      loginAsClientPortal(matchedClient.id, matchedClient.name, matchedClient.tin, matchedClient.email);
+      return { success: true };
+    }
+
+    return { success: false, message: 'No tax account or client entity found with this email / TIN. Please register or contact your accountant.' };
+  };
+
+  const loginAsClientPortal = (clientId: string, clientName: string, clientTin: string, clientEmail?: string, organizationId?: string) => {
+    const clientUser: User = {
+      id: clientId,
+      name: clientName,
+      email: clientEmail || `${clientTin}@taxpayer.bizcomply.ph`,
+      role: 'Client',
+      organization_id: organizationId || 'org_main_practice',
+      clientId: clientId,
+      tin: clientTin,
     };
-
-    setUser(authenticatedUser);
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
-    return { success: true };
+    setUser(clientUser);
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(clientUser));
   };
 
   const register = async (name: string, email: string, password: string, role: string) => {
@@ -303,6 +349,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           name: name.trim(),
           email: data.user.email || normalizedEmail,
           role: assignedRole,
+          organization_id: 'org_main_practice',
         };
         setUser(authenticatedUser);
         localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
@@ -326,6 +373,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: normalizedEmail,
       password,
       role: assignedRole,
+      organization_id: 'org_main_practice',
     };
 
     const updatedUsers = [...usersList, newUserObj];
@@ -337,6 +385,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       name: newUserObj.name,
       email: newUserObj.email,
       role: newUserObj.role,
+      organization_id: newUserObj.organization_id,
     };
 
     setUser(authenticatedUser);
@@ -444,6 +493,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unlockWorkspaceMode,
       downgradeToFreeTrial,
       login,
+      loginAsClientPortal,
       register,
       loginWithGoogle,
       logout,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { FileText, Eye, EyeOff, Lock, Mail, User as UserIcon, ArrowRight, X, UserPlus, Check, Trash2 } from 'lucide-react';
+import { FileText, Eye, EyeOff, Lock, Mail, User as UserIcon, ArrowRight, X, UserPlus, Check, Trash2, Building2, ShieldCheck, Briefcase } from 'lucide-react';
 
 interface GoogleAccount {
   name: string;
@@ -11,8 +11,9 @@ interface GoogleAccount {
 const SAVED_GOOGLE_ACCOUNTS_KEY = 'bir_google_saved_accounts_v1';
 
 export function AuthPage() {
-  const { login, register, loginWithGoogle, isSupabaseConnected } = useAuth();
+  const { login, loginAsClientPortal, register, loginWithGoogle, isSupabaseConnected } = useAuth();
   const [isRegister, setIsRegister] = useState(false);
+  const [portalType, setPortalType] = useState<'practice' | 'client'>('practice');
 
   // Form states
   const [email, setEmail] = useState('');
@@ -141,7 +142,43 @@ export function AuthPage() {
 
       <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         <div className="bg-slate-900/90 backdrop-blur-md py-8 px-6 shadow-2xl rounded-2xl border border-slate-800/80 sm:px-8">
-          {/* Mode Switcher Tabs */}
+          
+          {/* Portal Switcher Tabs: Practice vs Client Portal */}
+          <div className="grid grid-cols-2 bg-slate-950/80 p-1 rounded-xl mb-5 border border-slate-800">
+            <button
+              type="button"
+              onClick={() => {
+                setPortalType('practice');
+                setError(null);
+              }}
+              className={`py-2 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
+                portalType === 'practice'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Briefcase className="w-3.5 h-3.5" />
+              <span>Tax Practice / CPA</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setPortalType('client');
+                setError(null);
+              }}
+              className={`py-2 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
+                portalType === 'client'
+                  ? 'bg-amber-500 text-slate-950 shadow-md'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              <span>Client / Taxpayer</span>
+            </button>
+          </div>
+
+          {/* Mode Switcher Tabs (Sign In vs Register) */}
           <div className="flex bg-slate-800/80 p-1 rounded-xl mb-6 border border-slate-700/50">
             <button
               type="button"
@@ -149,9 +186,9 @@ export function AuthPage() {
                 setIsRegister(false);
                 setError(null);
               }}
-              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
+              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all cursor-pointer ${
                 !isRegister
-                  ? 'bg-blue-600 text-white shadow-md'
+                  ? 'bg-slate-700 text-white shadow-md font-bold'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -163,9 +200,9 @@ export function AuthPage() {
                 setIsRegister(true);
                 setError(null);
               }}
-              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
+              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all cursor-pointer ${
                 isRegister
-                  ? 'bg-blue-600 text-white shadow-md'
+                  ? 'bg-slate-700 text-white shadow-md font-bold'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -182,40 +219,56 @@ export function AuthPage() {
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             {isRegister && (
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-                  Full Name
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <UserIcon className="h-4 w-4 text-slate-500" />
+              <>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
+                    Full Name / Company Name
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <UserIcon className="h-4 w-4 text-slate-500" />
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="e.g. Juan Dela Cruz or Acme Corp"
+                      className="block w-full pl-9 pr-3 py-2.5 bg-slate-800/80 border border-slate-700/80 rounded-xl text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors"
+                    />
                   </div>
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Juan Dela Cruz"
-                    className="block w-full pl-9 pr-3 py-2.5 bg-slate-800/80 border border-slate-700/80 rounded-xl text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors"
-                  />
                 </div>
-              </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
+                    Account Type / Role
+                  </label>
+                  <select
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    className="block w-full px-3 py-2.5 bg-slate-800/80 border border-slate-700/80 rounded-xl text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors cursor-pointer"
+                  >
+                    <option value="Compliance Officer">Compliance Officer / Accountant</option>
+                    <option value="Client">Client / Taxpayer Entity</option>
+                  </select>
+                </div>
+              </>
             )}
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-                Email Address
+                {portalType === 'client' ? 'Taxpayer Email or BIR TIN' : 'Email Address'}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-4 w-4 text-slate-500" />
+                  {portalType === 'client' ? <Building2 className="h-4 w-4 text-slate-500" /> : <Mail className="h-4 w-4 text-slate-500" />}
                 </div>
                 <input
-                  type="email"
+                  type={portalType === 'client' ? 'text' : 'email'}
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="juan@example.com"
+                  placeholder={portalType === 'client' ? 'e.g. 123-456-789-00000 or client@domain.com' : 'juan@example.com'}
                   className="block w-full pl-9 pr-3 py-2.5 bg-slate-800/80 border border-slate-700/80 rounded-xl text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors"
                 />
               </div>
@@ -240,7 +293,7 @@ export function AuthPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -250,18 +303,69 @@ export function AuthPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full mt-2 py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl shadow-lg shadow-blue-600/20 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all flex items-center justify-center space-x-2 text-sm disabled:opacity-50 cursor-pointer"
+              className={`w-full mt-2 py-3 px-4 font-bold rounded-xl shadow-lg transition-all flex items-center justify-center space-x-2 text-sm disabled:opacity-50 cursor-pointer ${
+                portalType === 'client'
+                  ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/20'
+                  : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/20'
+              }`}
             >
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
-                  <span>{isRegister ? 'Create Account' : 'Sign In'}</span>
+                  <span>{isRegister ? 'Create Account' : portalType === 'client' ? 'Sign In as Client' : 'Sign In'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
             </button>
           </form>
+
+          {/* Quick Client Demo Accounts Selection */}
+          {portalType === 'client' && !isRegister && (
+            <div className="mt-5 pt-4 border-t border-slate-800 space-y-2">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-amber-400/90 text-center flex items-center justify-center gap-1">
+                <Building2 className="w-3.5 h-3.5" />
+                <span>Quick Client Portal Demo Login</span>
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => loginAsClientPortal('demo-client-acme', 'Acme Corporation', '123-456-789-00000', 'acme@taxpayer.com')}
+                  className="p-2 bg-slate-800/90 hover:bg-amber-500/20 hover:border-amber-500/40 border border-slate-700 rounded-xl text-left transition-all cursor-pointer group"
+                >
+                  <p className="text-xs font-bold text-white group-hover:text-amber-300 truncate">Acme Corp</p>
+                  <p className="text-[10px] text-slate-400 truncate">Corporate Client</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => loginAsClientPortal('demo-client-technova', 'TechNova Solutions', '234-567-890-00000', 'technova@taxpayer.com')}
+                  className="p-2 bg-slate-800/90 hover:bg-amber-500/20 hover:border-amber-500/40 border border-slate-700 rounded-xl text-left transition-all cursor-pointer group"
+                >
+                  <p className="text-xs font-bold text-white group-hover:text-amber-300 truncate">TechNova</p>
+                  <p className="text-[10px] text-slate-400 truncate">Tech Corporate</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => loginAsClientPortal('demo-client-juan', 'Juan Dela Cruz', '456-789-012-00000', 'juan@taxpayer.com')}
+                  className="p-2 bg-slate-800/90 hover:bg-amber-500/20 hover:border-amber-500/40 border border-slate-700 rounded-xl text-left transition-all cursor-pointer group"
+                >
+                  <p className="text-xs font-bold text-white group-hover:text-amber-300 truncate">Juan Dela Cruz</p>
+                  <p className="text-[10px] text-slate-400 truncate">Individual Taxpayer</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => loginAsClientPortal('demo-client-global', 'Global Industries', '345-678-901-00000', 'global@taxpayer.com')}
+                  className="p-2 bg-slate-800/90 hover:bg-amber-500/20 hover:border-amber-500/40 border border-slate-700 rounded-xl text-left transition-all cursor-pointer group"
+                >
+                  <p className="text-xs font-bold text-white group-hover:text-amber-300 truncate">Global Ind.</p>
+                  <p className="text-[10px] text-slate-400 truncate">Manufacturing</p>
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Divider */}
           <div className="relative my-6">

@@ -5,6 +5,7 @@ import { CalendarView } from './components/CalendarView';
 import { ClientList } from './components/ClientList';
 import { FormsDirectory } from './components/FormsDirectory';
 import { AuthPage } from './components/AuthPage';
+import { ClientPortalView } from './components/ClientPortalView';
 import { WorkspaceModeSelectionModal } from './components/WorkspaceModeSelectionModal';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { FeatureReleaseProvider } from './context/FeatureReleaseContext';
@@ -33,6 +34,18 @@ function MainContent() {
 
   if (!user) {
     return <AuthPage />;
+  }
+
+  if (user.role === 'Client') {
+    return (
+      <ClientPortalView 
+        clients={clients} 
+        formReferences={forms} 
+        selectedPeriod={selectedPeriod} 
+        onChangePeriod={setSelectedPeriod}
+        onUpdateForm={updateForm} 
+      />
+    );
   }
 
   if (!workspaceMode) {
