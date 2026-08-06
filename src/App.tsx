@@ -5,13 +5,14 @@ import { CalendarView } from './components/CalendarView';
 import { ClientList } from './components/ClientList';
 import { FormsDirectory } from './components/FormsDirectory';
 import { AuthPage } from './components/AuthPage';
+import { WorkspaceModeSelectionModal } from './components/WorkspaceModeSelectionModal';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { useClients, useFormReferences } from './store';
 import { AppLockShield } from './components/AppLockShield';
 
 function MainContent() {
-  const { user, isAuthLoaded } = useAuth();
+  const { user, isAuthLoaded, workspaceMode, setWorkspaceMode } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [currentView, setCurrentView] = useState<'dashboard' | 'calendar' | 'clients' | 'forms'>('dashboard');
   const [selectedPeriod, setSelectedPeriod] = useState(() => {
@@ -31,6 +32,10 @@ function MainContent() {
 
   if (!user) {
     return <AuthPage />;
+  }
+
+  if (!workspaceMode) {
+    return <WorkspaceModeSelectionModal onSelectMode={setWorkspaceMode} currentMode={workspaceMode} />;
   }
 
   return (

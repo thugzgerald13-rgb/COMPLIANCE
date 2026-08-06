@@ -2,9 +2,20 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { User } from '../types';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
+export type WorkspaceMode = 'single' | 'multi';
+export type SubscriptionTier = 'free_trial' | 'subscriber';
+
 interface AuthContextType {
   user: User | null;
   allUsers: User[];
+  workspaceMode: WorkspaceMode | null;
+  subscriptionTier: SubscriptionTier;
+  isWorkspaceLocked: boolean;
+  setWorkspaceMode: (mode: WorkspaceMode) => void;
+  resetWorkspaceMode: (force?: boolean) => void;
+  upgradeToSubscriber: () => void;
+  unlockWorkspaceMode: () => void;
+  downgradeToFreeTrial: () => void;
   login: (email: string, password: string) => Promise<{ success: boolean; message?: string }> | { success: boolean; message?: string };
   register: (name: string, email: string, password: string, role: string) => Promise<{ success: boolean; message?: string }> | { success: boolean; message?: string };
   loginWithGoogle: (email: string, name?: string) => Promise<{ success: boolean; message?: string }> | { success: boolean; message?: string };
@@ -41,13 +52,70 @@ const DEFAULT_USERS = [
 
 const USERS_STORAGE_KEY = 'bir_monitor_users_v1';
 const CURRENT_USER_KEY = 'bir_monitor_current_user_v1';
+const WORKSPACE_MODE_KEY = 'bir_monitor_workspace_mode_v1';
+const SUBSCRIPTION_TIER_KEY = 'bir_monitor_subscription_tier_v1';
+const WORKSPACE_LOCKED_KEY = 'bir_monitor_workspace_locked_v1';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [subscriptionTier, setSubscriptionTierState] = useState<SubscriptionTier>(() => {
+    const saved = localStorage.getItem(SUBSCRIPTION_TIER_KEY);
+    return saved === 'subscriber' ? 'subscriber' : 'free_trial';
+  });
+  const [isWorkspaceLocked, setIsWorkspaceLockedState] = useState<boolean>(() => {
+    return localStorage.getItem(WORKSPACE_LOCKED_KEY) === 'true';
+  });
+  const [workspaceMode, setWorkspaceModeState] = useState<WorkspaceMode | null>(() => {
+    const saved = localStorage.getItem(WORKSPACE_MODE_KEY);
+    return (saved === 'single' || saved === 'multi') ? saved : null;
+  });
   const [isAuthLoaded, setIsAuthLoaded] = useState(false);
+
+  const setWorkspaceMode = (mode: WorkspaceMode) => {
+    setWorkspaceModeState(mode);
+    localStorage.setItem(WORKSPACE_MODE_KEY, mode);
+
+    // If setting mode as a subscriber, lock it in as their status!
+    if (subscriptionTier === 'subscriber') {
+      setIsWorkspaceLockedState(true);
+      localStorage.setItem(WORKSPACE_LOCKED_KEY, 'true');
+    }
+  };
+
+  const resetWorkspaceMode = (force: boolean = false) => {
+    const isSuperAdmin = user ? isSuperAdminEmail(user.email) : false;
+    // Allow reset if in free trial OR if forced/unlocked OR if super admin
+    if (subscriptionTier === 'free_trial' || !isWorkspaceLocked || force || isSuperAdmin) {
+      setWorkspaceModeState(null);
+      localStorage.removeItem(WORKSPACE_MODE_KEY);
+    }
+  };
+
+  const upgradeToSubscriber = () => {
+    setSubscriptionTierState('subscriber');
+    localStorage.setItem(SUBSCRIPTION_TIER_KEY, 'subscriber');
+
+    // Prompt user again to choose single or multi, which will lock in their subscriber status
+    setIsWorkspaceLockedState(false);
+    localStorage.removeItem(WORKSPACE_LOCKED_KEY);
+    setWorkspaceModeState(null);
+    localStorage.removeItem(WORKSPACE_MODE_KEY);
+  };
+
+  const unlockWorkspaceMode = () => {
+    setIsWorkspaceLockedState(false);
+    localStorage.setItem(WORKSPACE_LOCKED_KEY, 'false');
+  };
+
+  const downgradeToFreeTrial = () => {
+    setSubscriptionTierState('free_trial');
+    localStorage.setItem(SUBSCRIPTION_TIER_KEY, 'free_trial');
+    setIsWorkspaceLockedState(false);
+    localStorage.setItem(WORKSPACE_LOCKED_KEY, 'false');
+  };
 
   // Sync users list to state
   const refreshUsersList = () => {
@@ -358,6 +426,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{
       user,
       allUsers,
+      workspaceMode,
+      subscriptionTier,
+      isWorkspaceLocked,
+      setWorkspaceMode,
+      resetWorkspaceMode,
+      upgradeToSubscriber,
+      unlockWorkspaceMode,
+      downgradeToFreeTrial,
       login,
       register,
       loginWithGoogle,

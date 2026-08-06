@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, FileText, BookOpen, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Calendar, CalendarDays, LogOut, Cloud, Menu, X, Settings, Sun, Moon, Crown } from 'lucide-react';
+import { LayoutDashboard, Users, User, FileText, BookOpen, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Calendar, CalendarDays, LogOut, Cloud, Menu, X, Settings, Sun, Moon, Crown, Lock, Sparkles, ShieldCheck } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -39,7 +39,17 @@ export function Sidebar({
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const [showLockedNotice, setShowLockedNotice] = useState(false);
+  const { 
+    user, 
+    logout, 
+    workspaceMode, 
+    resetWorkspaceMode, 
+    subscriptionTier, 
+    isWorkspaceLocked, 
+    upgradeToSubscriber, 
+    unlockWorkspaceMode 
+  } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(() => 
@@ -224,7 +234,42 @@ export function Sidebar({
 
               {/* Clickable Collapsible User Profile Card (Mobile) */}
               {isUserMenuOpen && (
-                <div className="bg-slate-800 border border-slate-700 rounded-xl p-1.5 space-y-1 shadow-2xl text-slate-100">
+                <div className="bg-slate-800 border border-slate-700 rounded-xl p-2 space-y-2 shadow-2xl text-slate-100">
+                  {/* Subscription Status Banner */}
+                  <div className="p-2 rounded-lg bg-slate-900/80 border border-slate-700/60 flex items-center justify-between text-xs">
+                    {subscriptionTier === 'free_trial' ? (
+                      <>
+                        <div className="flex items-center space-x-1 text-emerald-400 font-bold text-[11px]">
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Free Trial</span>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setIsUserMenuOpen(false);
+                            setIsMobileOpen(false);
+                            upgradeToSubscriber();
+                          }}
+                          className="px-2 py-1 bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 font-extrabold text-[10px] rounded hover:brightness-110 transition-all cursor-pointer shadow-xs flex items-center space-x-1"
+                          title="Click to Subscribe and lock in your workspace mode"
+                        >
+                          <Crown className="w-3 h-3 fill-slate-950" />
+                          <span>Upgrade</span>
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center space-x-1 text-amber-300 font-bold text-[11px]">
+                          <Crown className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Subscriber Plan</span>
+                        </div>
+                        <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center space-x-1">
+                          <Lock className="w-2.5 h-2.5 text-amber-400" />
+                          <span>Locked</span>
+                        </span>
+                      </>
+                    )}
+                  </div>
+
                   <button
                     onClick={() => toggleTheme()}
                     className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-slate-700/80 transition-colors cursor-pointer"
@@ -253,6 +298,56 @@ export function Sidebar({
                     <Settings className="w-4 h-4 text-blue-400 shrink-0" />
                     <span>Settings</span>
                   </button>
+
+                  {/* Workspace Mode Action / Locked Indicator */}
+                  {subscriptionTier === 'free_trial' ? (
+                    <button
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        setIsMobileOpen(false);
+                        resetWorkspaceMode();
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold text-emerald-400 hover:bg-emerald-950/40 transition-colors cursor-pointer border border-emerald-500/30 bg-emerald-500/5"
+                    >
+                      <div className="flex items-center space-x-2.5">
+                        {workspaceMode === 'single' ? (
+                          <User className="w-4 h-4 text-emerald-400 shrink-0" />
+                        ) : (
+                          <Users className="w-4 h-4 text-blue-400 shrink-0" />
+                        )}
+                        <span>Switch Workspace Mode</span>
+                      </div>
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.5 rounded">Trial</span>
+                    </button>
+                  ) : (
+                    <div className="w-full p-2.5 rounded-lg bg-slate-900/60 border border-slate-700/80 space-y-1">
+                      <div className="flex items-center justify-between text-xs font-semibold text-slate-200">
+                        <div className="flex items-center space-x-2">
+                          {workspaceMode === 'single' ? (
+                            <User className="w-4 h-4 text-emerald-400 shrink-0" />
+                          ) : (
+                            <Users className="w-4 h-4 text-blue-400 shrink-0" />
+                          )}
+                          <span>Workspace: {workspaceMode === 'single' ? 'Single-User' : 'Multi-User'}</span>
+                        </div>
+                        <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      </div>
+                      <p className="text-[10px] text-slate-400">Locked under active subscription plan.</p>
+                      {(user?.role === 'Super Admin' || user?.email?.includes('gerald13')) && (
+                        <button
+                          onClick={() => {
+                            setIsUserMenuOpen(false);
+                            setIsMobileOpen(false);
+                            unlockWorkspaceMode();
+                            resetWorkspaceMode(true);
+                          }}
+                          className="text-[10px] font-bold text-amber-400 hover:underline cursor-pointer pt-1"
+                        >
+                          Super Admin Unlock
+                        </button>
+                      )}
+                    </div>
+                  )}
 
                   <button
                     onClick={() => {
@@ -446,7 +541,63 @@ export function Sidebar({
 
           {/* Collapsible Menu Options */}
           {isUserMenuOpen && (
-            <div className={`bg-slate-800 border border-slate-700 rounded-xl p-1.5 space-y-1 shadow-2xl text-slate-100 animate-in fade-in slide-in-from-bottom-2 duration-150 ${isCollapsed ? 'flex flex-col items-center justify-center' : ''}`}>
+            <div className={`bg-slate-800 border border-slate-700 rounded-xl p-2 space-y-2 shadow-2xl text-slate-100 animate-in fade-in slide-in-from-bottom-2 duration-150 ${isCollapsed ? 'flex flex-col items-center justify-center' : ''}`}>
+              
+              {/* Subscription Status Pill */}
+              {!isCollapsed ? (
+                <div className="p-2 rounded-lg bg-slate-900/80 border border-slate-700/60 flex items-center justify-between text-xs">
+                  {subscriptionTier === 'free_trial' ? (
+                    <>
+                      <div className="flex items-center space-x-1 text-emerald-400 font-bold text-[11px]">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Free Trial</span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          upgradeToSubscriber();
+                        }}
+                        className="px-2 py-1 bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 font-extrabold text-[10px] rounded hover:brightness-110 transition-all cursor-pointer shadow-xs flex items-center space-x-1"
+                        title="Click to Subscribe and lock in your workspace mode"
+                      >
+                        <Crown className="w-3 h-3 fill-slate-950" />
+                        <span>Upgrade</span>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center space-x-1 text-amber-300 font-bold text-[11px]">
+                        <Crown className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Subscriber Plan</span>
+                      </div>
+                      <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center space-x-1">
+                        <Lock className="w-2.5 h-2.5 text-amber-400" />
+                        <span>Locked</span>
+                      </span>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className="py-1">
+                  {subscriptionTier === 'free_trial' ? (
+                    <button
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        upgradeToSubscriber();
+                      }}
+                      className="p-1.5 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-lg hover:bg-amber-500/30 transition-colors cursor-pointer"
+                      title="Free Trial (Click to Upgrade to Subscriber)"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <div className="p-1.5 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-lg" title="Subscriber Plan (Locked)">
+                      <Lock className="w-4 h-4" />
+                    </div>
+                  )}
+                </div>
+              )}
+
               <button
                 onClick={() => {
                   toggleTheme();
@@ -479,6 +630,55 @@ export function Sidebar({
                 <Settings className="w-4.5 h-4.5 text-blue-400 shrink-0" />
                 {!isCollapsed && <span>Settings</span>}
               </button>
+
+              {/* Workspace Mode Switch / Locked Option */}
+              {subscriptionTier === 'free_trial' ? (
+                <button
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    resetWorkspaceMode();
+                  }}
+                  className={`w-full flex items-center ${isCollapsed ? 'justify-center p-2' : 'justify-between px-3 py-2'} rounded-lg text-xs font-semibold text-emerald-400 hover:bg-emerald-950/40 transition-colors cursor-pointer border border-emerald-500/30 bg-emerald-500/5`}
+                  title="Free Trial: Switch between Single-User and Multi-User workspace mode"
+                >
+                  <div className="flex items-center space-x-2.5">
+                    {workspaceMode === 'single' ? (
+                      <User className="w-4.5 h-4.5 text-emerald-400 shrink-0" />
+                    ) : (
+                      <Users className="w-4.5 h-4.5 text-blue-400 shrink-0" />
+                    )}
+                    {!isCollapsed && <span>Switch Workspace Mode</span>}
+                  </div>
+                  {!isCollapsed && <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.5 rounded">Trial</span>}
+                </button>
+              ) : (
+                <div className={`w-full ${isCollapsed ? 'p-1.5 flex justify-center' : 'p-2.5'} rounded-lg bg-slate-900/60 border border-slate-700/80 space-y-1`}>
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-200">
+                    <div className="flex items-center space-x-2">
+                      {workspaceMode === 'single' ? (
+                        <User className="w-4.5 h-4.5 text-emerald-400 shrink-0" />
+                      ) : (
+                        <Users className="w-4.5 h-4.5 text-blue-400 shrink-0" />
+                      )}
+                      {!isCollapsed && <span>Workspace: {workspaceMode === 'single' ? 'Single-User' : 'Multi-User'}</span>}
+                    </div>
+                    <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" title="Locked Subscriber Plan" />
+                  </div>
+                  {!isCollapsed && <p className="text-[10px] text-slate-400">Locked under active subscription plan.</p>}
+                  {!isCollapsed && (user?.role === 'Super Admin' || user?.email?.includes('gerald13')) && (
+                    <button
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        unlockWorkspaceMode();
+                        resetWorkspaceMode(true);
+                      }}
+                      className="text-[10px] font-bold text-amber-400 hover:underline cursor-pointer pt-1"
+                    >
+                      Super Admin Unlock
+                    </button>
+                  )}
+                </div>
+              )}
 
               <button
                 onClick={() => {
