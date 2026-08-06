@@ -1,9 +1,18 @@
-// BIZ-COMPLY Automatic Web Push & Service Worker Manager
+// BIZ-COMPLY Automatic Web Push, Caching & Service Worker Manager
 // Schedules & handles automatic 8:00 AM Philippine Time (GMT+8) Web Push Notifications
-// Works in the background even when the website tab is closed!
+// Provides robust offline asset caching and background data sync for compliance dashboard
 
+const CACHE_NAME = 'bizcomply-static-v2';
+const DYNAMIC_CACHE = 'bizcomply-dynamic-v2';
 const DB_NAME = 'BizComply_SW_DB';
 const DB_VERSION = 1;
+
+const PRECACHE_ASSETS = [
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/favicon.ico'
+];
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -12,6 +21,9 @@ function openDB() {
       const db = event.target.result;
       if (!db.objectStoreNames.contains('store')) {
         db.createObjectStore('store');
+      }
+      if (!db.objectStoreNames.contains('offline_queue')) {
+        db.createObjectStore('offline_queue', { keyPath: 'id' });
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -138,17 +150,110 @@ async function checkAndTrigger8AMPushNotification(forceTest = false) {
   }
 }
 
-// Service Worker Install & Activate
+// Service Worker Install & Activate with Asset Precaching
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      console.log('[SW] Precaching core compliance shell assets');
+      return cache.addAll(PRECACHE_ASSETS).catch((err) => {
+        console.warn('[SW] Pre-cache warning:', err);
+      });
+    }).then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    self.clients.claim().then(() => {
+    Promise.all([
+      // Clean up old caches
+      caches.keys().then((keys) => {
+        return Promise.all(
+          keys.map((key) => {
+            if (key !== CACHE_NAME && key !== DYNAMIC_CACHE) {
+              console.log('[SW] Deleting stale cache:', key);
+              return caches.delete(key);
+            }
+          })
+        );
+      }),
+      self.clients.claim()
+    ]).then(() => {
       // Check 8:00 AM trigger on activation
       checkAndTrigger8AMPushNotification();
     })
+  );
+});
+
+// Fetch Intercept & Caching Strategy
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  const url = new URL(req.url);
+
+  // Skip non-GET and unsupported protocols
+  if (req.method !== 'GET' || !url.protocol.startsWith('http')) {
+    return;
+  }
+
+  // Navigation / Document requests: Network-first with Cache fallback
+  if (req.mode === 'navigate' || req.headers.get('accept')?.includes('text/html')) {
+    event.respondWith(
+      fetch(req)
+        .then((networkRes) => {
+          if (networkRes && networkRes.status === 200) {
+            const resClone = networkRes.clone();
+            caches.open(DYNAMIC_CACHE).then((cache) => cache.put(req, resClone));
+          }
+          return networkRes;
+        })
+        .catch(async () => {
+          const cachedRes = await caches.match(req);
+          if (cachedRes) return cachedRes;
+          const fallback = await caches.match('/index.html') || await caches.match('/');
+          return fallback || new Response('Offline Compliance Shell', { status: 200, headers: { 'Content-Type': 'text/html' } });
+        })
+    );
+    return;
+  }
+
+  // Static Assets (JS, CSS, fonts, SVG, PNG): Stale-While-Revalidate Strategy
+  if (
+    url.pathname.endsWith('.js') ||
+    url.pathname.endsWith('.css') ||
+    url.pathname.endsWith('.svg') ||
+    url.pathname.endsWith('.png') ||
+    url.pathname.endsWith('.woff2') ||
+    url.pathname.endsWith('.ico') ||
+    url.pathname.includes('/assets/')
+  ) {
+    event.respondWith(
+      caches.match(req).then((cachedRes) => {
+        const fetchPromise = fetch(req)
+          .then((networkRes) => {
+            if (networkRes && networkRes.status === 200) {
+              const resClone = networkRes.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
+            }
+            return networkRes;
+          })
+          .catch(() => cachedRes);
+
+        return cachedRes || fetchPromise;
+      })
+    );
+    return;
+  }
+
+  // Default API or static requests: Network-First with Cache Fallback
+  event.respondWith(
+    fetch(req)
+      .then((networkRes) => {
+        if (networkRes && networkRes.status === 200 && networkRes.type === 'basic') {
+          const resClone = networkRes.clone();
+          caches.open(DYNAMIC_CACHE).then((cache) => cache.put(req, resClone));
+        }
+        return networkRes;
+      })
+      .catch(() => caches.match(req))
   );
 });
 
@@ -156,6 +261,19 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('periodicsync', (event) => {
   if (event.tag === 'bizcomply-daily-8am-push') {
     event.waitUntil(checkAndTrigger8AMPushNotification());
+  }
+});
+
+// Background Sync Event for Offline Queue
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'bizcomply-offline-sync') {
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window' }).then((clientList) => {
+        clientList.forEach((client) => {
+          client.postMessage({ type: 'TRIGGER_OFFLINE_SYNC' });
+        });
+      })
+    );
   }
 });
 

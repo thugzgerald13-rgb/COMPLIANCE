@@ -7,9 +7,11 @@ import { FormsDirectory } from './components/FormsDirectory';
 import { AuthPage } from './components/AuthPage';
 import { ClientPortalView } from './components/ClientPortalView';
 import { WorkspaceModeSelectionModal } from './components/WorkspaceModeSelectionModal';
+import { OfflineSyncBanner } from './components/OfflineSyncBanner';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { FeatureReleaseProvider } from './context/FeatureReleaseContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { OfflineSyncProvider } from './context/OfflineSyncContext';
 import { useClients, useFormReferences } from './store';
 import { AppLockShield } from './components/AppLockShield';
 
@@ -38,13 +40,16 @@ function MainContent() {
 
   if (user.role === 'Client') {
     return (
-      <ClientPortalView 
-        clients={clients} 
-        formReferences={forms} 
-        selectedPeriod={selectedPeriod} 
-        onChangePeriod={setSelectedPeriod}
-        onUpdateForm={updateForm} 
-      />
+      <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
+        <OfflineSyncBanner />
+        <ClientPortalView 
+          clients={clients} 
+          formReferences={forms} 
+          selectedPeriod={selectedPeriod} 
+          onChangePeriod={setSelectedPeriod}
+          onUpdateForm={updateForm} 
+        />
+      </div>
     );
   }
 
@@ -53,63 +58,66 @@ function MainContent() {
   }
 
   return (
-    <div className="flex flex-col md:flex-row h-screen h-[100dvh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans overflow-hidden transition-colors duration-200 relative">
-      <Sidebar 
-        currentView={currentView} 
-        onChangeView={setCurrentView} 
-        selectedPeriod={selectedPeriod}
-        onChangePeriod={setSelectedPeriod}
-        clients={clients}
-        formReferences={forms}
-        onUpdateForm={updateForm}
-      />
-      
-      <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-        <main className="flex-1 h-full overflow-y-auto pt-2 sm:pt-0">
-          {currentView === 'dashboard' && (
-            <Dashboard 
-              clients={clients} 
-              formReferences={forms} 
-              selectedPeriod={selectedPeriod} 
-              onUpdateForm={updateForm}
-              onRemoveFormFromClient={removeFormFromClient}
-            />
-          )}
+    <div className="flex flex-col h-screen h-[100dvh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans overflow-hidden transition-colors duration-200 relative">
+      <OfflineSyncBanner />
+      <div className="flex flex-col md:flex-row flex-1 h-full overflow-hidden relative">
+        <Sidebar 
+          currentView={currentView} 
+          onChangeView={setCurrentView} 
+          selectedPeriod={selectedPeriod}
+          onChangePeriod={setSelectedPeriod}
+          clients={clients}
+          formReferences={forms}
+          onUpdateForm={updateForm}
+        />
+        
+        <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+          <main className="flex-1 h-full overflow-y-auto pt-2 sm:pt-0">
+            {currentView === 'dashboard' && (
+              <Dashboard 
+                clients={clients} 
+                formReferences={forms} 
+                selectedPeriod={selectedPeriod} 
+                onUpdateForm={updateForm}
+                onRemoveFormFromClient={removeFormFromClient}
+              />
+            )}
 
-          {currentView === 'calendar' && (
-            <CalendarView
-              clients={clients}
-              formReferences={forms}
-              selectedPeriod={selectedPeriod}
-              onChangePeriod={setSelectedPeriod}
-              onUpdateForm={updateForm}
-              onRemoveFormFromClient={removeFormFromClient}
-            />
-          )}
-          
-          {currentView === 'clients' && (
-            <ClientList 
-              clients={clients} 
-              formReferences={forms}
-              onUpdateForm={updateForm} 
-              onAddClient={addClient}
-              onDeleteClient={deleteClient}
-              onClearAllClients={clearAllClients}
-              onAddFormToClient={addFormToClient}
-              onRemoveFormFromClient={removeFormFromClient}
-              selectedPeriod={selectedPeriod}
-            />
-          )}
+            {currentView === 'calendar' && (
+              <CalendarView
+                clients={clients}
+                formReferences={forms}
+                selectedPeriod={selectedPeriod}
+                onChangePeriod={setSelectedPeriod}
+                onUpdateForm={updateForm}
+                onRemoveFormFromClient={removeFormFromClient}
+              />
+            )}
+            
+            {currentView === 'clients' && (
+              <ClientList 
+                clients={clients} 
+                formReferences={forms}
+                onUpdateForm={updateForm} 
+                onAddClient={addClient}
+                onDeleteClient={deleteClient}
+                onClearAllClients={clearAllClients}
+                onAddFormToClient={addFormToClient}
+                onRemoveFormFromClient={removeFormFromClient}
+                selectedPeriod={selectedPeriod}
+              />
+            )}
 
-          {currentView === 'forms' && (
-            <FormsDirectory 
-              forms={forms} 
-              onAddFormReference={addFormReference} 
-              onDeleteFormReference={deleteFormReference}
-              onUpdateFormReference={updateFormReference}
-            />
-          )}
-        </main>
+            {currentView === 'forms' && (
+              <FormsDirectory 
+                forms={forms} 
+                onAddFormReference={addFormReference} 
+                onDeleteFormReference={deleteFormReference}
+                onUpdateFormReference={updateFormReference}
+              />
+            )}
+          </main>
+        </div>
       </div>
     </div>
   );
@@ -121,8 +129,10 @@ export default function App() {
     <ThemeProvider>
       <AuthProvider>
         <FeatureReleaseProvider>
-          <AppLockShield />
-          <MainContent />
+          <OfflineSyncProvider>
+            <AppLockShield />
+            <MainContent />
+          </OfflineSyncProvider>
         </FeatureReleaseProvider>
       </AuthProvider>
     </ThemeProvider>

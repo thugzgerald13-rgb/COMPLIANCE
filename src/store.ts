@@ -6,6 +6,26 @@ import { supabase, isSupabaseConfigured } from './lib/supabase';
 
 const FORMS_STORAGE_KEY = 'bir_monitor_forms_v2';
 
+function recordOfflineAction(type: 'UPDATE_FORM' | 'ADD_CLIENT' | 'DELETE_CLIENT' | 'ADD_FORM_TO_CLIENT' | 'REMOVE_FORM' | 'UPDATE_PAYABLE', description: string, payload: any) {
+  try {
+    const QUEUE_KEY = 'bizcomply_offline_sync_queue_v1';
+    const stored = localStorage.getItem(QUEUE_KEY);
+    const queue = stored ? JSON.parse(stored) : [];
+    const newAction = {
+      id: crypto.randomUUID(),
+      type,
+      description,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      payload
+    };
+    queue.unshift(newAction);
+    localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+    window.dispatchEvent(new Event('bizcomply_offline_queue_updated'));
+  } catch (e) {
+    console.warn('Failed to record offline action:', e);
+  }
+}
+
 export function useFormReferences() {
   const { user } = useAuth();
   const [forms, setForms] = useState<FormReference[]>(commonForms);
@@ -229,8 +249,10 @@ export function useClients() {
     updates: Partial<BIRForm>, 
     formMeta?: { code: string; description: string; deadline: string; period: string; assignedPeriod?: string }
   ) => {
+    let clientName = 'Client';
     const updatedClients = clients.map(client => {
       if (client.id === clientId) {
+        clientName = client.name;
         const existingIndex = client.forms.findIndex(f => 
           f.id === formId || (formMeta && f.code === formMeta.code && f.period === formMeta.period)
         );
@@ -258,16 +280,29 @@ export function useClients() {
       return client;
     });
     
+    if (!navigator.onLine || localStorage.getItem('bizcomply_offline_sync_queue_v1')) {
+      const formCode = formMeta?.code || 'BIR Form';
+      const statusText = updates.status ? `status to ${updates.status}` : 'details';
+      recordOfflineAction('UPDATE_FORM', `Updated ${formCode} ${statusText} for ${clientName}`, { clientId, formId, updates });
+    }
+
     saveClients(updatedClients);
   };
 
   const addClient = (client: Client) => {
     const updatedClients = [client, ...clients];
+    if (!navigator.onLine || localStorage.getItem('bizcomply_offline_sync_queue_v1')) {
+      recordOfflineAction('ADD_CLIENT', `Added new client entity ${client.name} (TIN: ${client.tin})`, client);
+    }
     saveClients(updatedClients);
   };
 
   const deleteClient = (clientId: string) => {
+    const target = clients.find(c => c.id === clientId);
     const updatedClients = clients.filter(c => c.id !== clientId);
+    if (!navigator.onLine || localStorage.getItem('bizcomply_offline_sync_queue_v1')) {
+      recordOfflineAction('DELETE_CLIENT', `Removed client entity ${target?.name || clientId}`, { clientId });
+    }
     saveClients(updatedClients);
   };
 
