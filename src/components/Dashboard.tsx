@@ -33,7 +33,7 @@ interface SelectedDashboardForm extends BIRForm {
 }
 
 export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateForm, onRemoveFormFromClient }: DashboardProps) {
-  const { user, isSuperAdmin } = useAuth();
+  const { user, isSuperAdmin, workspaceMode, toggleWorkspaceMode } = useAuth();
   const { isFeatureAvailable, getFeatureStage, featureUpdates } = useFeatureRelease();
   const [filterStatus, setFilterStatus] = useState<'all' | 'Pending' | 'Processing'>('all');
   const [editingForm, setEditingForm] = useState<SelectedDashboardForm | null>(null);
@@ -300,13 +300,24 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
             </div>
           </div>
 
-          <button
-            onClick={() => setIsAdminReleaseModalOpen(true)}
-            className="px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-slate-950 font-black text-xs rounded-xl transition-all cursor-pointer shadow-md shrink-0 flex items-center space-x-1.5"
-          >
-            <Rocket className="w-4 h-4 text-slate-950" />
-            <span>Manage Early Access Updates</span>
-          </button>
+          <div className="flex items-center space-x-2 shrink-0">
+            <button
+              onClick={toggleWorkspaceMode}
+              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 font-bold text-xs rounded-xl transition-all cursor-pointer shadow-md flex items-center space-x-1.5"
+              title="Click to toggle workspace mode between Single-User and Multi-User Practice Mode"
+            >
+              {workspaceMode === 'single' ? <Users className="w-4 h-4 text-blue-400" /> : <Users className="w-4 h-4 text-emerald-400" />}
+              <span>Switch to {workspaceMode === 'single' ? 'Multi-User' : 'Single-User'}</span>
+            </button>
+
+            <button
+              onClick={() => setIsAdminReleaseModalOpen(true)}
+              className="px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-slate-950 font-black text-xs rounded-xl transition-all cursor-pointer shadow-md flex items-center space-x-1.5"
+            >
+              <Rocket className="w-4 h-4 text-slate-950" />
+              <span>Manage Early Access Updates</span>
+            </button>
+          </div>
         </div>
       )}
 

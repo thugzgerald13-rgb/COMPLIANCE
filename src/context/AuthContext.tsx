@@ -12,6 +12,7 @@ interface AuthContextType {
   workspaceMode: WorkspaceMode | null;
   subscriptionTier: SubscriptionTier;
   isWorkspaceLocked: boolean;
+  toggleWorkspaceMode: () => void;
   setWorkspaceMode: (mode: WorkspaceMode) => void;
   resetWorkspaceMode: (force?: boolean) => void;
   upgradeToSubscriber: () => void;
@@ -75,20 +76,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
   const [isAuthLoaded, setIsAuthLoaded] = useState(false);
 
+  const isSuperAdmin = Boolean(user && (user.role === 'Super Admin' || user.role === 'Admin' || isSuperAdminEmail(user.email) || user.email?.toLowerCase().includes('gerald13')));
+
+  const toggleWorkspaceMode = () => {
+    const nextMode: WorkspaceMode = workspaceMode === 'single' ? 'multi' : 'single';
+    setWorkspaceModeState(nextMode);
+    localStorage.setItem(WORKSPACE_MODE_KEY, nextMode);
+  };
+
   const setWorkspaceMode = (mode: WorkspaceMode) => {
     setWorkspaceModeState(mode);
     localStorage.setItem(WORKSPACE_MODE_KEY, mode);
 
-    // If setting mode as a subscriber, lock it in as their status!
-    if (subscriptionTier === 'subscriber') {
+    if (subscriptionTier === 'subscriber' && !isSuperAdmin) {
       setIsWorkspaceLockedState(true);
       localStorage.setItem(WORKSPACE_LOCKED_KEY, 'true');
     }
   };
 
   const resetWorkspaceMode = (force: boolean = false) => {
-    const isSuperAdmin = user ? isSuperAdminEmail(user.email) : false;
-    // Allow reset if in free trial OR if forced/unlocked OR if super admin
     if (subscriptionTier === 'free_trial' || !isWorkspaceLocked || force || isSuperAdmin) {
       setWorkspaceModeState(null);
       localStorage.removeItem(WORKSPACE_MODE_KEY);
@@ -423,8 +429,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(CURRENT_USER_KEY);
   };
 
-  const isSuperAdmin = Boolean(user && (user.role === 'Super Admin' || isSuperAdminEmail(user.email) || user.email?.toLowerCase().includes('gerald13')));
-
   return (
     <AuthContext.Provider value={{
       user,
@@ -433,6 +437,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       workspaceMode,
       subscriptionTier,
       isWorkspaceLocked,
+      toggleWorkspaceMode,
       setWorkspaceMode,
       resetWorkspaceMode,
       upgradeToSubscriber,

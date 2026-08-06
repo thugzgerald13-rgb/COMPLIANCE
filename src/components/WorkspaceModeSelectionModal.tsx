@@ -15,7 +15,7 @@ export function WorkspaceModeSelectionModal({
   onClose,
   isModal = false
 }: WorkspaceModeSelectionModalProps) {
-  const { user, subscriptionTier } = useAuth();
+  const { user, isSuperAdmin, subscriptionTier } = useAuth();
 
   const isSubscriber = subscriptionTier === 'subscriber';
 
@@ -42,7 +42,12 @@ export function WorkspaceModeSelectionModal({
         
         {/* Header Section */}
         <div className="text-center space-y-3 max-w-2xl mx-auto">
-          {isSubscriber ? (
+          {isSuperAdmin ? (
+            <div className="inline-flex items-center space-x-2 px-3.5 py-1 bg-amber-500/20 border border-amber-500/40 rounded-full text-amber-300 text-xs font-bold shadow-xs">
+              <Crown className="w-4 h-4 text-amber-400 fill-amber-400" />
+              <span>Super Admin Workspace Privilege</span>
+            </div>
+          ) : isSubscriber ? (
             <div className="inline-flex items-center space-x-2 px-3.5 py-1 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/40 rounded-full text-amber-300 text-xs font-bold shadow-xs">
               <Crown className="w-4 h-4 text-amber-400" />
               <span>Subscriber Lock-In Selection</span>
@@ -55,11 +60,15 @@ export function WorkspaceModeSelectionModal({
           )}
 
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            {isSubscriber ? 'Confirm Your Subscriber Plan Mode' : `Welcome, ${user?.name || 'Tax Professional'}!`}
+            {isSuperAdmin ? 'Select or Switch Workspace Mode' : isSubscriber ? 'Confirm Your Subscriber Plan Mode' : `Welcome, ${user?.name || 'Tax Professional'}!`}
           </h1>
           
           <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            {isSubscriber ? (
+            {isSuperAdmin ? (
+              <span>
+                As <strong>Super Admin</strong>, you have full privileges to switch between <strong>Single-User</strong> and <strong>Multi-User</strong> modes at any time via the sidebar or control center.
+              </span>
+            ) : isSubscriber ? (
               <span>
                 As a <strong>Subscriber</strong>, please select your preferred operating mode below. Your selection will become your <strong>locked-in subscriber status</strong> for this account.
               </span>

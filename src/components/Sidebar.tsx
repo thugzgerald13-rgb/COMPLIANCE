@@ -49,6 +49,8 @@ export function Sidebar({
     isSuperAdmin,
     logout, 
     workspaceMode, 
+    setWorkspaceMode,
+    toggleWorkspaceMode,
     resetWorkspaceMode, 
     subscriptionTier, 
     isWorkspaceLocked, 
@@ -665,7 +667,35 @@ export function Sidebar({
               )}
 
               {/* Workspace Mode Switch / Locked Option */}
-              {subscriptionTier === 'free_trial' ? (
+              {isSuperAdmin ? (
+                <button
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    toggleWorkspaceMode();
+                  }}
+                  className={`w-full flex items-center ${isCollapsed ? 'justify-center p-2' : 'justify-between px-3 py-2.5'} rounded-lg text-xs font-bold text-amber-300 hover:bg-amber-500/20 transition-all cursor-pointer border border-amber-500/40 bg-gradient-to-r from-amber-500/10 to-yellow-500/10 shadow-xs`}
+                  title="Super Admin: Toggle between Single-User and Multi-User Mode"
+                >
+                  <div className="flex items-center space-x-2.5">
+                    {workspaceMode === 'single' ? (
+                      <User className="w-4.5 h-4.5 text-emerald-400 shrink-0" />
+                    ) : (
+                      <Users className="w-4.5 h-4.5 text-blue-400 shrink-0" />
+                    )}
+                    {!isCollapsed && (
+                      <div className="flex flex-col text-left">
+                        <span className="text-white font-bold">Switch to {workspaceMode === 'single' ? 'Multi-User' : 'Single-User'}</span>
+                        <span className="text-[10px] text-amber-300/90 font-normal">Active: {workspaceMode === 'single' ? 'Single-User' : 'Multi-User'}</span>
+                      </div>
+                    )}
+                  </div>
+                  {!isCollapsed && (
+                    <span className="text-[9px] bg-amber-500/30 text-amber-200 font-mono font-black px-1.5 py-0.5 rounded uppercase">
+                      Admin Toggle
+                    </span>
+                  )}
+                </button>
+              ) : subscriptionTier === 'free_trial' ? (
                 <button
                   onClick={() => {
                     setIsUserMenuOpen(false);
@@ -698,18 +728,6 @@ export function Sidebar({
                     <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" title="Locked Subscriber Plan" />
                   </div>
                   {!isCollapsed && <p className="text-[10px] text-slate-400">Locked under active subscription plan.</p>}
-                  {!isCollapsed && (user?.role === 'Super Admin' || user?.email?.includes('gerald13')) && (
-                    <button
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        unlockWorkspaceMode();
-                        resetWorkspaceMode(true);
-                      }}
-                      className="text-[10px] font-bold text-amber-400 hover:underline cursor-pointer pt-1"
-                    >
-                      Super Admin Unlock
-                    </button>
-                  )}
                 </div>
               )}
 

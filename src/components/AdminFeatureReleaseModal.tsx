@@ -17,7 +17,9 @@ import {
   Eye, 
   Sliders,
   Check,
-  AlertCircle
+  AlertCircle,
+  User,
+  Users
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useFeatureRelease, FeatureUpdate } from '../context/FeatureReleaseContext';
@@ -28,7 +30,7 @@ interface AdminFeatureReleaseModalProps {
 }
 
 export function AdminFeatureReleaseModal({ isOpen, onClose }: AdminFeatureReleaseModalProps) {
-  const { user, isSuperAdmin } = useAuth();
+  const { user, isSuperAdmin, workspaceMode, setWorkspaceMode } = useAuth();
   const { 
     featureUpdates, 
     toggleFeatureStage, 
@@ -185,6 +187,60 @@ export function AdminFeatureReleaseModal({ isOpen, onClose }: AdminFeatureReleas
                   <RefreshCw className="w-3.5 h-3.5" />
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* Super Admin Workspace Mode Switcher Control */}
+          <div className="p-4 rounded-xl bg-gradient-to-r from-slate-800 via-slate-850 to-indigo-950/60 border border-amber-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center shrink-0">
+                {workspaceMode === 'single' ? <User className="w-5 h-5 text-emerald-400" /> : <Users className="w-5 h-5 text-blue-400" />}
+              </div>
+              <div>
+                <h4 className="text-xs font-black uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                  <span>Super Admin Workspace Operating Mode</span>
+                  <span className="text-[10px] bg-amber-500/20 text-amber-200 border border-amber-500/30 px-1.5 py-0.2 rounded font-mono">Instant Toggle</span>
+                </h4>
+                <p className="text-xs text-slate-200 mt-0.5">
+                  Current Active Workspace Mode: <strong className={workspaceMode === 'single' ? 'text-emerald-400' : 'text-blue-400'}>
+                    {workspaceMode === 'single' ? 'Solo Taxpayer / Single-User Mode' : 'Multi-User Practice / Client Management Mode'}
+                  </strong>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 shrink-0">
+              <button
+                onClick={() => {
+                  setWorkspaceMode('single');
+                  setSuccessBanner('Switched Workspace Operating Mode to Single-User Solo Mode');
+                  setTimeout(() => setSuccessBanner(null), 3000);
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center space-x-1.5 border ${
+                  workspaceMode === 'single'
+                    ? 'bg-emerald-600 text-white border-emerald-400 shadow-sm'
+                    : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+                }`}
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>Single-User</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setWorkspaceMode('multi');
+                  setSuccessBanner('Switched Workspace Operating Mode to Multi-User Practice Mode');
+                  setTimeout(() => setSuccessBanner(null), 3000);
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center space-x-1.5 border ${
+                  workspaceMode === 'multi'
+                    ? 'bg-blue-600 text-white border-blue-400 shadow-sm'
+                    : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Multi-User</span>
+              </button>
             </div>
           </div>
 
