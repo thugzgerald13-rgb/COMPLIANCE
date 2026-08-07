@@ -250,7 +250,7 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
 • High Priority Action Required: ${pendingCount} form(s) remain PENDING filing. Recommend prioritizing BIR Form 1601-EQ and 2550Q before monthly deadline cutoff.
 • ${processingCount} form(s) currently IN PROCESSING awaiting final bank transaction reference receipt or eFPS payment confirmation.
 • BIR Compliance Risk Index: ${pendingCount > 2 ? '⚠️ ELEVATED (Action Advised)' : '✅ LOW (On Track)'}
-• Automatic early access recommendation generated for ${user?.name || 'Tax Administrator'}.`;
+• Automatic compliance recommendation generated for ${user?.name || 'Tax Administrator'}.`;
 
       setAiAnalysisOutput(summary);
       setIsGeneratingAI(false);
@@ -321,140 +321,122 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
         </div>
       )}
 
-      {/* Early Access / Web App Feature Updates Section */}
-      <div className="mb-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* Card 1: AI Compliance Assistant & Smart BIR Advisor */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between space-y-4 relative overflow-hidden">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-500 flex items-center justify-center shrink-0">
-                <Bot className="w-5 h-5" />
+      {/* Feature Updates Section (Hidden for regular users if features are in superadmin_only early access) */}
+      {((isSuperAdmin || isFeatureAvailable('ai_compliance_assistant')) || (isSuperAdmin || isFeatureAvailable('efiling_api_sync'))) && (
+        <div className="mb-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          {/* Card 1: AI Compliance Assistant & Smart BIR Advisor */}
+          {(isSuperAdmin || isFeatureAvailable('ai_compliance_assistant')) && (
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between space-y-4 relative overflow-hidden">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-500 flex items-center justify-center shrink-0">
+                    <Bot className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                      <span>AI Compliance Assistant & Smart Advisor</span>
+                      {isSuperAdmin && getFeatureStage('ai_compliance_assistant') === 'superadmin_only' && (
+                        <span className="text-[10px] bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <Crown className="w-2.5 h-2.5 fill-amber-400" />
+                          <span>Admin Early Access</span>
+                        </span>
+                      )}
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      AI-driven tax risk analysis & automated BIR filing obligations advisor
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>AI Compliance Assistant & Smart Advisor</span>
-                  {getFeatureStage('ai_compliance_assistant') === 'superadmin_only' && (
-                    <span className="text-[10px] bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                      <Crown className="w-2.5 h-2.5 fill-amber-400" />
-                      <span>Admin Early Access</span>
-                    </span>
+
+              <div className="space-y-3">
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/60 text-xs">
+                  {aiAnalysisOutput ? (
+                    <pre className="whitespace-pre-wrap font-sans text-slate-700 dark:text-slate-200 leading-relaxed text-[11px]">
+                      {aiAnalysisOutput}
+                    </pre>
+                  ) : (
+                    <p className="text-slate-500 dark:text-slate-400 italic">
+                      Click "Run AI Tax Risk Analysis" to generate real-time BIR compliance insights for period [{selectedPeriod}] across all client entities.
+                    </p>
                   )}
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  AI-driven tax risk analysis & automated BIR filing obligations advisor
-                </p>
-              </div>
-            </div>
-          </div>
+                </div>
 
-          {isFeatureAvailable('ai_compliance_assistant') ? (
-            <div className="space-y-3">
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/60 text-xs">
-                {aiAnalysisOutput ? (
-                  <pre className="whitespace-pre-wrap font-sans text-slate-700 dark:text-slate-200 leading-relaxed text-[11px]">
-                    {aiAnalysisOutput}
-                  </pre>
-                ) : (
-                  <p className="text-slate-500 dark:text-slate-400 italic">
-                    Click "Run AI Tax Risk Analysis" to generate real-time BIR compliance insights for period [{selectedPeriod}] across all client entities.
-                  </p>
-                )}
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    {isSuperAdmin ? '⚡ Unrestricted Super Admin Execution' : 'Released Feature'}
+                  </span>
+                  <button
+                    onClick={handleRunAiAnalysis}
+                    disabled={isGeneratingAI}
+                    className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center space-x-1.5 shadow-sm disabled:opacity-50"
+                  >
+                    <Sparkles className={`w-3.5 h-3.5 ${isGeneratingAI ? 'animate-spin' : ''}`} />
+                    <span>{isGeneratingAI ? 'Analyzing...' : 'Run AI Tax Risk Analysis'}</span>
+                  </button>
+                </div>
               </div>
-
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-[11px] text-slate-400 font-mono">
-                  {isSuperAdmin ? '⚡ Unrestricted Super Admin Execution' : 'Released Feature'}
-                </span>
-                <button
-                  onClick={handleRunAiAnalysis}
-                  disabled={isGeneratingAI}
-                  className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center space-x-1.5 shadow-sm disabled:opacity-50"
-                >
-                  <Sparkles className={`w-3.5 h-3.5 ${isGeneratingAI ? 'animate-spin' : ''}`} />
-                  <span>{isGeneratingAI ? 'Analyzing...' : 'Run AI Tax Risk Analysis'}</span>
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="p-4 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-amber-500/30 text-xs space-y-2">
-              <div className="flex items-center space-x-2 text-amber-600 dark:text-amber-400 font-bold">
-                <Lock className="w-4 h-4" />
-                <span>Super Admin Early Access Testing</span>
-              </div>
-              <p className="text-slate-600 dark:text-slate-300 text-[11px]">
-                This feature update is currently in <strong>Super Admin Early Access</strong> for live testing before being released to all users.
-              </p>
             </div>
           )}
-        </div>
 
-        {/* Card 2: Automated eFPS / eBIRForms Direct API Sync */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between space-y-4 relative overflow-hidden">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 flex items-center justify-center shrink-0">
-                <Cpu className="w-5 h-5" />
+          {/* Card 2: Automated eFPS / eBIRForms Direct API Sync */}
+          {(isSuperAdmin || isFeatureAvailable('efiling_api_sync')) && (
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between space-y-4 relative overflow-hidden">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 flex items-center justify-center shrink-0">
+                    <Cpu className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                      <span>eFPS & eBIRForms Direct API Verification</span>
+                      {isSuperAdmin && getFeatureStage('efiling_api_sync') === 'superadmin_only' && (
+                        <span className="text-[10px] bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <Crown className="w-2.5 h-2.5 fill-amber-400" />
+                          <span>Admin Early Access</span>
+                        </span>
+                      )}
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Direct API verification pipeline for BIR reference numbers & filing confirmations
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>eFPS & eBIRForms Direct API Verification</span>
-                  {getFeatureStage('efiling_api_sync') === 'superadmin_only' && (
-                    <span className="text-[10px] bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                      <Crown className="w-2.5 h-2.5 fill-amber-400" />
-                      <span>Admin Early Access</span>
-                    </span>
+
+              <div className="space-y-3">
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/60 text-xs">
+                  {efpsSyncMsg ? (
+                    <p className="text-emerald-600 dark:text-emerald-400 font-bold text-[11px] flex items-center space-x-1.5">
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                      <span>{efpsSyncMsg}</span>
+                    </p>
+                  ) : (
+                    <p className="text-slate-500 dark:text-slate-400 italic">
+                      Validate confirmation and reference numbers directly against BIR eFPS servers for {clients.length} clients in period [{selectedPeriod}].
+                    </p>
                   )}
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Direct API verification pipeline for BIR reference numbers & filing confirmations
-                </p>
-              </div>
-            </div>
-          </div>
+                </div>
 
-          {isFeatureAvailable('efiling_api_sync') ? (
-            <div className="space-y-3">
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/60 text-xs">
-                {efpsSyncMsg ? (
-                  <p className="text-emerald-600 dark:text-emerald-400 font-bold text-[11px] flex items-center space-x-1.5">
-                    <CheckCircle2 className="w-4 h-4 shrink-0" />
-                    <span>{efpsSyncMsg}</span>
-                  </p>
-                ) : (
-                  <p className="text-slate-500 dark:text-slate-400 italic">
-                    Validate confirmation and reference numbers directly against BIR eFPS servers for {clients.length} clients in period [{selectedPeriod}].
-                  </p>
-                )}
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    {isSuperAdmin ? '⚡ Super Admin Gateway Live' : 'Released Feature'}
+                  </span>
+                  <button
+                    onClick={handleRunEfpsSync}
+                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center space-x-1.5 shadow-sm"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Sync eFPS Status Now</span>
+                  </button>
+                </div>
               </div>
-
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-[11px] text-slate-400 font-mono">
-                  {isSuperAdmin ? '⚡ Super Admin Gateway Live' : 'Released Feature'}
-                </span>
-                <button
-                  onClick={handleRunEfpsSync}
-                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center space-x-1.5 shadow-sm"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Sync eFPS Status Now</span>
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="p-4 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-amber-500/30 text-xs space-y-2">
-              <div className="flex items-center space-x-2 text-amber-600 dark:text-amber-400 font-bold">
-                <Lock className="w-4 h-4" />
-                <span>Super Admin Early Access Testing</span>
-              </div>
-              <p className="text-slate-600 dark:text-slate-300 text-[11px]">
-                This feature update is currently in <strong>Super Admin Early Access</strong> for live testing before being released to all users.
-              </p>
             </div>
           )}
-        </div>
 
-      </div>
+        </div>
+      )}
       
       {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

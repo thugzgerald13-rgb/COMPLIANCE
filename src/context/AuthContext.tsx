@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User } from '../types';
+import { User, CompanyInfo } from '../types';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 export type WorkspaceMode = 'single' | 'multi';
@@ -21,7 +21,9 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<{ success: boolean; message?: string }> | { success: boolean; message?: string };
   loginAsClientPortal: (clientId: string, clientName: string, clientTin: string, clientEmail?: string) => void;
   register: (name: string, email: string, password: string, role: string) => Promise<{ success: boolean; message?: string }> | { success: boolean; message?: string };
-  loginWithGoogle: (email: string, name?: string) => Promise<{ success: boolean; message?: string }> | { success: boolean; message?: string };
+  loginWithGoogle: (email: string, name?: string, roleHint?: string) => Promise<{ success: boolean; message?: string }> | { success: boolean; message?: string };
+  updateUserDashboardMode: (mode: 'shared_accountant' | 'business_owner') => void;
+  updateUserAccountInfo: (accountType: 'accountant' | 'business_owner', companyInfo: CompanyInfo, clientDashboardMode?: 'shared_accountant' | 'business_owner') => void;
   logout: () => void;
   switchUser: (userId: string) => void;
   isAuthLoaded: boolean;
@@ -270,6 +272,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         organization_id: foundUser.organization_id || 'org_main_practice',
         clientId: foundUser.clientId,
         tin: foundUser.tin,
+        clientDashboardMode: foundUser.clientDashboardMode,
+        accountType: foundUser.accountType,
+        companyInfo: foundUser.companyInfo,
       };
 
       setUser(authenticatedUser);
@@ -277,35 +282,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { success: true };
     }
 
-    // Check if input matches a Client TIN or Email across client stores
-    const cleanDigits = email.replace(/[^0-9]/g, '');
-    let matchedClient: any = null;
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.includes('bir_monitor_clients')) {
-        try {
-          const storedClients = JSON.parse(localStorage.getItem(key) || '[]');
-          if (Array.isArray(storedClients)) {
-            const found = storedClients.find((c: any) => 
-              (cleanDigits.length >= 7 && c.tin?.replace(/[^0-9]/g, '').includes(cleanDigits)) ||
-              (c.email && c.email.toLowerCase().trim() === normalizedEmail) ||
-              (c.name && c.name.toLowerCase().trim() === normalizedEmail)
-            );
-            if (found) {
-              matchedClient = found;
-              break;
-            }
-          }
-        } catch (e) {}
-      }
-    }
-
-    if (matchedClient) {
-      loginAsClientPortal(matchedClient.id, matchedClient.name, matchedClient.tin, matchedClient.email);
-      return { success: true };
-    }
-
-    return { success: false, message: 'No tax account or client entity found with this email / TIN. Please register or contact your accountant.' };
+    return { success: false, message: 'No user account found with this email address. Please check your credentials or register.' };
   };
 
   const loginAsClientPortal = (clientId: string, clientName: string, clientTin: string, clientEmail?: string, organizationId?: string) => {
@@ -393,7 +370,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: true };
   };
 
-  const loginWithGoogle = async (email: string, name?: string) => {
+  const loginWithGoogle = async (email: string, name?: string, roleHint?: string) => {
     if (supabase && isSupabaseConfigured) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -411,7 +388,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Local fallback
     const googleEmail = email.trim().toLowerCase();
     const isSuper = isSuperAdminEmail(googleEmail);
-    const defaultRole = isSuper ? 'Super Admin' : 'Compliance Specialist';
+    const defaultRole = isSuper ? 'Super Admin' : (roleHint || 'Compliance Specialist');
     const googleName = name?.trim() || (googleEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
     
     const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
@@ -423,12 +400,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (existing) {
       if (isSuper) {
         existing.role = 'Super Admin';
+      } else if (roleHint) {
+        existing.role = roleHint;
       }
       googleUser = {
         id: existing.id,
         name: existing.name || googleName,
         email: existing.email,
         role: existing.role || defaultRole,
+        clientDashboardMode: existing.clientDashboardMode,
+        accountType: existing.accountType,
+        companyInfo: existing.companyInfo,
       };
     } else {
       const newUserObj = {
@@ -452,6 +434,75 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(googleUser);
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(googleUser));
     return { success: true };
+  };
+
+  const updateUserDashboardMode = (mode: 'shared_accountant' | 'business_owner') => {
+    if (!user) return;
+    const updatedUser: User = {
+      ...user,
+      clientDashboardMode: mode,
+    };
+    setUser(updatedUser);
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+
+    const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
+    if (rawUsers) {
+      try {
+        const usersList = JSON.parse(rawUsers);
+        const idx = usersList.findIndex((u: any) => u.id === user.id || u.email?.toLowerCase().trim() === user.email?.toLowerCase().trim());
+        if (idx !== -1) {
+          usersList[idx].clientDashboardMode = mode;
+          localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
+        }
+      } catch (e) {}
+    }
+  };
+
+  const updateUserAccountInfo = (
+    accountType: 'accountant' | 'business_owner',
+    companyInfo: CompanyInfo,
+    clientDashboardMode?: 'shared_accountant' | 'business_owner'
+  ) => {
+    if (!user) return;
+
+    let newRole = user.role;
+    if (!isSuperAdmin) {
+      newRole = accountType === 'accountant' ? 'Compliance Officer' : 'Client';
+    }
+
+    const updatedUser: User = {
+      ...user,
+      name: companyInfo.companyName || user.name,
+      accountType,
+      companyInfo,
+      role: newRole,
+      tin: companyInfo.tin || user.tin,
+      clientDashboardMode: clientDashboardMode || (accountType === 'business_owner' ? 'business_owner' : 'shared_accountant'),
+    };
+
+    setUser(updatedUser);
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+
+    const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
+    if (rawUsers) {
+      try {
+        const usersList = JSON.parse(rawUsers);
+        const idx = usersList.findIndex((u: any) => u.id === user.id || u.email?.toLowerCase().trim() === user.email?.toLowerCase().trim());
+        if (idx !== -1) {
+          usersList[idx] = {
+            ...usersList[idx],
+            name: companyInfo.companyName || usersList[idx].name,
+            accountType,
+            companyInfo,
+            role: newRole,
+            tin: companyInfo.tin || usersList[idx].tin,
+            clientDashboardMode: clientDashboardMode || (accountType === 'business_owner' ? 'business_owner' : 'shared_accountant'),
+          };
+          localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
+        }
+      } catch (e) {}
+    }
+    refreshUsersList();
   };
 
   const switchUser = (userId: string) => {
@@ -496,6 +547,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loginAsClientPortal,
       register,
       loginWithGoogle,
+      updateUserDashboardMode,
+      updateUserAccountInfo,
       logout,
       switchUser,
       isAuthLoaded,

@@ -5,6 +5,7 @@ import { CalendarView } from './components/CalendarView';
 import { ClientList } from './components/ClientList';
 import { FormsDirectory } from './components/FormsDirectory';
 import { AuthPage } from './components/AuthPage';
+import { AccountOnboardingModal } from './components/AccountOnboardingModal';
 import { ClientPortalView } from './components/ClientPortalView';
 import { WorkspaceModeSelectionModal } from './components/WorkspaceModeSelectionModal';
 import { OfflineSyncBanner } from './components/OfflineSyncBanner';
@@ -36,6 +37,10 @@ function MainContent() {
 
   if (!user) {
     return <AuthPage />;
+  }
+
+  if (!user.accountType || !user.companyInfo) {
+    return <AccountOnboardingModal />;
   }
 
   if (user.role === 'Client') {

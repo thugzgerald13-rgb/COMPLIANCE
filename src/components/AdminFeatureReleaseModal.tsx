@@ -47,7 +47,7 @@ export function AdminFeatureReleaseModal({ isOpen, onClose }: AdminFeatureReleas
   const [newFeatureCategory, setNewFeatureCategory] = useState<'AI & Automation' | 'BIR Compliance' | 'Audit & Multi-Branch' | 'Notifications'>('AI & Automation');
   const [successBanner, setSuccessBanner] = useState<string | null>(null);
 
-  if (!isOpen) return null;
+  if (!isOpen || !isSuperAdmin) return null;
 
   const categories = ['All', 'AI & Automation', 'BIR Compliance', 'Audit & Multi-Branch', 'Notifications'];
 

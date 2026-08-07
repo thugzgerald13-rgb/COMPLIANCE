@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Client, FormStatus, FormReference, BIRForm } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { ClientDashboardModeModal } from './ClientDashboardModeModal';
 import { 
   Building2, 
   FileText, 
@@ -69,7 +70,7 @@ export function ClientPortalView({
   onRemoveFormFromClient,
   onSwitchBackToPractice
 }: ClientPortalViewProps) {
-  const { user, isSuperAdmin, logout, switchUser, allUsers } = useAuth();
+  const { user, isSuperAdmin, logout, switchUser, allUsers, updateUserDashboardMode } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
   // Find the logged in client by user.clientId, user.email, or user.tin
@@ -92,6 +93,23 @@ export function ClientPortalView({
   const [isManageFormsModalOpen, setIsManageFormsModalOpen] = useState(false);
   const [formSearchQuery, setFormSearchQuery] = useState('');
   const [assignmentSuccessToast, setAssignmentSuccessToast] = useState<string | null>(null);
+
+  // Dashboard setup mode state (first login option: shared_accountant or business_owner)
+  const [isDashboardModeModalOpen, setIsDashboardModeModalOpen] = useState(false);
+
+  useEffect(() => {
+    // If client user logged in for first time without selecting a dashboard setup mode, prompt modal
+    if (!user?.clientDashboardMode) {
+      setIsDashboardModeModalOpen(true);
+    }
+  }, [user?.clientDashboardMode]);
+
+  const handleSelectDashboardMode = (mode: 'shared_accountant' | 'business_owner') => {
+    updateUserDashboardMode(mode);
+    setIsDashboardModeModalOpen(false);
+    setAssignmentSuccessToast(`Dashboard setup saved: ${mode === 'shared_accountant' ? 'Shared with Accountant' : 'Business Owner Mode'}`);
+    setTimeout(() => setAssignmentSuccessToast(null), 3500);
+  };
 
   // Effective active client
   const activeClient = clients.find(c => c.id === (selectedClientOverride || currentClient?.id)) || currentClient || clients[0];
@@ -225,6 +243,22 @@ export function ClientPortalView({
                 </select>
               </div>
             )}
+
+            {/* Dashboard Mode Switcher */}
+            <button
+              onClick={() => setIsDashboardModeModalOpen(true)}
+              className={`px-3 py-1.5 border rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center space-x-1.5 ${
+                user?.clientDashboardMode === 'business_owner'
+                  ? 'bg-amber-500/20 border-amber-500/40 text-amber-300 hover:bg-amber-500/30'
+                  : 'bg-blue-500/20 border-blue-500/40 text-blue-300 hover:bg-blue-500/30'
+              }`}
+              title="Click to reconfigure your taxpayer dashboard setup mode"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">
+                {user?.clientDashboardMode === 'business_owner' ? 'Business Owner Mode' : 'Shared Accountant Portal'}
+              </span>
+            </button>
 
             {/* Return to Practice View (for Admins) */}
             {(isSuperAdmin || onSwitchBackToPractice) && (
@@ -384,8 +418,8 @@ export function ClientPortalView({
           ) : (
             <div className="grid grid-cols-1 gap-4">
               {activeForms.map((form) => {
-                const statusInfo = getComplianceStatusInfo(form.status);
                 const effectiveDeadline = form.deadline || getEffectiveDeadline(form, formReferences, selectedPeriod);
+                const statusInfo = getComplianceStatusInfo(form, effectiveDeadline);
 
                 return (
                   <div 
@@ -410,9 +444,8 @@ export function ClientPortalView({
 
                       <div className="flex items-center space-x-2 shrink-0 self-end sm:self-center">
                         {/* Status Badge */}
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center space-x-1.5 ${statusInfo.badgeBg} ${statusInfo.badgeText} ${statusInfo.badgeBorder}`}>
-                          <span className={`w-2 h-2 rounded-full ${statusInfo.dotColor}`} />
-                          <span>{statusInfo.text}</span>
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center space-x-1.5 ${statusInfo.color}`}>
+                          <span>{statusInfo.label}</span>
                         </span>
 
                         {/* Amount Badge */}
@@ -710,7 +743,7 @@ export function ClientPortalView({
 
                   return (
                     <div 
-                      key={formRef.id || formRef.code}
+                      key={formRef.code}
                       className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
                         isAssigned 
                           ? 'bg-blue-50/40 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/50' 
@@ -729,7 +762,7 @@ export function ClientPortalView({
                             </span>
                           </div>
                           <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                            Standard BIR Deadline: <span className="font-mono">{formRef.defaultDeadlineRule || '15th/25th of month'}</span>
+                            Standard BIR Deadline: <span className="font-mono">{formRef.deadlineRule || '15th/25th of month'}</span>
                           </p>
                         </div>
                       </div>
@@ -788,6 +821,15 @@ export function ClientPortalView({
           </div>
         </div>
       )}
+
+      {/* First Login & Re-configuration Setup Modal */}
+      <ClientDashboardModeModal
+        isOpen={isDashboardModeModalOpen}
+        currentMode={user?.clientDashboardMode}
+        onSelectMode={handleSelectDashboardMode}
+        onClose={() => setIsDashboardModeModalOpen(false)}
+        isFirstLogin={!user?.clientDashboardMode}
+      />
 
     </div>
   );

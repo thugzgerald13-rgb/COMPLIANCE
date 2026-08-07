@@ -125,7 +125,7 @@ export const OfflineSyncProvider: React.FC<{ children: ReactNode }> = ({ childre
                 action: item.type,
                 details: item.description,
                 created_at: new Date().toISOString()
-              }]).catch(() => {});
+              }]);
             }
           } catch (e) {
             // Ignore minor log errors

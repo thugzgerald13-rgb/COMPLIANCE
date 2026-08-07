@@ -2,6 +2,16 @@ export type FormStatus = 'Pending' | 'Processing' | 'Filed' | 'Paid';
 
 export type TaxPayerType = 'Individual' | 'Corporate';
 
+export interface CompanyInfo {
+  companyName: string;
+  tin: string;
+  rdo?: string;
+  cpaLicenseNo?: string;
+  industry?: string;
+  address?: string;
+  phone?: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -10,6 +20,9 @@ export interface User {
   organization_id?: string;
   clientId?: string;
   tin?: string;
+  clientDashboardMode?: 'shared_accountant' | 'business_owner';
+  accountType?: 'accountant' | 'business_owner';
+  companyInfo?: CompanyInfo;
 }
 
 export interface BIRForm {
