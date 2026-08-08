@@ -274,7 +274,7 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
             {isSuperAdmin && (
               <span className="text-xs bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
                 <Crown className="w-3 h-3 fill-amber-400" />
-                <span>Super Admin Mode</span>
+                <span>Developer Mode</span>
               </span>
             )}
           </h1>
@@ -291,7 +291,7 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
             </div>
             <div className="space-y-0.5">
               <h3 className="text-sm font-black text-white flex items-center gap-2">
-                <span>Super Admin Web App Early Access Active</span>
+                <span>Developer Web App Early Access Active</span>
                 <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-mono">Full Privileges</span>
               </h3>
               <p className="text-xs text-slate-300">
@@ -339,7 +339,7 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
                       {isSuperAdmin && getFeatureStage('ai_compliance_assistant') === 'superadmin_only' && (
                         <span className="text-[10px] bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                           <Crown className="w-2.5 h-2.5 fill-amber-400" />
-                          <span>Admin Early Access</span>
+                          <span>Developer Early Access</span>
                         </span>
                       )}
                     </h3>
@@ -365,7 +365,7 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
 
                 <div className="flex items-center justify-between pt-1">
                   <span className="text-[11px] text-slate-400 font-mono">
-                    {isSuperAdmin ? '⚡ Unrestricted Super Admin Execution' : 'Released Feature'}
+                    {isSuperAdmin ? '⚡ Unrestricted Developer Execution' : 'Released Feature'}
                   </span>
                   <button
                     onClick={handleRunAiAnalysis}
@@ -421,7 +421,7 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
 
                 <div className="flex items-center justify-between pt-1">
                   <span className="text-[11px] text-slate-400 font-mono">
-                    {isSuperAdmin ? '⚡ Super Admin Gateway Live' : 'Released Feature'}
+                    {isSuperAdmin ? '⚡ Developer Gateway Live' : 'Released Feature'}
                   </span>
                   <button
                     onClick={handleRunEfpsSync}

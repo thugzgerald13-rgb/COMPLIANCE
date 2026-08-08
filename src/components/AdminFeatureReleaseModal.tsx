@@ -60,7 +60,7 @@ export function AdminFeatureReleaseModal({ isOpen, onClose }: AdminFeatureReleas
 
   const handleToggle = (id: string, name: string, currentStage: string) => {
     toggleFeatureStage(id);
-    const newStageText = currentStage === 'superadmin_only' ? 'Released to All Users' : 'Restricted to Super Admin Early Access';
+    const newStageText = currentStage === 'superadmin_only' ? 'Released to All Users' : 'Restricted to Developer Early Access';
     setSuccessBanner(`Updated "${name}" -> ${newStageText}`);
     setTimeout(() => setSuccessBanner(null), 4000);
   };
@@ -84,17 +84,17 @@ export function AdminFeatureReleaseModal({ isOpen, onClose }: AdminFeatureReleas
       name: newFeatureName.trim(),
       description: newFeatureDesc.trim(),
       category: newFeatureCategory,
-      stage: 'superadmin_only', // Default to super admin early access first!
+      stage: 'superadmin_only', // Default to developer early access first!
       version: 'v2.6.0-beta',
       releaseDate: new Date().toISOString().split('T')[0],
-      createdBy: user?.name || 'Super Admin'
+      createdBy: user?.name || 'Developer'
     });
 
     setNewFeatureName('');
     setNewFeatureKey('');
     setNewFeatureDesc('');
     setShowAddForm(false);
-    setSuccessBanner(`Added "${newFeatureName.trim()}" in Super Admin Early Access mode!`);
+    setSuccessBanner(`Added "${newFeatureName.trim()}" in Developer Early Access mode!`);
     setTimeout(() => setSuccessBanner(null), 4000);
   };
 
@@ -110,7 +110,7 @@ export function AdminFeatureReleaseModal({ isOpen, onClose }: AdminFeatureReleas
             <div className="flex items-center space-x-2">
               <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 font-extrabold text-[11px] flex items-center space-x-1 shadow-xs">
                 <Crown className="w-3.5 h-3.5 fill-amber-400 text-amber-950" />
-                <span>Super Admin Release Control Center</span>
+                <span>Developer Release Control Center</span>
               </span>
               <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-mono text-[10px]">
                 Full Unrestricted Access Enabled
@@ -121,7 +121,7 @@ export function AdminFeatureReleaseModal({ isOpen, onClose }: AdminFeatureReleas
               <span>Web App Early Access & Feature Updates Engine</span>
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 max-w-2xl">
-              As <strong>Super Admin</strong>, every web app update is available to you <strong>first</strong> for live testing and validation before releasing to general users.
+              As <strong>Developer</strong>, every web app update is available to you <strong>first</strong> for live testing and validation before releasing to general users.
             </p>
           </div>
 
@@ -148,7 +148,7 @@ export function AdminFeatureReleaseModal({ isOpen, onClose }: AdminFeatureReleas
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="p-3.5 bg-slate-800/80 rounded-xl border border-amber-500/30 flex items-center justify-between">
               <div>
-                <span className="text-[10px] uppercase font-mono text-amber-400 font-bold block">Super Admin Testing</span>
+                <span className="text-[10px] uppercase font-mono text-amber-400 font-bold block">Developer Testing</span>
                 <span className="text-xl font-black text-white">{superAdminOnlyCount} Update(s)</span>
                 <span className="text-[10px] text-slate-400 block">Exclusive Early Access</span>
               </div>
@@ -169,7 +169,7 @@ export function AdminFeatureReleaseModal({ isOpen, onClose }: AdminFeatureReleas
             </div>
 
             <div className="p-3.5 bg-slate-800/80 rounded-xl border border-slate-700 flex flex-col justify-between space-y-2">
-              <span className="text-[10px] uppercase font-mono text-slate-400 font-bold">Admin Release Actions</span>
+              <span className="text-[10px] uppercase font-mono text-slate-400 font-bold">Developer Release Actions</span>
               <div className="flex items-center space-x-2">
                 <button
                   onClick={handleReleaseAll}
@@ -198,7 +198,7 @@ export function AdminFeatureReleaseModal({ isOpen, onClose }: AdminFeatureReleas
               </div>
               <div>
                 <h4 className="text-xs font-black uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
-                  <span>Super Admin Workspace Operating Mode</span>
+                  <span>Developer Workspace Operating Mode</span>
                   <span className="text-[10px] bg-amber-500/20 text-amber-200 border border-amber-500/30 px-1.5 py-0.2 rounded font-mono">Instant Toggle</span>
                 </h4>
                 <p className="text-xs text-slate-200 mt-0.5">
@@ -276,7 +276,7 @@ export function AdminFeatureReleaseModal({ isOpen, onClose }: AdminFeatureReleas
             <form onSubmit={handleAddFeature} className="p-4 bg-slate-800/90 border border-indigo-500/40 rounded-xl space-y-3 animate-in fade-in duration-150">
               <h4 className="text-xs font-extrabold text-indigo-300 uppercase tracking-wider flex items-center space-x-1.5">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Register Web App Update Preview (Super Admin Early Access)</span>
+                <span>Register Web App Update Preview (Developer Early Access)</span>
               </h4>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -330,7 +330,7 @@ export function AdminFeatureReleaseModal({ isOpen, onClose }: AdminFeatureReleas
                   type="submit"
                   className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg cursor-pointer shadow-md"
                 >
-                  Save to Super Admin Preview
+                  Save to Developer Preview
                 </button>
               </div>
             </form>
@@ -340,7 +340,7 @@ export function AdminFeatureReleaseModal({ isOpen, onClose }: AdminFeatureReleas
           <div className="space-y-3">
             <div className="flex items-center justify-between text-xs font-bold text-slate-400 px-1">
               <span>Web App Feature Updates ({filteredUpdates.length})</span>
-              <span className="text-[11px] text-amber-400">⚡ Super Admin Has Unrestricted Access to ALL</span>
+              <span className="text-[11px] text-amber-400">⚡ Developer Has Unrestricted Access to ALL</span>
             </div>
 
             <div className="grid grid-cols-1 gap-3">
@@ -377,7 +377,7 @@ export function AdminFeatureReleaseModal({ isOpen, onClose }: AdminFeatureReleas
                           {isSuperAdminOnly ? (
                             <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center space-x-1 shadow-xs">
                               <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />
-                              <span>Super Admin Early Access</span>
+                              <span>Developer Early Access</span>
                             </span>
                           ) : (
                             <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center space-x-1">
@@ -420,7 +420,7 @@ export function AdminFeatureReleaseModal({ isOpen, onClose }: AdminFeatureReleas
                           ) : (
                             <>
                               <Lock className="w-3.5 h-3.5" />
-                              <span>Restrict to Admin Only</span>
+                              <span>Restrict to Developer Only</span>
                             </>
                           )}
                         </button>
@@ -437,7 +437,7 @@ export function AdminFeatureReleaseModal({ isOpen, onClose }: AdminFeatureReleas
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2 text-xs">
             <h4 className="font-extrabold text-amber-300 flex items-center space-x-1.5">
               <ShieldCheck className="w-4 h-4 text-amber-400" />
-              <span>Super Admin Master Privileges Summary</span>
+              <span>Developer Master Privileges Summary</span>
             </h4>
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-300">
               <li className="flex items-center space-x-1.5">
@@ -464,7 +464,7 @@ export function AdminFeatureReleaseModal({ isOpen, onClose }: AdminFeatureReleas
         {/* Modal Footer */}
         <div className="p-4 bg-slate-900 border-t border-slate-800 flex items-center justify-between text-xs">
           <span className="text-slate-400 text-[11px]">
-            Logged in as <strong>{user?.name}</strong> ({user?.email}) • <strong>Super Admin</strong>
+            Logged in as <strong>{user?.name}</strong> ({user?.email}) • <strong>Developer</strong>
           </span>
 
           <button

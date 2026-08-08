@@ -46,7 +46,8 @@ export function NotificationHubModal({
   onUpdateForm,
   selectedPeriod
 }: NotificationHubModalProps) {
-  const { user, logout, allUsers, switchUser } = useAuth();
+  const { user, isSuperAdmin, logout, allUsers, switchUser } = useAuth();
+  const isAdmin = Boolean(isSuperAdmin || user?.role === 'Super Admin' || user?.role === 'Admin' || user?.role?.includes('Admin') || user?.email?.includes('gerald13'));
   const [activeTab, setActiveTab] = useState<'profile' | 'mobile' | 'logs' | 'settings'>('mobile');
   const [logs, setLogs] = useState<NotificationLog[]>(loadNotificationLogs());
   const [dispatchSuccessMsg, setDispatchSuccessMsg] = useState<string | null>(null);
@@ -120,6 +121,11 @@ export function NotificationHubModal({
 
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAdmin) {
+      setDispatchSuccessMsg('Notification settings can only be saved by Developers.');
+      setTimeout(() => setDispatchSuccessMsg(null), 3000);
+      return;
+    }
     const updated: NotificationSettings = {
       autoDispatchOnLoad: autoLoad,
       soundEnabled: sound,
@@ -243,17 +249,19 @@ export function NotificationHubModal({
             <span>Audit Logs ({logs.length})</span>
           </button>
 
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`px-4 py-3 text-xs font-bold border-b-2 transition-colors flex items-center space-x-2 shrink-0 cursor-pointer ${
-              activeTab === 'settings'
-                ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-900 rounded-t-lg'
-                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-            }`}
-          >
-            <Settings className="w-4 h-4" />
-            <span>Gateway Settings</span>
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`px-4 py-3 text-xs font-bold border-b-2 transition-colors flex items-center space-x-2 shrink-0 cursor-pointer ${
+                activeTab === 'settings'
+                  ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-900 rounded-t-lg'
+                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+            >
+              <Settings className="w-4 h-4" />
+              <span>Gateway Settings</span>
+            </button>
+          )}
         </div>
 
         {/* Content Body */}
@@ -469,7 +477,7 @@ export function NotificationHubModal({
                     <div className="flex items-center space-x-2">
                       <Crown className="w-5 h-5 text-amber-400 animate-pulse" />
                       <h4 className="text-xs font-bold uppercase tracking-wider text-amber-300">
-                        Super Admin Privileges & System Management
+                        Developer Privileges & System Management
                       </h4>
                     </div>
                     <span className="text-[10px] font-mono bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/40">
@@ -478,7 +486,7 @@ export function NotificationHubModal({
                   </div>
 
                   <p className="text-xs text-slate-300 leading-relaxed">
-                    Super Admin privileges are permanently bound to <strong>thugz.gerald13@gmail.com</strong> and <strong>tagz.gerald13@gmail.com</strong>. You possess full administrative control over client files, BIR compliance forms, and user permissions.
+                    Developer privileges are permanently bound to <strong>thugz.gerald13@gmail.com</strong> and <strong>tagz.gerald13@gmail.com</strong>. You possess full administrative control over client files, BIR compliance forms, and user permissions.
                   </p>
 
                   {/* Registered Accounts Quick Switcher */}
@@ -625,7 +633,16 @@ export function NotificationHubModal({
 
           {/* TAB 2: GATEWAY SETTINGS */}
           {activeTab === 'settings' && (
-            <form onSubmit={handleSaveSettings} className="space-y-4">
+            !isAdmin ? (
+              <div className="p-8 bg-slate-800/60 border border-slate-700/80 rounded-2xl text-center space-y-3">
+                <Shield className="w-10 h-10 text-amber-400 mx-auto" />
+                <h3 className="text-sm font-bold text-white">Notification Settings Restricted</h3>
+                <p className="text-xs text-slate-300 max-w-md mx-auto">
+                  Notification settings and gateway controls are restricted to Developer accounts only. Standard users cannot view or modify automated notification preferences.
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleSaveSettings} className="space-y-4">
               <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3">
                 <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center">
                   <Bell className="w-4 h-4 mr-2 text-amber-600" /> Automated Trigger Controls
@@ -767,7 +784,8 @@ export function NotificationHubModal({
                   Save Gateway Settings
                 </button>
               </div>
-            </form>
+              </form>
+            )
           )}
         </div>
       </div>

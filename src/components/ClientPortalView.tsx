@@ -566,7 +566,7 @@ export function ClientPortalView({
             <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-100 dark:border-slate-700/60 space-y-2 text-xs">
               <div className="flex justify-between">
                 <span className="text-slate-500">Lead CPA Officer:</span>
-                <span className="font-bold text-slate-800 dark:text-slate-200">Gerald (Super Admin CPA)</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200">Gerald (Developer CPA)</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Advisory Email:</span>

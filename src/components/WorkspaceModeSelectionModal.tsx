@@ -45,7 +45,7 @@ export function WorkspaceModeSelectionModal({
           {isSuperAdmin ? (
             <div className="inline-flex items-center space-x-2 px-3.5 py-1 bg-amber-500/20 border border-amber-500/40 rounded-full text-amber-300 text-xs font-bold shadow-xs">
               <Crown className="w-4 h-4 text-amber-400 fill-amber-400" />
-              <span>Super Admin Workspace Privilege</span>
+              <span>Developer Workspace Privilege</span>
             </div>
           ) : isSubscriber ? (
             <div className="inline-flex items-center space-x-2 px-3.5 py-1 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/40 rounded-full text-amber-300 text-xs font-bold shadow-xs">
@@ -66,7 +66,7 @@ export function WorkspaceModeSelectionModal({
           <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
             {isSuperAdmin ? (
               <span>
-                As <strong>Super Admin</strong>, you have full privileges to switch between <strong>Single-User</strong> and <strong>Multi-User</strong> modes at any time via the sidebar or control center.
+                As <strong>Developer</strong>, you have full privileges to switch between <strong>Single-User</strong> and <strong>Multi-User</strong> modes at any time via the sidebar or control center.
               </span>
             ) : isSubscriber ? (
               <span>

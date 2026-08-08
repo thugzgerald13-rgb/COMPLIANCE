@@ -302,17 +302,19 @@ export function Sidebar({
                     )}
                   </button>
 
-                  <button
-                    onClick={() => {
-                      setIsSettingsOpen(true);
-                      setIsUserMenuOpen(false);
-                      setIsMobileOpen(false);
-                    }}
-                    className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-slate-700/80 transition-colors cursor-pointer"
-                  >
-                    <Settings className="w-4 h-4 text-blue-400 shrink-0" />
-                    <span>Settings</span>
-                  </button>
+                  {(isSuperAdmin || user?.role?.includes('Admin') || user?.email?.includes('gerald13')) && (
+                    <button
+                      onClick={() => {
+                        setIsSettingsOpen(true);
+                        setIsUserMenuOpen(false);
+                        setIsMobileOpen(false);
+                      }}
+                      className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-slate-700/80 transition-colors cursor-pointer"
+                    >
+                      <Settings className="w-4 h-4 text-blue-400 shrink-0" />
+                      <span>Notification Settings</span>
+                    </button>
+                  )}
 
                   {/* Workspace Mode Action / Locked Indicator */}
                   {subscriptionTier === 'free_trial' ? (
@@ -358,7 +360,7 @@ export function Sidebar({
                           }}
                           className="text-[10px] font-bold text-amber-400 hover:underline cursor-pointer pt-1"
                         >
-                          Super Admin Unlock
+                          Developer Unlock
                         </button>
                       )}
                     </div>
@@ -395,7 +397,7 @@ export function Sidebar({
                       {(user?.role?.includes('Admin') || user?.email?.includes('gerald13')) && (
                         <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[9px] font-bold px-1.5 py-0.2 rounded-full flex items-center shrink-0">
                           <Crown className="w-2.5 h-2.5 mr-0.5 text-amber-400" />
-                          <span>Admin</span>
+                          <span>Developer</span>
                         </span>
                       )}
                     </div>
@@ -634,17 +636,19 @@ export function Sidebar({
                 )}
               </button>
 
-              <button
-                onClick={() => {
-                  setIsSettingsOpen(true);
-                  setIsUserMenuOpen(false);
-                }}
-                className={`w-full flex items-center ${isCollapsed ? 'justify-center p-2' : 'space-x-2.5 px-3 py-2'} rounded-lg text-xs font-semibold hover:bg-slate-700/80 transition-colors cursor-pointer`}
-                title="Automated Email & Phone Dispatcher Settings"
-              >
-                <Settings className="w-4.5 h-4.5 text-blue-400 shrink-0" />
-                {!isCollapsed && <span>Settings</span>}
-              </button>
+              {(isSuperAdmin || user?.role?.includes('Admin') || user?.email?.includes('gerald13')) && (
+                <button
+                  onClick={() => {
+                    setIsSettingsOpen(true);
+                    setIsUserMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center ${isCollapsed ? 'justify-center p-2' : 'space-x-2.5 px-3 py-2'} rounded-lg text-xs font-semibold hover:bg-slate-700/80 transition-colors cursor-pointer`}
+                  title="Automated Email & Phone Dispatcher Settings (Developer Only)"
+                >
+                  <Settings className="w-4.5 h-4.5 text-blue-400 shrink-0" />
+                  {!isCollapsed && <span>Notification Settings</span>}
+                </button>
+              )}
 
               {/* Super Admin Feature Release Portal Trigger */}
               {isSuperAdmin && (
@@ -654,13 +658,13 @@ export function Sidebar({
                     setIsUserMenuOpen(false);
                   }}
                   className={`w-full flex items-center ${isCollapsed ? 'justify-center p-2' : 'space-x-2.5 px-3 py-2'} rounded-lg text-xs font-bold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/40 transition-colors cursor-pointer`}
-                  title="Super Admin Release Control Center: Manage Web App Updates & Early Access"
+                  title="Developer Release Control Center: Manage Web App Updates & Early Access"
                 >
                   <Crown className="w-4.5 h-4.5 text-amber-400 shrink-0 fill-amber-400" />
                   {!isCollapsed && (
                     <div className="flex-1 text-left flex items-center justify-between">
                       <span>Release Control Portal</span>
-                      <span className="text-[9px] bg-amber-500/30 text-amber-200 px-1.5 py-0.5 rounded font-mono font-bold">Super Admin</span>
+                      <span className="text-[9px] bg-amber-500/30 text-amber-200 px-1.5 py-0.5 rounded font-mono font-bold">Developer</span>
                     </div>
                   )}
                 </button>
@@ -674,7 +678,7 @@ export function Sidebar({
                     toggleWorkspaceMode();
                   }}
                   className={`w-full flex items-center ${isCollapsed ? 'justify-center p-2' : 'justify-between px-3 py-2.5'} rounded-lg text-xs font-bold text-amber-300 hover:bg-amber-500/20 transition-all cursor-pointer border border-amber-500/40 bg-gradient-to-r from-amber-500/10 to-yellow-500/10 shadow-xs`}
-                  title="Super Admin: Toggle between Single-User and Multi-User Mode"
+                  title="Developer: Toggle between Single-User and Multi-User Mode"
                 >
                   <div className="flex items-center space-x-2.5">
                     {workspaceMode === 'single' ? (
@@ -691,7 +695,7 @@ export function Sidebar({
                   </div>
                   {!isCollapsed && (
                     <span className="text-[9px] bg-amber-500/30 text-amber-200 font-mono font-black px-1.5 py-0.5 rounded uppercase">
-                      Admin Toggle
+                      Developer Toggle
                     </span>
                   )}
                 </button>
@@ -765,7 +769,7 @@ export function Sidebar({
                     {(user?.role?.includes('Admin') || user?.email?.includes('gerald13')) && (
                       <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[9px] font-bold px-1.5 py-0.2 rounded-full flex items-center shrink-0">
                         <Crown className="w-2.5 h-2.5 mr-0.5 text-amber-400" />
-                        <span>Admin</span>
+                        <span>Developer</span>
                       </span>
                     )}
                   </div>
