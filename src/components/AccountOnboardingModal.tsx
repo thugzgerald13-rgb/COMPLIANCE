@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Briefcase, Building2, ShieldCheck, User, ArrowRight, ArrowLeft, Check, Sparkles, FileText, Phone, MapPin, Hash, Layers, HelpCircle, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { CompanyInfo } from '../types';
+import { formatTIN } from '../utils';
+import { birRDOList } from '../rdoData';
 
 export function AccountOnboardingModal() {
   const { user, updateUserAccountInfo, logout } = useAuth();
@@ -18,9 +20,9 @@ export function AccountOnboardingModal() {
 
   // Form states
   const [companyName, setCompanyName] = useState(user?.companyInfo?.companyName || user?.name || '');
-  const [tin, setTin] = useState(user?.companyInfo?.tin || user?.tin || '');
-  const [rdo, setRdo] = useState(user?.companyInfo?.rdo || 'RDO 043 - Pasig');
-  const [cpaLicenseNo, setCpaLicenseNo] = useState(user?.companyInfo?.cpaLicenseNo || '');
+  const [tin, setTin] = useState(formatTIN(user?.companyInfo?.tin || user?.tin || ''));
+  const [rdo, setRdo] = useState(user?.companyInfo?.rdo || '043');
+  const [isCustomRdo, setIsCustomRdo] = useState(false);
   const [industry, setIndustry] = useState(user?.companyInfo?.industry || 'Retail & Professional Services');
   const [address, setAddress] = useState(user?.companyInfo?.address || '');
   const [phone, setPhone] = useState(user?.companyInfo?.phone || '');
@@ -29,6 +31,16 @@ export function AccountOnboardingModal() {
   );
 
   const [formError, setFormError] = useState<string | null>(null);
+
+  const groupedRDOs = useMemo<Record<string, typeof birRDOList>>(() => {
+    const groups: Record<string, typeof birRDOList> = {};
+    birRDOList.forEach(r => {
+      const reg = r.region || 'Other District Offices';
+      if (!groups[reg]) groups[reg] = [];
+      groups[reg].push(r);
+    });
+    return groups;
+  }, []);
 
   const handleSelectOption = (type: 'accountant' | 'business_owner') => {
     setSelectedType(type);
@@ -56,7 +68,6 @@ export function AccountOnboardingModal() {
       companyName: companyName.trim(),
       tin: tin.trim(),
       rdo: rdo.trim(),
-      cpaLicenseNo: selectedType === 'accountant' ? cpaLicenseNo.trim() : undefined,
       industry: selectedType === 'business_owner' ? industry.trim() : undefined,
       address: address.trim(),
       phone: phone.trim(),
@@ -294,9 +305,11 @@ export function AccountOnboardingModal() {
                     <input
                       type="text"
                       required
+                      inputMode="numeric"
+                      maxLength={18}
                       value={tin}
-                      onChange={(e) => setTin(e.target.value)}
-                      placeholder="123-456-789-00000"
+                      onChange={(e) => setTin(formatTIN(e.target.value))}
+                      placeholder="000-000-000-00000"
                       className="block w-full pl-9 pr-3 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-white text-sm font-mono placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                     />
                   </div>
@@ -304,33 +317,53 @@ export function AccountOnboardingModal() {
 
                 {/* Revenue District Office (RDO) */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                    BIR Revenue District Office (RDO)
-                  </label>
-                  <input
-                    type="text"
-                    value={rdo}
-                    onChange={(e) => setRdo(e.target.value)}
-                    placeholder="e.g. RDO 043 - Pasig"
-                    className="block w-full px-3 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  />
-                </div>
-
-                {/* CPA License / Accreditation (If Accountant) */}
-                {selectedType === 'accountant' && (
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                      CPA License No. / Accreditation No.
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                      BIR Revenue District Office (RDO)
                     </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomRdo(!isCustomRdo)}
+                      className="text-[11px] text-blue-400 hover:underline cursor-pointer font-normal"
+                    >
+                      {isCustomRdo ? "Select List" : "Type Custom"}
+                    </button>
+                  </div>
+
+                  {isCustomRdo ? (
                     <input
                       type="text"
-                      value={cpaLicenseNo}
-                      onChange={(e) => setCpaLicenseNo(e.target.value)}
-                      placeholder="e.g. CPA Lic. #0098765"
+                      value={rdo}
+                      onChange={(e) => setRdo(e.target.value)}
+                      placeholder="e.g. 039 or 054A"
                       className="block w-full px-3 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                     />
-                  </div>
-                )}
+                  ) : (
+                    <select
+                      value={rdo}
+                      onChange={(e) => setRdo(e.target.value)}
+                      className="block w-full px-3 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-medium"
+                    >
+                      <option value="" disabled className="bg-slate-900 text-slate-400">Select RDO Office</option>
+                      {Object.keys(groupedRDOs).map(region => {
+                        const rdos = groupedRDOs[region];
+                        return (
+                          <optgroup key={region} label={region} className="bg-slate-900 text-amber-300 font-bold">
+                            {rdos.map(r => (
+                              <option 
+                                key={r.code} 
+                                value={r.code} 
+                                className="bg-slate-800 text-white font-normal"
+                              >
+                                RDO {r.code} - {r.location}
+                              </option>
+                            ))}
+                          </optgroup>
+                        );
+                      })}
+                    </select>
+                  )}
+                </div>
 
                 {/* Industry (If Business Owner) */}
                 {selectedType === 'business_owner' && (
