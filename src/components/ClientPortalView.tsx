@@ -73,13 +73,26 @@ export function ClientPortalView({
   const { user, isSuperAdmin, logout, switchUser, allUsers, updateUserDashboardMode } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
+  const userFallbackClient: Client | null = user ? {
+    id: user.clientId || `client-${user.id}`,
+    name: user.companyInfo?.companyName || user.name || 'Self-Managed Taxpayer',
+    tin: user.companyInfo?.tin || user.tin || '000-000-000-00000',
+    rdo: user.companyInfo?.rdo || '043',
+    email: user.email,
+    phone: user.companyInfo?.phone || '',
+    address: user.companyInfo?.address || '',
+    type: (user.companyInfo?.industry?.toLowerCase().includes('corporate') ? 'Corporate' : 'Individual') as any,
+    status: 'Active',
+    forms: []
+  } : null;
+
   // Find the logged in client by user.clientId, user.email, or user.tin
   const currentClient = clients.find(c => 
     c.id === user?.clientId || 
     (c.email && c.email.toLowerCase().trim() === user?.email?.toLowerCase().trim()) ||
     c.tin === user?.tin ||
     c.tin === user?.email // user logging in via TIN as email
-  ) || clients[0]; // Fallback to first client if none found
+  ) || clients[0] || userFallbackClient;
 
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [selectedClientOverride, setSelectedClientOverride] = useState<string>(currentClient?.id || '');
@@ -112,7 +125,7 @@ export function ClientPortalView({
   };
 
   // Effective active client
-  const activeClient = clients.find(c => c.id === (selectedClientOverride || currentClient?.id)) || currentClient || clients[0];
+  const activeClient = clients.find(c => c.id === (selectedClientOverride || currentClient?.id)) || currentClient || userFallbackClient;
 
   if (!activeClient) {
     return (

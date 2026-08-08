@@ -57,6 +57,8 @@ export interface Client {
   type: TaxPayerType;
   email?: string;
   phone?: string;
+  address?: string;
+  status?: string;
   notifyEmail?: boolean;
   notifyPhone?: boolean;
   forms: BIRForm[];
