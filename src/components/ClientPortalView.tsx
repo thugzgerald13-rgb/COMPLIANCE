@@ -93,13 +93,16 @@ export function ClientPortalView({
     forms: []
   } : null;
 
-  // Find the logged in client by user.clientId, user.email, or matching TIN
+  // Find the logged in client by user.clientId, user.email, matching TIN, or company name
   const userTin = user?.companyInfo?.tin || user?.tin;
+  const userCompanyName = user?.companyInfo?.companyName || user?.name || '';
   const normUserEmail = user?.email ? user.email.toLowerCase().trim() : '';
   const normUserTin = userTin ? userTin.replace(/\D/g, '') : '';
+  const normUserName = userCompanyName.toLowerCase().replace(/[^a-z0-9]/g, '');
 
   const currentClient = clients.find(c => {
-    if (c.id === user?.clientId) return true;
+    if (c.id === user?.clientId || c.id === user?.id) return true;
+
     const normCEmail = c.email ? c.email.toLowerCase().trim() : '';
     if (normCEmail && normUserEmail && normCEmail === normUserEmail) return true;
 
@@ -109,9 +112,15 @@ export function ClientPortalView({
       if (normUserTin.length >= 9 && normCTin.length >= 9 && normUserTin.slice(0, 9) === normCTin.slice(0, 9)) return true;
     }
 
+    const normCName = (c.name || (c as any).companyName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (normUserName && normCName && normCName.length >= 3) {
+      if (normCName === normUserName) return true;
+      if (normCName.length >= 5 && normUserName.length >= 5 && (normCName.includes(normUserName) || normUserName.includes(normCName))) return true;
+    }
+
     if (normCTin && normUserEmail && normCTin === normUserEmail.replace(/\D/g, '')) return true;
     return false;
-  }) || userFallbackClient;
+  }) || clients[0] || userFallbackClient;
 
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [selectedClientOverride, setSelectedClientOverride] = useState<string>(currentClient?.id || '');

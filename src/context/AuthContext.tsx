@@ -526,13 +526,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const officerName = (user && user.accountType !== 'business_owner') ? (user.companyInfo?.companyName || user.name) : (user?.syncedAccountantName || 'CAPO Management & Advisory Services');
 
     const normClientEmail = clientEmail ? clientEmail.toLowerCase().trim() : '';
-    const normClientTin = clientTin ? clientTin.trim() : '';
+    const normClientTin = clientTin ? clientTin.replace(/\D/g, '') : '';
+    const normClientName = (clientName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
-    // Search registered users for matching TIN or Email
-    const matchedUser = allUsers.find(u => 
-      (normClientEmail && u.email?.toLowerCase().trim() === normClientEmail) ||
-      (normClientTin && (u.tin === normClientTin || u.companyInfo?.tin === normClientTin))
-    );
+    // Search registered users for matching TIN, Email, or Company Name
+    const matchedUser = allUsers.find(u => {
+      if (normClientEmail && u.email?.toLowerCase().trim() === normClientEmail) return true;
+      const uTin = (u.companyInfo?.tin || u.tin || '').replace(/\D/g, '');
+      if (normClientTin && uTin) {
+        if (normClientTin === uTin) return true;
+        if (normClientTin.length >= 9 && uTin.length >= 9 && normClientTin.slice(0, 9) === uTin.slice(0, 9)) return true;
+      }
+      const uName = (u.companyInfo?.companyName || u.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (normClientName && uName && uName.length >= 3) {
+        if (uName === normClientName) return true;
+        if (uName.length >= 5 && normClientName.length >= 5 && (uName.includes(normClientName) || normClientName.includes(uName))) return true;
+      }
+      return false;
+    });
 
     const targetEmail = matchedUser?.email || clientEmail || `${clientTin}@taxpayer.bizcomply.ph`;
     const targetName = matchedUser?.companyInfo?.companyName || matchedUser?.name || clientName;
