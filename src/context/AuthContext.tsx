@@ -294,6 +294,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     initAuth();
+
+    const handleFocusOrVisible = () => {
+      if (document.visibilityState === 'visible') {
+        loadLocalUser();
+      }
+    };
+
+    window.addEventListener('focus', handleFocusOrVisible);
+    document.addEventListener('visibilitychange', handleFocusOrVisible);
+
+    return () => {
+      window.removeEventListener('focus', handleFocusOrVisible);
+      document.removeEventListener('visibilitychange', handleFocusOrVisible);
+    };
   }, []);
 
   const loadLocalUser = async () => {
@@ -600,6 +614,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const defaultRole = isSuper ? 'Super Admin' : (roleHint || 'Compliance Specialist');
     const googleName = name?.trim() || (googleEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
 
+    // 1. Check if user already exists in central storage server
+    let centralUser: any = null;
+    try {
+      const findRes = await fetch(`/api/users/find?q=${encodeURIComponent(googleEmail)}`);
+      if (findRes.ok) {
+        const findData = await findRes.json();
+        if (findData.success && findData.user) {
+          centralUser = findData.user;
+        }
+      }
+    } catch (e) {}
+
+    // If central user already exists and has onboarding selections, use them directly
+    if (centralUser && (centralUser.accountType || centralUser.companyInfo)) {
+      const googleUser: User = {
+        id: centralUser.id,
+        name: centralUser.companyInfo?.companyName || centralUser.name || googleName,
+        email: centralUser.email || googleEmail,
+        role: isSuper ? 'Super Admin' : (centralUser.role || defaultRole),
+        clientDashboardMode: centralUser.clientDashboardMode,
+        accountType: centralUser.accountType,
+        companyInfo: centralUser.companyInfo,
+        tin: centralUser.companyInfo?.tin || centralUser.tin,
+        clientId: centralUser.clientId,
+        organization_id: centralUser.organization_id || 'org_main_practice',
+      };
+      refreshUsersList();
+      setUser(googleUser);
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(googleUser));
+      return { success: true };
+    }
+
     try {
       const res = await fetch('/api/users/register', {
         method: 'POST',
@@ -608,6 +654,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           name: googleName,
           email: googleEmail,
           role: defaultRole,
+          accountType: centralUser?.accountType,
+          companyInfo: centralUser?.companyInfo,
+          clientDashboardMode: centralUser?.clientDashboardMode,
+          tin: centralUser?.companyInfo?.tin || centralUser?.tin,
         }),
       });
 
@@ -619,12 +669,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             id: u.id,
             name: u.companyInfo?.companyName || u.name || googleName,
             email: u.email,
-            role: u.role || defaultRole,
-            clientDashboardMode: u.clientDashboardMode,
-            accountType: u.accountType,
-            companyInfo: u.companyInfo,
-            tin: u.companyInfo?.tin || u.tin,
+            role: isSuper ? 'Super Admin' : (u.role || defaultRole),
+            clientDashboardMode: u.clientDashboardMode || centralUser?.clientDashboardMode,
+            accountType: u.accountType || centralUser?.accountType,
+            companyInfo: u.companyInfo || centralUser?.companyInfo,
+            tin: u.companyInfo?.tin || u.tin || centralUser?.tin,
             clientId: u.clientId,
+            organization_id: u.organization_id || 'org_main_practice',
           };
           refreshUsersList();
           setUser(googleUser);

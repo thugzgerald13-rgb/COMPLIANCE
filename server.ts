@@ -200,19 +200,19 @@ async function startServer() {
     const existingIndex = users.findIndex((u: any) => u.email?.toLowerCase().trim() === normEmail);
 
     if (existingIndex !== -1) {
-      // Update existing user with provided info
+      // Update existing user with provided info without destroying existing profile selections
       const existing = users[existingIndex];
       const updatedUser = {
         ...existing,
-        name: name ? name.trim() : existing.name,
-        role: role || existing.role || 'Compliance Officer',
-        accountType: accountType || existing.accountType,
-        companyInfo: companyInfo || existing.companyInfo,
-        clientDashboardMode: clientDashboardMode || existing.clientDashboardMode,
-        tin: companyInfo?.tin || existing.tin,
+        name: existing.companyInfo?.companyName || existing.name || (name ? name.trim() : 'User'),
+        role: existing.role || role || 'Compliance Officer',
+        accountType: existing.accountType || accountType,
+        companyInfo: existing.companyInfo || companyInfo,
+        clientDashboardMode: existing.clientDashboardMode || clientDashboardMode,
+        tin: existing.companyInfo?.tin || existing.tin || companyInfo?.tin,
         updatedAt: new Date().toISOString(),
       };
-      if (password) updatedUser.password = password;
+      if (password && !existing.password) updatedUser.password = password;
       users[existingIndex] = updatedUser;
       db.users = users;
       writeDB(db);
