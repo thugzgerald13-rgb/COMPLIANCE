@@ -201,8 +201,11 @@ export function ClientDashboardModeModal({
                   <label className="block text-slate-300 font-bold mb-1">Select Registered Compliance Officer:</label>
                   <select
                     value={selectedAccEmail}
-                    onChange={(e) => setSelectedAccEmail(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => {
+                      setSelectedAccEmail(e.target.value);
+                      setCustomAccEmail('');
+                    }}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                   >
                     {accountantList.map(acc => (
                       <option key={acc.id} value={acc.email}>
@@ -218,8 +221,15 @@ export function ClientDashboardModeModal({
                 <input
                   type="email"
                   value={customAccEmail}
-                  onChange={(e) => setCustomAccEmail(e.target.value)}
-                  placeholder="e.g. cpa.gerald@bizcomply.ph"
+                  onChange={(e) => {
+                    setCustomAccEmail(e.target.value);
+                    if (e.target.value) {
+                      setSelectedAccEmail('');
+                    } else if (accountantList.length > 0) {
+                      setSelectedAccEmail(accountantList[0].email);
+                    }
+                  }}
+                  placeholder="e.g. thugz.gerald13@gmail.com"
                   className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>

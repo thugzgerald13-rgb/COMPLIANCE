@@ -540,52 +540,67 @@ async function startServer() {
 
     // Check direct user property
     if (user && (user.syncedAccountantEmail || user.isSyncedWithAccountant)) {
-      isSynced = true;
       const accEmail = user.syncedAccountantEmail ? user.syncedAccountantEmail.toLowerCase().trim() : '';
-      const foundAcc = users.find((u: any) => u.email && u.email.toLowerCase().trim() === accEmail);
-      if (foundAcc) {
-        accountantObj = {
-          name: foundAcc.companyInfo?.companyName || foundAcc.name || 'Lead CPA Officer',
-          email: foundAcc.email,
-          role: foundAcc.role || 'Compliance Officer',
-          cpaLicenseNo: foundAcc.companyInfo?.cpaLicenseNo || 'CPA-LIC-009812',
-        };
-      } else {
-        accountantObj = {
-          name: user.syncedAccountantName || 'Designated CPA Firm',
-          email: accEmail || 'compliance@bizcomply.ph',
-          role: 'Compliance Officer',
-          cpaLicenseNo: 'CPA-LIC-009812',
-        };
+      if (accEmail && accEmail !== clientEmail) {
+        isSynced = true;
+        const foundAcc = users.find((u: any) => u.email && u.email.toLowerCase().trim() === accEmail);
+        if (foundAcc) {
+          accountantObj = {
+            name: foundAcc.companyInfo?.companyName || foundAcc.name || 'Lead CPA Officer',
+            email: foundAcc.email,
+            role: foundAcc.role || 'Compliance Officer',
+            cpaLicenseNo: foundAcc.companyInfo?.cpaLicenseNo || 'CPA-LIC-009812',
+          };
+        } else {
+          accountantObj = {
+            name: user.syncedAccountantName || 'Designated CPA Firm',
+            email: accEmail || 'compliance@bizcomply.ph',
+            role: 'Compliance Officer',
+            cpaLicenseNo: 'CPA-LIC-009812',
+          };
+        }
+      } else if (accEmail === clientEmail) {
+        // Clean up invalid self-sync
+        delete user.syncedAccountantEmail;
+        delete user.syncedAccountantName;
+        user.isSyncedWithAccountant = false;
+        writeDB(db);
       }
     }
 
     // Secondary check: Has any accountant added this client in db.user_clients or db.clients?
     if (!isSynced) {
       const userClientsMap = db.user_clients || {};
-      for (const [accEmail, clientList] of Object.entries(userClientsMap)) {
+      for (const [accKey, clientList] of Object.entries(userClientsMap)) {
         if (Array.isArray(clientList)) {
           const match = clientList.find((c: any) => 
             (c.email && c.email.toLowerCase().trim() === clientEmail) ||
             (user && user.tin && c.tin === user.tin)
           );
           if (match) {
-            isSynced = true;
-            const foundAcc = users.find((u: any) => u.email && u.email.toLowerCase().trim() === accEmail.toLowerCase().trim());
-            accountantObj = {
-              name: foundAcc?.companyInfo?.companyName || foundAcc?.name || 'BIZ-COMPLY Practice Firm',
-              email: accEmail,
-              role: foundAcc?.role || 'Compliance Officer',
-              cpaLicenseNo: foundAcc?.companyInfo?.cpaLicenseNo || 'CPA-LIC-009812',
-            };
-            // Persist sync state back on user profile
-            if (user) {
-              user.syncedAccountantEmail = accEmail;
-              user.syncedAccountantName = accountantObj.name;
-              user.isSyncedWithAccountant = true;
-              writeDB(db);
+            const foundAcc = users.find((u: any) => 
+              (u.email && u.email.toLowerCase().trim() === accKey.toLowerCase().trim()) ||
+              u.id === accKey
+            );
+            const actualAccEmail = (foundAcc?.email || accKey).toLowerCase().trim();
+
+            if (actualAccEmail && actualAccEmail !== clientEmail) {
+              isSynced = true;
+              accountantObj = {
+                name: foundAcc?.companyInfo?.companyName || foundAcc?.name || 'CAPO Management & Advisory Services',
+                email: actualAccEmail,
+                role: foundAcc?.role || 'Compliance Officer',
+                cpaLicenseNo: foundAcc?.companyInfo?.cpaLicenseNo || 'CPA-LIC-009812',
+              };
+              // Persist sync state back on user profile
+              if (user) {
+                user.syncedAccountantEmail = actualAccEmail;
+                user.syncedAccountantName = accountantObj.name;
+                user.isSyncedWithAccountant = true;
+                writeDB(db);
+              }
+              break;
             }
-            break;
           }
         }
       }
@@ -604,6 +619,10 @@ async function startServer() {
     const normClientEmail = String(clientEmail).toLowerCase().trim();
     const normAccEmail = String(accountantEmail).toLowerCase().trim();
 
+    if (normClientEmail === normAccEmail) {
+      return res.status(400).json({ success: false, message: 'Cannot sync client with their own email address as accountant' });
+    }
+
     const db = readDB();
     const users = db.users || [];
 
@@ -616,6 +635,7 @@ async function startServer() {
       users[clientUserIdx].syncedAccountantEmail = normAccEmail;
       users[clientUserIdx].syncedAccountantName = accDisplayName;
       users[clientUserIdx].isSyncedWithAccountant = true;
+      users[clientUserIdx].clientDashboardMode = 'shared_accountant';
     } else {
       users.push({
         id: 'user_' + Date.now(),
@@ -633,7 +653,8 @@ async function startServer() {
     if (!db.user_clients) db.user_clients = {};
     if (!db.clients) db.clients = [];
 
-    const accClients = db.user_clients[normAccEmail] || [];
+    const existingAccClients = db.user_clients[normAccEmail] || (accUser?.id ? db.user_clients[accUser.id] : null) || [];
+    const accClients = [...existingAccClients];
     const clientUser = users.find((u: any) => u.email && u.email.toLowerCase().trim() === normClientEmail);
 
     const clientName = clientUser?.companyInfo?.companyName || clientUser?.name || normClientEmail.split('@')[0];
@@ -659,6 +680,9 @@ async function startServer() {
       accClients.push(newClientRecord);
     }
     db.user_clients[normAccEmail] = accClients;
+    if (accUser?.id) {
+      db.user_clients[accUser.id] = accClients;
+    }
 
     // Also update or add in db.clients
     const globalIdx = db.clients.findIndex((c: any) => c.email && c.email.toLowerCase().trim() === normClientEmail);
@@ -743,14 +767,25 @@ async function startServer() {
 
     db.messages.push(newMessage);
 
-    // If client is sending to recipient, or accountant replying to client, maintain sync state
-    if (normClient && normRecipient) {
+    // Maintain sync state on client user record
+    if (normClient) {
       const users = db.users || [];
       const clientIdx = users.findIndex((u: any) => u.email && u.email.toLowerCase().trim() === normClient);
       if (clientIdx !== -1) {
-        users[clientIdx].syncedAccountantEmail = normRecipient;
-        users[clientIdx].isSyncedWithAccountant = true;
-        db.users = users;
+        // Correct accountant email determination:
+        // If sender is client, accountant is recipient. If sender is officer, accountant is sender.
+        let targetAccEmail = (normSender === normClient) ? normRecipient : normSender;
+        
+        if (targetAccEmail && targetAccEmail !== normClient) {
+          users[clientIdx].syncedAccountantEmail = targetAccEmail;
+          users[clientIdx].isSyncedWithAccountant = true;
+
+          const accUser = users.find((u: any) => u.email && u.email.toLowerCase().trim() === targetAccEmail);
+          if (accUser) {
+            users[clientIdx].syncedAccountantName = accUser.companyInfo?.companyName || accUser.name || 'Compliance CPA Firm';
+          }
+          db.users = users;
+        }
       }
     }
 

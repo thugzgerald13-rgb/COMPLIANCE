@@ -986,6 +986,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const normAccEmail = accountantEmail.toLowerCase().trim();
     if (!normAccEmail) return { success: false, message: 'Accountant email is required' };
 
+    if (normAccEmail === user.email.toLowerCase().trim()) {
+      return { success: false, message: 'Cannot sync client with their own email address as compliance officer.' };
+    }
+
     let syncedAccName = accountantName;
 
     if (!syncedAccName) {
@@ -1139,6 +1143,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (e) {}
 
     if (user.isSyncedWithAccountant && user.syncedAccountantEmail) {
+      if (user.syncedAccountantEmail.toLowerCase().trim() === user.email.toLowerCase().trim()) {
+        const updatedUser: User = {
+          ...user,
+          syncedAccountantEmail: undefined,
+          syncedAccountantName: undefined,
+          isSyncedWithAccountant: false,
+        };
+        setUser(updatedUser);
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+        return { isSynced: false, accountant: null };
+      }
+
       return {
         isSynced: true,
         accountant: {
