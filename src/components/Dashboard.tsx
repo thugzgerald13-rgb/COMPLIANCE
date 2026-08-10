@@ -261,7 +261,7 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <span>Dashboard Overview</span>
           </h1>
-          <p className="text-xs text-slate-600 dark:text-slate-300 font-medium mt-0.5">Click any pending or in-processing reference below to update its compliance status & details</p>
+          <p className="text-xs text-slate-600 dark:text-slate-300 font-medium mt-0.5">Click any Pending or In Processing stat card below to open its compliance references modal</p>
         </div>
       </div>
       
@@ -289,7 +289,7 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
                     <span>{stat.value}</span>
                     {(stat.id === 'Pending' || stat.id === 'Processing') && (
                       <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800">
-                        View Modal
+                        Open Modal
                       </span>
                     )}
                   </p>
@@ -298,141 +298,6 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
             </div>
           );
         })}
-      </div>
-
-      {/* Pending & In Processing References Overview Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        
-        {/* Card 1: Pending References Modal Launcher */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-red-100 dark:border-red-900/30 shadow-sm flex flex-col justify-between space-y-4 hover:border-red-300 dark:hover:border-red-800 transition-all">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-950/80 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
-                  <AlertCircle className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <span>Pending References</span>
-                    <span className="text-xs font-mono bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 px-2 py-0.5 rounded-full font-bold">
-                      {pendingFormsList.length} Items
-                    </span>
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Unfiled tax forms requiring attention for period [{selectedPeriod}]
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Preview List */}
-            <div className="space-y-2 mt-4">
-              {pendingFormsList.length === 0 ? (
-                <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-xl text-center">
-                  <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center justify-center gap-1.5">
-                    <CheckCircle className="w-4 h-4" />
-                    <span>No pending references for this period!</span>
-                  </p>
-                </div>
-              ) : (
-                pendingFormsList.slice(0, 3).map((item) => {
-                  const deadlineInfo = getComplianceStatusInfo(item, item.deadline);
-                  return (
-                    <div 
-                      key={`${item.clientId}-${item.id || item.code}`}
-                      onClick={() => setIsPendingModalOpen(true)}
-                      className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs cursor-pointer hover:bg-red-50/50 dark:hover:bg-slate-800 transition-colors"
-                    >
-                      <div className="flex items-center space-x-2.5 min-w-0 pr-2">
-                        <span className="font-bold text-slate-900 dark:text-white bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-[11px]">
-                          {item.code}
-                        </span>
-                        <span className="truncate font-medium text-slate-700 dark:text-slate-200">{item.clientName}</span>
-                      </div>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded border shrink-0 ${deadlineInfo.color}`}>
-                        {deadlineInfo.label}
-                      </span>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          <button
-            onClick={() => setIsPendingModalOpen(true)}
-            className="w-full py-2.5 px-4 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm flex items-center justify-center space-x-2 mt-2"
-          >
-            <span>Open Pending References Modal ({pendingFormsList.length})</span>
-            <ExternalLink className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Card 2: In Processing References Modal Launcher */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-amber-100 dark:border-amber-900/30 shadow-sm flex flex-col justify-between space-y-4 hover:border-amber-300 dark:hover:border-amber-800 transition-all">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                  <FileClock className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <span>In Processing References</span>
-                    <span className="text-xs font-mono bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full font-bold">
-                      {processingFormsList.length} Items
-                    </span>
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Forms currently awaiting confirmation or bank payment for period [{selectedPeriod}]
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Preview List */}
-            <div className="space-y-2 mt-4">
-              {processingFormsList.length === 0 ? (
-                <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-xl text-center">
-                  <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center justify-center gap-1.5">
-                    <CheckCircle className="w-4 h-4" />
-                    <span>No in-processing references for this period!</span>
-                  </p>
-                </div>
-              ) : (
-                processingFormsList.slice(0, 3).map((item) => {
-                  const deadlineInfo = getComplianceStatusInfo(item, item.deadline);
-                  return (
-                    <div 
-                      key={`${item.clientId}-${item.id || item.code}`}
-                      onClick={() => setIsInProcessingModalOpen(true)}
-                      className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs cursor-pointer hover:bg-amber-50/50 dark:hover:bg-slate-800 transition-colors"
-                    >
-                      <div className="flex items-center space-x-2.5 min-w-0 pr-2">
-                        <span className="font-bold text-slate-900 dark:text-white bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-[11px]">
-                          {item.code}
-                        </span>
-                        <span className="truncate font-medium text-slate-700 dark:text-slate-200">{item.clientName}</span>
-                      </div>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded border shrink-0 ${deadlineInfo.color}`}>
-                        {deadlineInfo.label}
-                      </span>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          <button
-            onClick={() => setIsInProcessingModalOpen(true)}
-            className="w-full py-2.5 px-4 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm flex items-center justify-center space-x-2 mt-2"
-          >
-            <span>Open In Processing References Modal ({processingFormsList.length})</span>
-            <ExternalLink className="w-4 h-4" />
-          </button>
-        </div>
-
       </div>
 
       {/* MODAL 1: PENDING REFERENCES MODAL */}
