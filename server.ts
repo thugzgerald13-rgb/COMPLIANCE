@@ -2,6 +2,7 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
+import { isEligibleComplianceOfficer } from './src/shared/complianceOfficerFilter';
 
 const PORT = 3000;
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -466,26 +467,25 @@ async function startServer() {
   });
 
   // ACCOUNTANTS LIST API (For business owners to select / sync with a registered compliance firm)
+  // Only verified, registered Compliance Officers may appear here. Business owner
+  // and client accounts are hard-excluded via isEligibleComplianceOfficer, which is
+  // the same predicate used by the client-side fallback list — see
+  // src/shared/complianceOfficerFilter.ts for the single source of truth.
   app.get('/api/accountants/list', (_req, res) => {
     const db = readDB();
     const users = db.users || [];
     const accountants = users
-      .filter((u: any) => 
-        u.accountType !== 'business_owner' &&
-        (
-          u.accountType === 'accountant' || 
-          u.role === 'Compliance Officer' || 
-          u.role === 'Compliance Specialist' || 
-          u.role === 'Compliance CPA' ||
-          u.role === 'Senior Tax Accountant' ||
-          u.role === 'Tax Associate'
-        )
-      )
+      .filter((u: any) => isEligibleComplianceOfficer(u))
       .map((u: any) => ({
         id: u.id,
         name: u.companyInfo?.companyName || u.name || 'Compliance CPA Firm',
         email: u.email,
         role: u.role || 'Compliance Officer',
+        // accountType is included so downstream consumers can safely re-apply
+        // isEligibleComplianceOfficer() without losing information (an
+        // accountType:'accountant' user may not have one of the literal
+        // COMPLIANCE_OFFICER_ROLES strings as their role).
+        accountType: u.accountType || 'accountant',
         cpaLicenseNo: u.companyInfo?.cpaLicenseNo || 'CPA-LIC-009812',
       }));
 
@@ -497,6 +497,7 @@ async function startServer() {
           name: 'Gerald Tagz, CPA Practice Firm',
           email: 'thugz.gerald13@gmail.com',
           role: 'Compliance Officer',
+          accountType: 'accountant',
           cpaLicenseNo: 'CPA-0192834',
         },
         {
@@ -504,6 +505,7 @@ async function startServer() {
           name: 'MAW Tax & Accounting Services',
           email: 'mawcons.bir@gmail.com',
           role: 'Compliance Officer',
+          accountType: 'accountant',
           cpaLicenseNo: 'CPA-0884120',
         }
       );

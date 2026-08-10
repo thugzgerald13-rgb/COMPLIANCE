@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Building2, Users, Check, ArrowRight, ShieldCheck, Briefcase, Sparkles, User, HelpCircle, X, Lock, Link, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { isEligibleComplianceOfficer } from '../shared/complianceOfficerFilter';
 
 interface ClientDashboardModeModalProps {
   isOpen: boolean;
@@ -42,7 +43,11 @@ export function ClientDashboardModeModal({
         })
         .then(data => {
           if (data && data.success && Array.isArray(data.accountants) && data.accountants.length > 0) {
-            const filtered = data.accountants.filter((acc: any) => acc.accountType !== 'business_owner');
+            // Server already filters to verified Compliance Officers, but we
+            // re-apply the same predicate here defensively so this list can never
+            // show a business_owner/client record even if the API response is
+            // stale, cached, or tampered with in transit.
+            const filtered = data.accountants.filter((acc: any) => isEligibleComplianceOfficer(acc));
             const listWithCompanyNames = filtered.map((acc: any) => ({
               ...acc,
               name: acc.companyInfo?.companyName || acc.name || 'Registered Compliance Officer Practice',
@@ -52,17 +57,17 @@ export function ClientDashboardModeModal({
               setSelectedAccEmail(listWithCompanyNames[0].email);
             }
           } else {
-            // Local fallback accountants
+            // Local fallback accountants — used only if the central API is
+            // unreachable or returns no results. Uses the exact same eligibility
+            // predicate as the server so the fallback can't drift into showing
+            // business_owner/client accounts that the server would have excluded.
             const rawUsers = localStorage.getItem('biz_comply_users_v2');
             let list: any[] = [];
             if (rawUsers) {
               try {
                 const parsed = JSON.parse(rawUsers);
                 list = parsed
-                  .filter((u: any) => 
-                    u.accountType !== 'business_owner' &&
-                    (u.accountType === 'accountant' || u.role === 'Compliance Officer' || u.role === 'Compliance CPA' || u.role === 'Senior Tax Accountant')
-                  )
+                  .filter((u: any) => isEligibleComplianceOfficer(u))
                   .map((u: any) => ({
                     id: u.id,
                     name: u.companyInfo?.companyName || u.name || 'Compliance Officer Practice',
