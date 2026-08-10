@@ -9,7 +9,6 @@ import {
   NotificationSettings 
 } from '../utils/notificationService';
 import { NotificationHubModal } from './NotificationHubModal';
-import { AdminFeatureReleaseModal } from './AdminFeatureReleaseModal';
 import { useAuth } from '../context/AuthContext';
 import { useFeatureRelease } from '../context/FeatureReleaseContext';
 
@@ -38,7 +37,6 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
   const [filterStatus, setFilterStatus] = useState<'all' | 'Pending' | 'Processing'>('all');
   const [editingForm, setEditingForm] = useState<SelectedDashboardForm | null>(null);
   const [isNotificationHubOpen, setIsNotificationHubOpen] = useState(false);
-  const [isAdminReleaseModalOpen, setIsAdminReleaseModalOpen] = useState(false);
   const [aiAnalysisOutput, setAiAnalysisOutput] = useState<string | null>(null);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [efpsSyncMsg, setEfpsSyncMsg] = useState<string | null>(null);
@@ -271,57 +269,12 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <span>Dashboard Overview</span>
-            {isSuperAdmin && (
-              <span className="text-xs bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
-                <Crown className="w-3 h-3 fill-amber-400" />
-                <span>Developer Mode</span>
-              </span>
-            )}
           </h1>
           <p className="text-xs text-slate-600 dark:text-slate-300 font-medium mt-0.5">Click any pending or in-processing reference below to update its compliance status & details</p>
         </div>
       </div>
 
-      {/* Super Admin Early Access Control Banner */}
-      {isSuperAdmin && (
-        <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-amber-950/80 via-slate-900 to-indigo-950/80 border border-amber-500/40 text-slate-100 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
-              <Crown className="w-5 h-5 fill-amber-400 text-amber-950" />
-            </div>
-            <div className="space-y-0.5">
-              <h3 className="text-sm font-black text-white flex items-center gap-2">
-                <span>Developer Web App Early Access Active</span>
-                <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-mono">Full Privileges</span>
-              </h3>
-              <p className="text-xs text-slate-300">
-                You have unrestricted access to all web app features and experimental updates before general release to users.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-2 shrink-0">
-            <button
-              onClick={toggleWorkspaceMode}
-              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 font-bold text-xs rounded-xl transition-all cursor-pointer shadow-md flex items-center space-x-1.5"
-              title="Click to toggle workspace mode between Single-User and Multi-User Practice Mode"
-            >
-              {workspaceMode === 'single' ? <Users className="w-4 h-4 text-blue-400" /> : <Users className="w-4 h-4 text-emerald-400" />}
-              <span>Switch to {workspaceMode === 'single' ? 'Multi-User' : 'Single-User'}</span>
-            </button>
-
-            <button
-              onClick={() => setIsAdminReleaseModalOpen(true)}
-              className="px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-slate-950 font-black text-xs rounded-xl transition-all cursor-pointer shadow-md flex items-center space-x-1.5"
-            >
-              <Rocket className="w-4 h-4 text-slate-950" />
-              <span>Manage Early Access Updates</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Feature Updates Section (Hidden for regular users if features are in superadmin_only early access) */}
+      {/* Feature Updates Section */}
       {((isSuperAdmin || isFeatureAvailable('ai_compliance_assistant')) || (isSuperAdmin || isFeatureAvailable('efiling_api_sync'))) && (
         <div className="mb-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
           
@@ -336,12 +289,6 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
                   <div>
                     <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                       <span>AI Compliance Assistant & Smart Advisor</span>
-                      {isSuperAdmin && getFeatureStage('ai_compliance_assistant') === 'superadmin_only' && (
-                        <span className="text-[10px] bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <Crown className="w-2.5 h-2.5 fill-amber-400" />
-                          <span>Developer Early Access</span>
-                        </span>
-                      )}
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       AI-driven tax risk analysis & automated BIR filing obligations advisor
@@ -365,7 +312,7 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
 
                 <div className="flex items-center justify-between pt-1">
                   <span className="text-[11px] text-slate-400 font-mono">
-                    {isSuperAdmin ? '⚡ Unrestricted Developer Execution' : 'Released Feature'}
+                    ⚡ Automated Analysis Execution
                   </span>
                   <button
                     onClick={handleRunAiAnalysis}
@@ -391,12 +338,6 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
                   <div>
                     <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                       <span>eFPS & eBIRForms Direct API Verification</span>
-                      {isSuperAdmin && getFeatureStage('efiling_api_sync') === 'superadmin_only' && (
-                        <span className="text-[10px] bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <Crown className="w-2.5 h-2.5 fill-amber-400" />
-                          <span>Admin Early Access</span>
-                        </span>
-                      )}
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       Direct API verification pipeline for BIR reference numbers & filing confirmations
@@ -421,7 +362,7 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
 
                 <div className="flex items-center justify-between pt-1">
                   <span className="text-[11px] text-slate-400 font-mono">
-                    {isSuperAdmin ? '⚡ Developer Gateway Live' : 'Released Feature'}
+                    ⚡ Direct API Sync Pipeline
                   </span>
                   <button
                     onClick={handleRunEfpsSync}
@@ -793,11 +734,7 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
         </div>
       )}
 
-      {/* Super Admin Feature Release Control Modal */}
-      <AdminFeatureReleaseModal
-        isOpen={isAdminReleaseModalOpen}
-        onClose={() => setIsAdminReleaseModalOpen(false)}
-      />
+      {/* End Dashboard */}
     </div>
   );
 }

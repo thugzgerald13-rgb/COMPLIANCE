@@ -821,6 +821,10 @@ export function Sidebar({
         onUpdateSettings={setNotificationSettings}
         onUpdateForm={onUpdateForm}
         selectedPeriod={selectedPeriod}
+        onOpenReleaseControl={() => {
+          setIsSettingsOpen(false);
+          setIsAdminReleaseModalOpen(true);
+        }}
       />
 
       {/* Super Admin Feature Release Control Modal */}

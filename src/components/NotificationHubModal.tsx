@@ -4,7 +4,7 @@ import {
   X, Bell, Mail, CheckCircle2, 
   Settings, History, Volume2, VolumeX, ShieldCheck, 
   Trash2, ExternalLink, Calendar, User, FileText, Check, Send, AlertCircle, Info, RefreshCw,
-  Smartphone, Share2, HelpCircle, AlertTriangle, CheckCircle, SmartphoneNfc, Crown, Shield
+  Smartphone, Share2, HelpCircle, AlertTriangle, CheckCircle, SmartphoneNfc, Crown, Shield, Rocket, Users
 } from 'lucide-react';
 import { 
   DueItemForNotification, 
@@ -35,6 +35,7 @@ interface NotificationHubModalProps {
     formMeta?: { code: string; description: string; deadline: string; period: string }
   ) => void;
   selectedPeriod: string;
+  onOpenReleaseControl?: () => void;
 }
 
 export function NotificationHubModal({
@@ -44,9 +45,10 @@ export function NotificationHubModal({
   settings,
   onUpdateSettings,
   onUpdateForm,
-  selectedPeriod
+  selectedPeriod,
+  onOpenReleaseControl
 }: NotificationHubModalProps) {
-  const { user, isSuperAdmin, logout, allUsers, switchUser } = useAuth();
+  const { user, isSuperAdmin, logout, allUsers, switchUser, workspaceMode, toggleWorkspaceMode } = useAuth();
   const isAdmin = Boolean(isSuperAdmin || user?.role === 'Super Admin' || user?.role === 'Admin' || user?.role?.includes('Admin') || user?.email?.includes('gerald13'));
   const [activeTab, setActiveTab] = useState<'profile' | 'mobile' | 'logs' | 'settings'>('mobile');
   const [logs, setLogs] = useState<NotificationLog[]>(loadNotificationLogs());
@@ -472,7 +474,7 @@ export function NotificationHubModal({
 
               {/* Super Admin Control Section */}
               {(user?.role?.includes('Admin') || user?.email?.includes('gerald13')) && (
-                <div className="p-4 bg-gradient-to-br from-amber-500/10 via-slate-900 to-slate-950 text-white rounded-xl space-y-3 border border-amber-500/30 shadow-lg">
+                <div className="p-4 bg-gradient-to-br from-amber-500/10 via-slate-900 to-slate-950 text-white rounded-xl space-y-4 border border-amber-500/30 shadow-lg">
                   <div className="flex items-center justify-between border-b border-amber-500/20 pb-2">
                     <div className="flex items-center space-x-2">
                       <Crown className="w-5 h-5 text-amber-400 animate-pulse" />
@@ -480,14 +482,47 @@ export function NotificationHubModal({
                         Developer Privileges & System Management
                       </h4>
                     </div>
-                    <span className="text-[10px] font-mono bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/40">
-                      MASTER ACCESS
+                    <span className="text-[10px] font-mono bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/40 font-bold">
+                      FULL PRIVILEGES
                     </span>
                   </div>
 
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    Developer privileges are permanently bound to <strong>thugz.gerald13@gmail.com</strong> and <strong>tagz.gerald13@gmail.com</strong>. You possess full administrative control over client files, BIR compliance forms, and user permissions.
-                  </p>
+                  <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-amber-200 flex items-center gap-1.5">
+                        <Crown className="w-3.5 h-3.5 text-amber-400" />
+                        Developer Web App Early Access Active
+                      </span>
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded font-mono font-bold">
+                        ACTIVE
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-300 leading-relaxed">
+                      Developer privileges are permanently bound to <strong>thugz.gerald13@gmail.com</strong> and <strong>tagz.gerald13@gmail.com</strong>. You possess master access over client files, BIR compliance forms, feature stages, and user permissions.
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-amber-500/20">
+                      {onOpenReleaseControl && (
+                        <button
+                          type="button"
+                          onClick={onOpenReleaseControl}
+                          className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-slate-950 font-extrabold text-xs rounded-lg transition-all cursor-pointer shadow-sm flex items-center space-x-1.5"
+                        >
+                          <Rocket className="w-3.5 h-3.5 text-slate-950" />
+                          <span>Manage Early Access Updates</span>
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={toggleWorkspaceMode}
+                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 font-bold text-xs rounded-lg transition-all cursor-pointer flex items-center space-x-1.5"
+                      >
+                        <Users className="w-3.5 h-3.5 text-blue-400" />
+                        <span>Switch Workspace ({workspaceMode === 'single' ? 'Multi-User' : 'Single-User'})</span>
+                      </button>
+                    </div>
+                  </div>
 
                   {/* Registered Accounts Quick Switcher */}
                   {allUsers && allUsers.length > 0 && (
