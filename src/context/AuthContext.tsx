@@ -188,82 +188,86 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    refreshUsersList();
+    async function initAuth() {
+      await refreshUsersList();
 
-    if (supabase && isSupabaseConfigured) {
-      // Supabase authentication listener
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session?.user) {
-          const userEmail = session.user.email || '';
-          const meta = session.user.user_metadata || {};
-          const localBackup = getLocalUserBackup(userEmail, session.user.id);
+      if (supabase && isSupabaseConfigured) {
+        // Supabase authentication listener
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session?.user) {
+            const userEmail = session.user.email || '';
+            const meta = session.user.user_metadata || {};
+            const localBackup = getLocalUserBackup(userEmail, session.user.id);
 
-          const accountType = meta.accountType || localBackup?.accountType;
-          const companyInfo = meta.companyInfo || localBackup?.companyInfo;
-          const clientDashboardMode = meta.clientDashboardMode || localBackup?.clientDashboardMode;
-          const tin = companyInfo?.tin || meta.tin || localBackup?.tin;
-          const clientId = meta.clientId || localBackup?.clientId;
+            const accountType = meta.accountType || localBackup?.accountType;
+            const companyInfo = meta.companyInfo || localBackup?.companyInfo;
+            const clientDashboardMode = meta.clientDashboardMode || localBackup?.clientDashboardMode;
+            const tin = companyInfo?.tin || meta.tin || localBackup?.tin;
+            const clientId = meta.clientId || localBackup?.clientId;
 
-          const u: User = {
-            id: session.user.id,
-            name: companyInfo?.companyName || meta.full_name || localBackup?.name || session.user.email?.split('@')[0] || 'User',
-            email: userEmail,
-            role: isSuperAdminEmail(userEmail) ? 'Super Admin' : (meta.role || localBackup?.role || 'Compliance Officer'),
-            accountType,
-            companyInfo,
-            clientDashboardMode,
-            tin,
-            clientId,
-            organization_id: localBackup?.organization_id || 'org_main_practice',
-          };
-          setUser(u);
-          localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(u));
-        } else {
-          // Fallback to local / central
-          loadLocalUser();
-        }
+            const u: User = {
+              id: session.user.id,
+              name: companyInfo?.companyName || meta.full_name || localBackup?.name || session.user.email?.split('@')[0] || 'User',
+              email: userEmail,
+              role: isSuperAdminEmail(userEmail) ? 'Super Admin' : (meta.role || localBackup?.role || 'Compliance Officer'),
+              accountType,
+              companyInfo,
+              clientDashboardMode,
+              tin,
+              clientId,
+              organization_id: localBackup?.organization_id || 'org_main_practice',
+            };
+            setUser(u);
+            localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(u));
+          } else {
+            // Fallback to local / central
+            loadLocalUser();
+          }
+          setIsAuthLoaded(true);
+        });
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+          if (session?.user) {
+            const userEmail = session.user.email || '';
+            const meta = session.user.user_metadata || {};
+            const localBackup = getLocalUserBackup(userEmail, session.user.id);
+
+            const accountType = meta.accountType || localBackup?.accountType;
+            const companyInfo = meta.companyInfo || localBackup?.companyInfo;
+            const clientDashboardMode = meta.clientDashboardMode || localBackup?.clientDashboardMode;
+            const tin = companyInfo?.tin || meta.tin || localBackup?.tin;
+            const clientId = meta.clientId || localBackup?.clientId;
+
+            const u: User = {
+              id: session.user.id,
+              name: companyInfo?.companyName || meta.full_name || localBackup?.name || session.user.email?.split('@')[0] || 'User',
+              email: userEmail,
+              role: isSuperAdminEmail(userEmail) ? 'Super Admin' : (meta.role || localBackup?.role || 'Compliance Officer'),
+              accountType,
+              companyInfo,
+              clientDashboardMode,
+              tin,
+              clientId,
+              organization_id: localBackup?.organization_id || 'org_main_practice',
+            };
+            setUser(u);
+            localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(u));
+          } else {
+            setUser(null);
+            localStorage.removeItem(CURRENT_USER_KEY);
+          }
+        });
+
+        return () => {
+          subscription.unsubscribe();
+        };
+      } else {
+        await loadLocalUser();
         setIsAuthLoaded(true);
-      });
-
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-        if (session?.user) {
-          const userEmail = session.user.email || '';
-          const meta = session.user.user_metadata || {};
-          const localBackup = getLocalUserBackup(userEmail, session.user.id);
-
-          const accountType = meta.accountType || localBackup?.accountType;
-          const companyInfo = meta.companyInfo || localBackup?.companyInfo;
-          const clientDashboardMode = meta.clientDashboardMode || localBackup?.clientDashboardMode;
-          const tin = companyInfo?.tin || meta.tin || localBackup?.tin;
-          const clientId = meta.clientId || localBackup?.clientId;
-
-          const u: User = {
-            id: session.user.id,
-            name: companyInfo?.companyName || meta.full_name || localBackup?.name || session.user.email?.split('@')[0] || 'User',
-            email: userEmail,
-            role: isSuperAdminEmail(userEmail) ? 'Super Admin' : (meta.role || localBackup?.role || 'Compliance Officer'),
-            accountType,
-            companyInfo,
-            clientDashboardMode,
-            tin,
-            clientId,
-            organization_id: localBackup?.organization_id || 'org_main_practice',
-          };
-          setUser(u);
-          localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(u));
-        } else {
-          setUser(null);
-          localStorage.removeItem(CURRENT_USER_KEY);
-        }
-      });
-
-      return () => {
-        subscription.unsubscribe();
-      };
-    } else {
-      loadLocalUser();
-      setIsAuthLoaded(true);
+      }
     }
+
+    initAuth();
   }, []);
 
   const loadLocalUser = async () => {

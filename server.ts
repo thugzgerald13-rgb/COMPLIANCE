@@ -38,16 +38,38 @@ function readDB() {
       users: DEFAULT_USERS,
       clients: [],
       forms: [],
+      user_clients: {},
+      user_forms: {},
+      logs: {},
+      settings: {},
     };
-    fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2), 'utf8');
+    try {
+      fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2), 'utf8');
+    } catch (e) {}
     return initialData;
   }
   try {
     const raw = fs.readFileSync(DB_FILE, 'utf8');
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (!parsed.users) parsed.users = DEFAULT_USERS;
+    if (!parsed.clients) parsed.clients = [];
+    if (!parsed.forms) parsed.forms = [];
+    if (!parsed.user_clients) parsed.user_clients = {};
+    if (!parsed.user_forms) parsed.user_forms = {};
+    if (!parsed.logs) parsed.logs = {};
+    if (!parsed.settings) parsed.settings = {};
+    return parsed;
   } catch (err) {
     console.error('Error reading central_db.json:', err);
-    return { users: DEFAULT_USERS, clients: [], forms: [] };
+    return {
+      users: DEFAULT_USERS,
+      clients: [],
+      forms: [],
+      user_clients: {},
+      user_forms: {},
+      logs: {},
+      settings: {},
+    };
   }
 }
 
@@ -63,11 +85,83 @@ function writeDB(data: any) {
 async function startServer() {
   const app = express();
 
-  app.use(express.json({ limit: '10mb' }));
+  app.use(express.json({ limit: '50mb' }));
 
   // Health check endpoint
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  // UNIFIED GET user data across device
+  app.get('/api/user-data', (req, res) => {
+    const email = req.query.email ? String(req.query.email).toLowerCase().trim() : '';
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email query is required' });
+    }
+
+    const db = readDB();
+    const user = (db.users || []).find((u: any) => u.email && u.email.toLowerCase().trim() === email);
+
+    const userClients = (db.user_clients && db.user_clients[email]) || db.clients || [];
+    const userForms = (db.user_forms && db.user_forms[email]) || db.forms || [];
+    const userLogs = (db.logs && (db.logs[email] || db.logs['default'])) || [];
+    const userSettings = (db.settings && (db.settings[email] || db.settings['default'])) || null;
+
+    res.json({
+      success: true,
+      user: user || null,
+      clients: userClients,
+      forms: userForms,
+      logs: userLogs,
+      settings: userSettings,
+    });
+  });
+
+  // UNIFIED POST user data save
+  app.post('/api/user-data/save', (req, res) => {
+    const { email, user, clients, forms, settings, logs } = req.body || {};
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    const normEmail = String(email).toLowerCase().trim();
+    const db = readDB();
+
+    if (user) {
+      const users = db.users || [];
+      const idx = users.findIndex((u: any) => u.email && u.email.toLowerCase().trim() === normEmail);
+      if (idx !== -1) {
+        users[idx] = { ...users[idx], ...user, updatedAt: new Date().toISOString() };
+      } else {
+        users.push({ ...user, email: normEmail, updatedAt: new Date().toISOString() });
+      }
+      db.users = users;
+    }
+
+    if (Array.isArray(clients)) {
+      if (!db.user_clients) db.user_clients = {};
+      db.user_clients[normEmail] = clients;
+      db.clients = clients;
+    }
+
+    if (Array.isArray(forms)) {
+      if (!db.user_forms) db.user_forms = {};
+      db.user_forms[normEmail] = forms;
+      db.forms = forms;
+    }
+
+    if (settings) {
+      if (!db.settings) db.settings = {};
+      db.settings[normEmail] = settings;
+    }
+
+    if (Array.isArray(logs)) {
+      if (!db.logs) db.logs = {};
+      db.logs[normEmail] = logs;
+    }
+
+    writeDB(db);
+    return res.json({ success: true });
   });
 
   // GET all users
@@ -203,15 +297,33 @@ async function startServer() {
   });
 
   // CLIENTS sync API
-  app.get('/api/clients', (_req, res) => {
+  app.get('/api/clients', (req, res) => {
+    const userEmail = req.query.email ? String(req.query.email).toLowerCase().trim() : '';
+    const userId = req.query.userId ? String(req.query.userId) : '';
     const db = readDB();
-    res.json({ success: true, clients: db.clients || [] });
+    if (!db.user_clients) db.user_clients = {};
+
+    let clientList = [];
+    if (userEmail && db.user_clients[userEmail]) {
+      clientList = db.user_clients[userEmail];
+    } else if (userId && db.user_clients[userId]) {
+      clientList = db.user_clients[userId];
+    } else {
+      clientList = db.clients || [];
+    }
+
+    res.json({ success: true, clients: clientList });
   });
 
   app.post('/api/clients/sync', (req, res) => {
-    const { clients } = req.body || {};
+    const { clients, userEmail, userId } = req.body || {};
     if (Array.isArray(clients)) {
       const db = readDB();
+      if (!db.user_clients) db.user_clients = {};
+
+      const normEmail = userEmail ? String(userEmail).toLowerCase().trim() : '';
+      if (normEmail) db.user_clients[normEmail] = clients;
+      if (userId) db.user_clients[userId] = clients;
       db.clients = clients;
       writeDB(db);
       return res.json({ success: true, count: clients.length });
@@ -220,15 +332,33 @@ async function startServer() {
   });
 
   // FORMS sync API
-  app.get('/api/forms', (_req, res) => {
+  app.get('/api/forms', (req, res) => {
+    const userEmail = req.query.email ? String(req.query.email).toLowerCase().trim() : '';
+    const userId = req.query.userId ? String(req.query.userId) : '';
     const db = readDB();
-    res.json({ success: true, forms: db.forms || [] });
+    if (!db.user_forms) db.user_forms = {};
+
+    let formList = [];
+    if (userEmail && db.user_forms[userEmail]) {
+      formList = db.user_forms[userEmail];
+    } else if (userId && db.user_forms[userId]) {
+      formList = db.user_forms[userId];
+    } else {
+      formList = db.forms || [];
+    }
+
+    res.json({ success: true, forms: formList });
   });
 
   app.post('/api/forms/sync', (req, res) => {
-    const { forms } = req.body || {};
+    const { forms, userEmail, userId } = req.body || {};
     if (Array.isArray(forms)) {
       const db = readDB();
+      if (!db.user_forms) db.user_forms = {};
+
+      const normEmail = userEmail ? String(userEmail).toLowerCase().trim() : '';
+      if (normEmail) db.user_forms[normEmail] = forms;
+      if (userId) db.user_forms[userId] = forms;
       db.forms = forms;
       writeDB(db);
       return res.json({ success: true, count: forms.length });
@@ -237,16 +367,22 @@ async function startServer() {
   });
 
   // NOTIFICATIONS LOGS & SETTINGS sync API
-  app.get('/api/notifications/logs', (_req, res) => {
+  app.get('/api/notifications/logs', (req, res) => {
+    const userEmail = req.query.email ? String(req.query.email).toLowerCase().trim() : '';
     const db = readDB();
-    res.json({ success: true, logs: db.logs || [] });
+    const logsObj = db.logs || {};
+    const logList = (userEmail && logsObj[userEmail]) || logsObj['default'] || [];
+    res.json({ success: true, logs: logList });
   });
 
   app.post('/api/notifications/logs', (req, res) => {
-    const { logs } = req.body || {};
+    const { logs, userEmail } = req.body || {};
     if (Array.isArray(logs)) {
+      const normEmail = userEmail ? String(userEmail).toLowerCase().trim() : 'default';
       const db = readDB();
-      db.logs = logs;
+      if (!db.logs) db.logs = {};
+      db.logs[normEmail] = logs;
+      db.logs['default'] = logs;
       writeDB(db);
       return res.json({ success: true, count: logs.length });
     }

@@ -54,7 +54,8 @@ export function useFormReferences() {
     }
 
     // Sync from Central Storage Server
-    fetch('/api/forms')
+    const emailParam = user?.email ? `?email=${encodeURIComponent(user.email)}&userId=${encodeURIComponent(user.id)}` : '';
+    fetch(`/api/forms${emailParam}`)
       .then(res => res.json())
       .then(data => {
         if (data.success && Array.isArray(data.forms) && data.forms.length > 0 && isMounted) {
@@ -98,7 +99,7 @@ export function useFormReferences() {
       await fetch('/api/forms/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ forms: updatedForms }),
+        body: JSON.stringify({ forms: updatedForms, userEmail: user?.email, userId: user?.id }),
       });
     } catch (e) {}
 
@@ -173,7 +174,8 @@ export function useClients() {
 
       // 2. Sync from Central Storage Server
       try {
-        const res = await fetch('/api/clients');
+        const emailParam = user?.email ? `?email=${encodeURIComponent(user.email)}&userId=${encodeURIComponent(user.id)}` : '';
+        const res = await fetch(`/api/clients${emailParam}`);
         if (res.ok) {
           const data = await res.json();
           if (data.success && Array.isArray(data.clients) && data.clients.length > 0) {
@@ -253,7 +255,7 @@ export function useClients() {
       await fetch('/api/clients/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clients: updated }),
+        body: JSON.stringify({ clients: updated, userEmail: user?.email, userId: user?.id }),
       });
     } catch (e) {}
 
