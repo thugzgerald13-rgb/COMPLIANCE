@@ -31,16 +31,47 @@ export function ClientDashboardModeModal({
   useEffect(() => {
     if (isOpen) {
       fetch('/api/accountants/list')
-        .then(res => res.json())
-        .then(data => {
-          if (data.success && Array.isArray(data.accountants)) {
-            setAccountantList(data.accountants);
-            if (data.accountants.length > 0) {
-              setSelectedAccEmail(data.accountants[0].email);
+        .then(async res => {
+          if (res.ok) {
+            const ct = res.headers.get('content-type') || '';
+            if (ct.includes('application/json')) {
+              return res.json();
             }
           }
+          return null;
         })
-        .catch(() => {});
+        .then(data => {
+          if (data && data.success && Array.isArray(data.accountants) && data.accountants.length > 0) {
+            setAccountantList(data.accountants);
+            setSelectedAccEmail(data.accountants[0].email);
+          } else {
+            // Local fallback accountants
+            const rawUsers = localStorage.getItem('biz_comply_users_v2');
+            let list: any[] = [];
+            if (rawUsers) {
+              try {
+                const parsed = JSON.parse(rawUsers);
+                list = parsed.filter((u: any) => u.accountType === 'accountant' || u.role === 'Compliance CPA' || u.role === 'Senior Tax Accountant');
+              } catch (e) {}
+            }
+            if (list.length === 0) {
+              list = [
+                { id: 'acc1', name: 'Gerald Tagz, CPA', email: 'thugz.gerald13@gmail.com', cpaLicenseNo: 'CPA-0192834' },
+                { id: 'acc2', name: 'MAW Tax & Accounting Services', email: 'mawcons.bir@gmail.com', cpaLicenseNo: 'CPA-0884120' }
+              ];
+            }
+            setAccountantList(list);
+            if (list.length > 0) setSelectedAccEmail(list[0].email);
+          }
+        })
+        .catch(() => {
+          const defaultList = [
+            { id: 'acc1', name: 'Gerald Tagz, CPA', email: 'thugz.gerald13@gmail.com', cpaLicenseNo: 'CPA-0192834' },
+            { id: 'acc2', name: 'MAW Tax & Accounting Services', email: 'mawcons.bir@gmail.com', cpaLicenseNo: 'CPA-0884120' }
+          ];
+          setAccountantList(defaultList);
+          setSelectedAccEmail('thugz.gerald13@gmail.com');
+        });
     }
   }, [isOpen]);
 
