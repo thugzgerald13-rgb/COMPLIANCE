@@ -42,8 +42,12 @@ export function ClientDashboardModeModal({
         })
         .then(data => {
           if (data && data.success && Array.isArray(data.accountants) && data.accountants.length > 0) {
-            setAccountantList(data.accountants);
-            setSelectedAccEmail(data.accountants[0].email);
+            const listWithCompanyNames = data.accountants.map((acc: any) => ({
+              ...acc,
+              name: acc.name || acc.companyInfo?.companyName || 'Registered Compliance Firm',
+            }));
+            setAccountantList(listWithCompanyNames);
+            setSelectedAccEmail(listWithCompanyNames[0].email);
           } else {
             // Local fallback accountants
             const rawUsers = localStorage.getItem('biz_comply_users_v2');
@@ -51,12 +55,22 @@ export function ClientDashboardModeModal({
             if (rawUsers) {
               try {
                 const parsed = JSON.parse(rawUsers);
-                list = parsed.filter((u: any) => u.accountType === 'accountant' || u.role === 'Compliance CPA' || u.role === 'Senior Tax Accountant');
+                list = parsed
+                  .filter((u: any) => 
+                    u.accountType !== 'business_owner' &&
+                    (u.accountType === 'accountant' || u.role === 'Compliance Officer' || u.role === 'Compliance CPA' || u.role === 'Senior Tax Accountant')
+                  )
+                  .map((u: any) => ({
+                    id: u.id,
+                    name: u.companyInfo?.companyName || u.name || 'Compliance CPA Firm',
+                    email: u.email,
+                    cpaLicenseNo: u.companyInfo?.cpaLicenseNo || 'CPA-0192834',
+                  }));
               } catch (e) {}
             }
             if (list.length === 0) {
               list = [
-                { id: 'acc1', name: 'Gerald Tagz, CPA', email: 'thugz.gerald13@gmail.com', cpaLicenseNo: 'CPA-0192834' },
+                { id: 'acc1', name: 'Gerald Tagz, CPA Practice Firm', email: 'thugz.gerald13@gmail.com', cpaLicenseNo: 'CPA-0192834' },
                 { id: 'acc2', name: 'MAW Tax & Accounting Services', email: 'mawcons.bir@gmail.com', cpaLicenseNo: 'CPA-0884120' }
               ];
             }
@@ -66,7 +80,7 @@ export function ClientDashboardModeModal({
         })
         .catch(() => {
           const defaultList = [
-            { id: 'acc1', name: 'Gerald Tagz, CPA', email: 'thugz.gerald13@gmail.com', cpaLicenseNo: 'CPA-0192834' },
+            { id: 'acc1', name: 'Gerald Tagz, CPA Practice Firm', email: 'thugz.gerald13@gmail.com', cpaLicenseNo: 'CPA-0192834' },
             { id: 'acc2', name: 'MAW Tax & Accounting Services', email: 'mawcons.bir@gmail.com', cpaLicenseNo: 'CPA-0884120' }
           ];
           setAccountantList(defaultList);
@@ -89,14 +103,17 @@ export function ClientDashboardModeModal({
     e.preventDefault();
     const emailToSync = customAccEmail.trim() || selectedAccEmail;
     if (!emailToSync) {
-      setSyncError('Please enter or select an Accountant / CPA email.');
+      setSyncError('Please enter or select a Registered Compliance CPA Firm email.');
       return;
     }
 
     setSyncLoading(true);
     setSyncError(null);
 
-    const result = await syncWithAccountant(emailToSync);
+    const matchAcc = accountantList.find(a => a.email.toLowerCase().trim() === emailToSync.toLowerCase().trim());
+    const accName = matchAcc?.name;
+
+    const result = await syncWithAccountant(emailToSync, accName);
     setSyncLoading(false);
 
     if (result.success) {

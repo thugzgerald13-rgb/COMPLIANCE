@@ -418,33 +418,48 @@ async function startServer() {
     return res.status(400).json({ success: false, message: 'Invalid settings object' });
   });
 
-  // ACCOUNTANTS LIST API (For business owners to select / sync with an accountant)
+  // ACCOUNTANTS LIST API (For business owners to select / sync with a registered compliance firm)
   app.get('/api/accountants/list', (_req, res) => {
     const db = readDB();
     const users = db.users || [];
-    const accountants = users.filter((u: any) => 
-      u.accountType === 'accountant' || 
-      u.role === 'Compliance Officer' || 
-      u.role === 'Compliance Specialist' || 
-      u.role === 'Super Admin' || 
-      u.role === 'Admin'
-    ).map((u: any) => ({
-      id: u.id,
-      name: u.companyInfo?.companyName || u.name || 'CPA Firm',
-      email: u.email,
-      role: u.role || 'Compliance Officer',
-      cpaLicenseNo: u.companyInfo?.cpaLicenseNo || 'CPA-LIC-009812',
-    }));
+    const accountants = users
+      .filter((u: any) => 
+        u.accountType !== 'business_owner' &&
+        (
+          u.accountType === 'accountant' || 
+          u.role === 'Compliance Officer' || 
+          u.role === 'Compliance Specialist' || 
+          u.role === 'Compliance CPA' ||
+          u.role === 'Senior Tax Accountant' ||
+          u.role === 'Tax Associate'
+        )
+      )
+      .map((u: any) => ({
+        id: u.id,
+        name: u.companyInfo?.companyName || u.name || 'Compliance CPA Firm',
+        email: u.email,
+        role: u.role || 'Compliance Officer',
+        cpaLicenseNo: u.companyInfo?.cpaLicenseNo || 'CPA-LIC-009812',
+      }));
 
-    // If empty, add a default compliance firm so business owners can always sync
+    // If empty, supply default registered compliance firms with company names
     if (accountants.length === 0) {
-      accountants.push({
-        id: 'cpa_main_firm',
-        name: 'BIZ-COMPLY CPA & Compliance Firm',
-        email: 'thugz.gerald13@gmail.com',
-        role: 'Lead Compliance CPA',
-        cpaLicenseNo: 'CPA-LIC-009812',
-      });
+      accountants.push(
+        {
+          id: 'acc_tagz_cpa',
+          name: 'Gerald Tagz, CPA Practice Firm',
+          email: 'thugz.gerald13@gmail.com',
+          role: 'Compliance Officer',
+          cpaLicenseNo: 'CPA-0192834',
+        },
+        {
+          id: 'acc_maw_tax',
+          name: 'MAW Tax & Accounting Services',
+          email: 'mawcons.bir@gmail.com',
+          role: 'Compliance Officer',
+          cpaLicenseNo: 'CPA-0884120',
+        }
+      );
     }
 
     res.json({ success: true, accountants });

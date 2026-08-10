@@ -323,9 +323,18 @@ export function ClientPortalView({
           
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-2 max-w-2xl">
-              <div className="inline-flex items-center space-x-2 bg-blue-500/20 border border-blue-400/30 px-3 py-1 rounded-full text-blue-300 text-xs font-bold">
-                <ShieldCheck className="w-4 h-4 text-blue-400" />
-                <span>Verified BIR Taxpayer Account Portal</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex items-center space-x-2 bg-blue-500/20 border border-blue-400/30 px-3 py-1 rounded-full text-blue-300 text-xs font-bold">
+                  <ShieldCheck className="w-4 h-4 text-blue-400" />
+                  <span>Verified BIR Taxpayer Account Portal</span>
+                </div>
+
+                {(user?.isSyncedWithAccountant || user?.syncedAccountantEmail) && (
+                  <div className="inline-flex items-center space-x-1.5 bg-emerald-500/20 border border-emerald-400/40 px-3 py-1 rounded-full text-emerald-300 text-xs font-bold">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>Compliance Firm: <strong>{user?.syncedAccountantName || user?.syncedAccountantEmail}</strong></span>
+                  </div>
+                )}
               </div>
               <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
                 Tax Compliance Status — [{selectedPeriod}]
