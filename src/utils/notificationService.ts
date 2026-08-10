@@ -246,6 +246,14 @@ export async function sendTestWebPushNotification(): Promise<{ success: boolean;
 
 export function loadNotificationLogs(): NotificationLog[] {
   try {
+    fetch('/api/notifications/logs')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.logs) && data.logs.length > 0) {
+          localStorage.setItem(LOGS_STORAGE_KEY, JSON.stringify(data.logs.slice(0, 200)));
+        }
+      })
+      .catch(() => {});
     const stored = localStorage.getItem(LOGS_STORAGE_KEY);
     return stored ? JSON.parse(stored) : [];
   } catch {
@@ -255,7 +263,13 @@ export function loadNotificationLogs(): NotificationLog[] {
 
 export function saveNotificationLogs(logs: NotificationLog[]) {
   try {
-    localStorage.setItem(LOGS_STORAGE_KEY, JSON.stringify(logs.slice(0, 200))); // Keep last 200
+    const trimmed = logs.slice(0, 200);
+    localStorage.setItem(LOGS_STORAGE_KEY, JSON.stringify(trimmed)); // Keep last 200
+    fetch('/api/notifications/logs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ logs: trimmed }),
+    }).catch(() => {});
   } catch (e) {
     console.warn('Failed to save notification logs:', e);
   }
@@ -264,6 +278,17 @@ export function saveNotificationLogs(logs: NotificationLog[]) {
 export function loadNotificationSettings(userEmail?: string): NotificationSettings {
   try {
     const userKey = userEmail ? `${SETTINGS_STORAGE_KEY}_${userEmail}` : SETTINGS_STORAGE_KEY;
+    if (userEmail) {
+      fetch(`/api/notifications/settings?email=${encodeURIComponent(userEmail)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.settings) {
+            localStorage.setItem(userKey, JSON.stringify(data.settings));
+            localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(data.settings));
+          }
+        })
+        .catch(() => {});
+    }
     const stored = localStorage.getItem(userKey) || localStorage.getItem(SETTINGS_STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
@@ -283,6 +308,11 @@ export function saveNotificationSettings(settings: NotificationSettings, userEma
     const userKey = userEmail ? `${SETTINGS_STORAGE_KEY}_${userEmail}` : SETTINGS_STORAGE_KEY;
     localStorage.setItem(userKey, JSON.stringify(settings));
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+    fetch('/api/notifications/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ settings, userEmail }),
+    }).catch(() => {});
   } catch (e) {
     console.warn('Failed to save notification settings:', e);
   }

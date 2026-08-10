@@ -127,22 +127,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(WORKSPACE_LOCKED_KEY, 'false');
   };
 
-  // Sync users list to state
-  const refreshUsersList = () => {
-    const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
+  // Sync users list to state & central storage
+  const refreshUsersList = async () => {
     let usersList: any[] = [];
-    if (!rawUsers) {
-      usersList = DEFAULT_USERS;
-    } else {
-      try {
-        usersList = JSON.parse(rawUsers);
-      } catch (e) {
+    try {
+      const res = await fetch('/api/users');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.users) && data.users.length > 0) {
+          usersList = data.users;
+        }
+      }
+    } catch (e) {}
+
+    if (usersList.length === 0) {
+      const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
+      if (rawUsers) {
+        try {
+          usersList = JSON.parse(rawUsers);
+        } catch (e) {
+          usersList = DEFAULT_USERS;
+        }
+      } else {
         usersList = DEFAULT_USERS;
       }
     }
-
-    // Filter out example emails
-    usersList = usersList.filter((u: any) => u.email && !u.email.toLowerCase().endsWith('@example.com'));
 
     // Ensure super admin emails are present and have Super Admin role
     SUPER_ADMIN_EMAILS.forEach((saEmail) => {
@@ -162,6 +171,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
     setAllUsers(usersList.map(({ password, ...u }: any) => u));
+    return usersList;
+  };
+
+  const getLocalUserBackup = (userEmail?: string, userId?: string) => {
+    if (!userEmail && !userId) return null;
+    const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
+    if (!rawUsers) return null;
+    try {
+      const uList = JSON.parse(rawUsers);
+      const normEmail = userEmail?.toLowerCase().trim();
+      return uList.find((x: any) => (userId && x.id === userId) || (normEmail && x.email?.toLowerCase().trim() === normEmail)) || null;
+    } catch (e) {
+      return null;
+    }
   };
 
   useEffect(() => {
@@ -172,15 +195,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session?.user) {
           const userEmail = session.user.email || '';
+          const meta = session.user.user_metadata || {};
+          const localBackup = getLocalUserBackup(userEmail, session.user.id);
+
+          const accountType = meta.accountType || localBackup?.accountType;
+          const companyInfo = meta.companyInfo || localBackup?.companyInfo;
+          const clientDashboardMode = meta.clientDashboardMode || localBackup?.clientDashboardMode;
+          const tin = companyInfo?.tin || meta.tin || localBackup?.tin;
+          const clientId = meta.clientId || localBackup?.clientId;
+
           const u: User = {
             id: session.user.id,
-            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
+            name: companyInfo?.companyName || meta.full_name || localBackup?.name || session.user.email?.split('@')[0] || 'User',
             email: userEmail,
-            role: isSuperAdminEmail(userEmail) ? 'Super Admin' : (session.user.user_metadata?.role || 'Compliance Officer'),
+            role: isSuperAdminEmail(userEmail) ? 'Super Admin' : (meta.role || localBackup?.role || 'Compliance Officer'),
+            accountType,
+            companyInfo,
+            clientDashboardMode,
+            tin,
+            clientId,
+            organization_id: localBackup?.organization_id || 'org_main_practice',
           };
           setUser(u);
+          localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(u));
         } else {
-          // Fallback to local
+          // Fallback to local / central
           loadLocalUser();
         }
         setIsAuthLoaded(true);
@@ -189,13 +228,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
         if (session?.user) {
           const userEmail = session.user.email || '';
+          const meta = session.user.user_metadata || {};
+          const localBackup = getLocalUserBackup(userEmail, session.user.id);
+
+          const accountType = meta.accountType || localBackup?.accountType;
+          const companyInfo = meta.companyInfo || localBackup?.companyInfo;
+          const clientDashboardMode = meta.clientDashboardMode || localBackup?.clientDashboardMode;
+          const tin = companyInfo?.tin || meta.tin || localBackup?.tin;
+          const clientId = meta.clientId || localBackup?.clientId;
+
           const u: User = {
             id: session.user.id,
-            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
+            name: companyInfo?.companyName || meta.full_name || localBackup?.name || session.user.email?.split('@')[0] || 'User',
             email: userEmail,
-            role: isSuperAdminEmail(userEmail) ? 'Super Admin' : (session.user.user_metadata?.role || 'Compliance Officer'),
+            role: isSuperAdminEmail(userEmail) ? 'Super Admin' : (meta.role || localBackup?.role || 'Compliance Officer'),
+            accountType,
+            companyInfo,
+            clientDashboardMode,
+            tin,
+            clientId,
+            organization_id: localBackup?.organization_id || 'org_main_practice',
           };
           setUser(u);
+          localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(u));
         } else {
           setUser(null);
           localStorage.removeItem(CURRENT_USER_KEY);
@@ -211,16 +266,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const loadLocalUser = () => {
+  const loadLocalUser = async () => {
     const storedCurrentUser = localStorage.getItem(CURRENT_USER_KEY);
     if (storedCurrentUser) {
       try {
-        const parsed: User = JSON.parse(storedCurrentUser);
+        let parsed: User = JSON.parse(storedCurrentUser);
         if (isSuperAdminEmail(parsed.email)) {
           parsed.role = 'Super Admin';
-          localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(parsed));
         }
+        
+        // Fetch from central storage server first to ensure option & company info are synced across devices
+        if (parsed.email) {
+          try {
+            const res = await fetch(`/api/users/find?q=${encodeURIComponent(parsed.email)}`);
+            if (res.ok) {
+              const data = await res.json();
+              if (data.success && data.user) {
+                const central = data.user;
+                parsed = {
+                  ...parsed,
+                  name: central.companyInfo?.companyName || central.name || parsed.name,
+                  role: isSuperAdminEmail(central.email) ? 'Super Admin' : (central.role || parsed.role),
+                  accountType: central.accountType || parsed.accountType,
+                  companyInfo: central.companyInfo || parsed.companyInfo,
+                  clientDashboardMode: central.clientDashboardMode || parsed.clientDashboardMode,
+                  tin: central.companyInfo?.tin || central.tin || parsed.tin,
+                };
+              }
+            }
+          } catch (e) {}
+        }
+
+        const localBackup = getLocalUserBackup(parsed.email, parsed.id);
+        if (localBackup) {
+          parsed.accountType = parsed.accountType || localBackup.accountType;
+          parsed.companyInfo = parsed.companyInfo || localBackup.companyInfo;
+          parsed.clientDashboardMode = parsed.clientDashboardMode || localBackup.clientDashboardMode;
+          parsed.tin = parsed.tin || localBackup.tin;
+          parsed.clientId = parsed.clientId || localBackup.clientId;
+        }
+
         setUser(parsed);
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(parsed));
       } catch (e) {
         localStorage.removeItem(CURRENT_USER_KEY);
       }
@@ -228,9 +315,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const login = async (email: string, password: string) => {
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // 1. Central Storage Server Login / Check
+    try {
+      const res = await fetch(`/api/users/find?q=${encodeURIComponent(normalizedEmail)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.user) {
+          const foundUser = data.user;
+          if (foundUser.password && foundUser.password !== password) {
+            return { success: false, message: 'Incorrect password. Please try again.' };
+          }
+
+          const authenticatedUser: User = {
+            id: foundUser.id,
+            name: foundUser.companyInfo?.companyName || foundUser.name,
+            email: foundUser.email,
+            role: isSuperAdminEmail(foundUser.email) ? 'Super Admin' : (foundUser.role || 'Compliance Officer'),
+            organization_id: foundUser.organization_id || 'org_main_practice',
+            clientId: foundUser.clientId,
+            tin: foundUser.companyInfo?.tin || foundUser.tin,
+            clientDashboardMode: foundUser.clientDashboardMode,
+            accountType: foundUser.accountType,
+            companyInfo: foundUser.companyInfo,
+          };
+
+          setUser(authenticatedUser);
+          localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
+          return { success: true };
+        }
+      }
+    } catch (e) {}
+
+    // 2. Supabase Login
     if (supabase && isSupabaseConfigured) {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: normalizedEmail,
         password,
       });
 
@@ -240,23 +361,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (data.user) {
         const userEmail = data.user.email || email;
+        const meta = data.user.user_metadata || {};
+        const localBackup = getLocalUserBackup(userEmail, data.user.id);
+
+        const accountType = meta.accountType || localBackup?.accountType;
+        const companyInfo = meta.companyInfo || localBackup?.companyInfo;
+        const clientDashboardMode = meta.clientDashboardMode || localBackup?.clientDashboardMode;
+        const tin = companyInfo?.tin || meta.tin || localBackup?.tin;
+
         const authenticatedUser: User = {
           id: data.user.id,
-          name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User',
+          name: companyInfo?.companyName || meta.full_name || localBackup?.name || data.user.email?.split('@')[0] || 'User',
           email: userEmail,
-          role: isSuperAdminEmail(userEmail) ? 'Super Admin' : (data.user.user_metadata?.role || 'Compliance Officer'),
+          role: isSuperAdminEmail(userEmail) ? 'Super Admin' : (meta.role || localBackup?.role || 'Compliance Officer'),
+          organization_id: 'org_main_practice',
+          accountType,
+          companyInfo,
+          clientDashboardMode,
+          tin,
         };
         setUser(authenticatedUser);
         localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
+
+        // Sync to central storage server
+        try {
+          await fetch('/api/users/update-profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: authenticatedUser.id,
+              email: authenticatedUser.email,
+              name: authenticatedUser.name,
+              accountType: authenticatedUser.accountType,
+              companyInfo: authenticatedUser.companyInfo,
+              clientDashboardMode: authenticatedUser.clientDashboardMode,
+              role: authenticatedUser.role,
+              tin: authenticatedUser.tin,
+            }),
+          });
+        } catch (e) {}
+
         return { success: true };
       }
     }
 
-    // Local fallback
+    // 3. Local fallback
     const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
     const usersList = rawUsers ? JSON.parse(rawUsers) : DEFAULT_USERS;
 
-    const normalizedEmail = email.toLowerCase().trim();
     const foundUser = usersList.find((u: any) => u.email.toLowerCase().trim() === normalizedEmail);
 
     if (foundUser) {
@@ -266,12 +418,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const authenticatedUser: User = {
         id: foundUser.id,
-        name: foundUser.name,
+        name: foundUser.companyInfo?.companyName || foundUser.name,
         email: foundUser.email,
         role: isSuperAdminEmail(foundUser.email) ? 'Super Admin' : (foundUser.role || 'Compliance Officer'),
         organization_id: foundUser.organization_id || 'org_main_practice',
         clientId: foundUser.clientId,
-        tin: foundUser.tin,
+        tin: foundUser.companyInfo?.tin || foundUser.tin,
         clientDashboardMode: foundUser.clientDashboardMode,
         accountType: foundUser.accountType,
         companyInfo: foundUser.companyInfo,
@@ -294,6 +446,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       organization_id: organizationId || 'org_main_practice',
       clientId: clientId,
       tin: clientTin,
+      accountType: 'business_owner',
+      clientDashboardMode: 'business_owner',
+      companyInfo: {
+        companyName: clientName,
+        tin: clientTin,
+        rdo: '043',
+      }
     };
     setUser(clientUser);
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(clientUser));
@@ -304,35 +463,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const isSuper = isSuperAdminEmail(normalizedEmail);
     const assignedRole = isSuper ? 'Super Admin' : (role.trim() || 'Compliance Officer');
 
-    if (supabase && isSupabaseConfigured) {
-      const { data, error } = await supabase.auth.signUp({
-        email: normalizedEmail,
-        password,
-        options: {
-          data: {
-            full_name: name.trim(),
-            role: assignedRole,
-          },
-        },
+    // Register in central storage server
+    try {
+      const res = await fetch('/api/users/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: normalizedEmail,
+          password,
+          role: assignedRole,
+        }),
       });
 
-      if (error) {
-        return { success: false, message: error.message };
-      }
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.user) {
+          const newUserObj = data.user;
+          const authenticatedUser: User = {
+            id: newUserObj.id,
+            name: newUserObj.name,
+            email: newUserObj.email,
+            role: assignedRole,
+            organization_id: 'org_main_practice',
+            accountType: newUserObj.accountType,
+            companyInfo: newUserObj.companyInfo,
+            clientDashboardMode: newUserObj.clientDashboardMode,
+          };
 
-      if (data.user) {
-        const authenticatedUser: User = {
-          id: data.user.id,
-          name: name.trim(),
-          email: data.user.email || normalizedEmail,
-          role: assignedRole,
-          organization_id: 'org_main_practice',
-        };
-        setUser(authenticatedUser);
-        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
-        return { success: true };
+          setUser(authenticatedUser);
+          localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
+
+          if (supabase && isSupabaseConfigured) {
+            await supabase.auth.signUp({
+              email: normalizedEmail,
+              password,
+              options: {
+                data: {
+                  full_name: name.trim(),
+                  role: assignedRole,
+                },
+              },
+            }).catch(() => {});
+          }
+
+          refreshUsersList();
+          return { success: true };
+        }
       }
-    }
+    } catch (e) {}
 
     // Local fallback
     const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
@@ -385,12 +564,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { success: true };
     }
 
-    // Local fallback
+    // Central server login with Google
     const googleEmail = email.trim().toLowerCase();
     const isSuper = isSuperAdminEmail(googleEmail);
     const defaultRole = isSuper ? 'Super Admin' : (roleHint || 'Compliance Specialist');
     const googleName = name?.trim() || (googleEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
-    
+
+    try {
+      const res = await fetch('/api/users/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: googleName,
+          email: googleEmail,
+          role: defaultRole,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.user) {
+          const u = data.user;
+          const googleUser: User = {
+            id: u.id,
+            name: u.companyInfo?.companyName || u.name || googleName,
+            email: u.email,
+            role: u.role || defaultRole,
+            clientDashboardMode: u.clientDashboardMode,
+            accountType: u.accountType,
+            companyInfo: u.companyInfo,
+            tin: u.companyInfo?.tin || u.tin,
+            clientId: u.clientId,
+          };
+          refreshUsersList();
+          setUser(googleUser);
+          localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(googleUser));
+          return { success: true };
+        }
+      }
+    } catch (e) {}
+
+    // Fallback
     const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
     const usersList = rawUsers ? JSON.parse(rawUsers) : DEFAULT_USERS;
 
@@ -405,12 +619,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       googleUser = {
         id: existing.id,
-        name: existing.name || googleName,
+        name: existing.companyInfo?.companyName || existing.name || googleName,
         email: existing.email,
         role: existing.role || defaultRole,
         clientDashboardMode: existing.clientDashboardMode,
         accountType: existing.accountType,
         companyInfo: existing.companyInfo,
+        tin: existing.companyInfo?.tin || existing.tin,
+        clientId: existing.clientId,
       };
     } else {
       const newUserObj = {
@@ -436,7 +652,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: true };
   };
 
-  const updateUserDashboardMode = (mode: 'shared_accountant' | 'business_owner') => {
+  const updateUserDashboardMode = async (mode: 'shared_accountant' | 'business_owner') => {
     if (!user) return;
     const updatedUser: User = {
       ...user,
@@ -445,20 +661,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(updatedUser);
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
 
+    // Sync to Central Server
+    try {
+      await fetch('/api/users/update-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: user.id,
+          email: user.email,
+          clientDashboardMode: mode,
+        }),
+      });
+    } catch (e) {}
+
     const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
     if (rawUsers) {
       try {
         const usersList = JSON.parse(rawUsers);
-        const idx = usersList.findIndex((u: any) => u.id === user.id || u.email?.toLowerCase().trim() === user.email?.toLowerCase().trim());
+        const normEmail = user.email?.toLowerCase().trim();
+        const idx = usersList.findIndex((u: any) => u.id === user.id || (normEmail && u.email?.toLowerCase().trim() === normEmail));
         if (idx !== -1) {
           usersList[idx].clientDashboardMode = mode;
           localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
         }
       } catch (e) {}
     }
+
+    if (supabase && isSupabaseConfigured) {
+      try {
+        await supabase.auth.updateUser({
+          data: {
+            clientDashboardMode: mode,
+          }
+        });
+      } catch (e) {}
+    }
   };
 
-  const updateUserAccountInfo = (
+  const updateUserAccountInfo = async (
     accountType: 'accountant' | 'business_owner',
     companyInfo: CompanyInfo,
     clientDashboardMode?: 'shared_accountant' | 'business_owner'
@@ -470,6 +710,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       newRole = accountType === 'accountant' ? 'Compliance Officer' : 'Client';
     }
 
+    const effectiveDashboardMode = clientDashboardMode || (accountType === 'business_owner' ? 'business_owner' : 'shared_accountant');
+
     const updatedUser: User = {
       ...user,
       name: companyInfo.companyName || user.name,
@@ -477,31 +719,88 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       companyInfo,
       role: newRole,
       tin: companyInfo.tin || user.tin,
-      clientDashboardMode: clientDashboardMode || (accountType === 'business_owner' ? 'business_owner' : 'shared_accountant'),
+      clientDashboardMode: effectiveDashboardMode,
     };
 
     setUser(updatedUser);
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
 
+    // SYNC TO CENTRAL SERVER
+    try {
+      await fetch('/api/users/update-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: user.id,
+          email: user.email,
+          name: companyInfo.companyName || user.name,
+          accountType,
+          companyInfo,
+          clientDashboardMode: effectiveDashboardMode,
+          role: newRole,
+          tin: companyInfo.tin || user.tin,
+        }),
+      });
+    } catch (err) {
+      console.error('Failed to sync user profile to central storage server:', err);
+    }
+
     const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
+    let usersList: any[] = [];
     if (rawUsers) {
       try {
-        const usersList = JSON.parse(rawUsers);
-        const idx = usersList.findIndex((u: any) => u.id === user.id || u.email?.toLowerCase().trim() === user.email?.toLowerCase().trim());
-        if (idx !== -1) {
-          usersList[idx] = {
-            ...usersList[idx],
-            name: companyInfo.companyName || usersList[idx].name,
+        usersList = JSON.parse(rawUsers);
+      } catch (e) {
+        usersList = [];
+      }
+    }
+
+    const normEmail = user.email?.toLowerCase().trim();
+    const idx = usersList.findIndex((u: any) => u.id === user.id || (normEmail && u.email?.toLowerCase().trim() === normEmail));
+
+    if (idx !== -1) {
+      usersList[idx] = {
+        ...usersList[idx],
+        name: companyInfo.companyName || usersList[idx].name,
+        accountType,
+        companyInfo,
+        role: newRole,
+        tin: companyInfo.tin || usersList[idx].tin,
+        clientDashboardMode: effectiveDashboardMode,
+      };
+    } else {
+      usersList.push({
+        id: user.id,
+        name: companyInfo.companyName || user.name,
+        email: user.email,
+        accountType,
+        companyInfo,
+        role: newRole,
+        tin: companyInfo.tin || user.tin,
+        clientDashboardMode: effectiveDashboardMode,
+        organization_id: user.organization_id || 'org_main_practice',
+      });
+    }
+
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
+
+    if (supabase && isSupabaseConfigured) {
+      try {
+        await supabase.auth.updateUser({
+          data: {
+            full_name: companyInfo.companyName || user.name,
             accountType,
             companyInfo,
             role: newRole,
-            tin: companyInfo.tin || usersList[idx].tin,
-            clientDashboardMode: clientDashboardMode || (accountType === 'business_owner' ? 'business_owner' : 'shared_accountant'),
-          };
-          localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
-        }
-      } catch (e) {}
+            clientDashboardMode: effectiveDashboardMode,
+            tin: companyInfo.tin || user.tin,
+          }
+        });
+      } catch (err) {
+        console.error('Failed to sync user metadata to Supabase:', err);
+      }
     }
+
     refreshUsersList();
   };
 
@@ -512,9 +811,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (target) {
       const authenticatedUser: User = {
         id: target.id,
-        name: target.name,
+        name: target.companyInfo?.companyName || target.name,
         email: target.email,
         role: target.role || 'Compliance Officer',
+        organization_id: target.organization_id || 'org_main_practice',
+        clientId: target.clientId,
+        tin: target.companyInfo?.tin || target.tin,
+        clientDashboardMode: target.clientDashboardMode,
+        accountType: target.accountType,
+        companyInfo: target.companyInfo,
       };
       setUser(authenticatedUser);
       localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));

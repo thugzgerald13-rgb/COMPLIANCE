@@ -53,6 +53,21 @@ export function useFormReferences() {
       setForms(commonForms);
     }
 
+    // Sync from Central Storage Server
+    fetch('/api/forms')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.forms) && data.forms.length > 0 && isMounted) {
+          const remoteForms: FormReference[] = data.forms;
+          const existingCodes = new Set(remoteForms.map(f => f.code));
+          const missingCommon = commonForms.filter(f => !existingCodes.has(f.code));
+          const merged = missingCommon.length > 0 ? [...remoteForms, ...missingCommon] : remoteForms;
+          setForms(merged);
+          localStorage.setItem(userFormsKey, JSON.stringify(merged));
+        }
+      })
+      .catch(() => {});
+
     if (supabase && isSupabaseConfigured && user) {
       supabase.auth.getUser().then(({ data: { user: supabaseUser } }) => {
         if (supabaseUser?.user_metadata?.custom_forms && isMounted) {
@@ -77,6 +92,15 @@ export function useFormReferences() {
     setForms(updatedForms);
     const userFormsKey = user ? `bir_monitor_forms_u_${user.id}` : FORMS_STORAGE_KEY;
     localStorage.setItem(userFormsKey, JSON.stringify(updatedForms));
+
+    // Sync to Central Storage Server
+    try {
+      await fetch('/api/forms/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ forms: updatedForms }),
+      });
+    } catch (e) {}
 
     if (supabase && isSupabaseConfigured && user) {
       try {
@@ -147,7 +171,21 @@ export function useClients() {
         setClients(localClients);
       }
 
-      // 2. Sync from Supabase Cloud Storage/Database if configured
+      // 2. Sync from Central Storage Server
+      try {
+        const res = await fetch('/api/clients');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.clients) && data.clients.length > 0) {
+            if (isMounted) {
+              setClients(data.clients);
+              localStorage.setItem(userKey, JSON.stringify(data.clients));
+            }
+          }
+        }
+      } catch (e) {}
+
+      // 3. Sync from Supabase Cloud Storage/Database if configured
       if (supabase && isSupabaseConfigured && user) {
         try {
           // Attempt 1: Fetch from Supabase Storage Bucket 'bizcomply-data'
@@ -209,6 +247,15 @@ export function useClients() {
     if (userKey) {
       localStorage.setItem(userKey, JSON.stringify(updated));
     }
+
+    // Sync to Central Storage Server
+    try {
+      await fetch('/api/clients/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clients: updated }),
+      });
+    } catch (e) {}
 
     // Sync to Supabase centralized cloud storage & database if Supabase is connected
     if (supabase && isSupabaseConfigured && user) {
