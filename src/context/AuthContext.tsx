@@ -193,23 +193,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (supabase && isSupabaseConfigured) {
         // Supabase authentication listener
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        supabase.auth.getSession().then(async ({ data: { session } }) => {
           if (session?.user) {
             const userEmail = session.user.email || '';
+            let centralUser: any = null;
+            if (userEmail) {
+              try {
+                const res = await fetch(`/api/users/find?q=${encodeURIComponent(userEmail)}`);
+                if (res.ok) {
+                  const data = await res.json();
+                  if (data.success && data.user) {
+                    centralUser = data.user;
+                  }
+                }
+              } catch (e) {}
+            }
+
             const meta = session.user.user_metadata || {};
             const localBackup = getLocalUserBackup(userEmail, session.user.id);
 
-            const accountType = meta.accountType || localBackup?.accountType;
-            const companyInfo = meta.companyInfo || localBackup?.companyInfo;
-            const clientDashboardMode = meta.clientDashboardMode || localBackup?.clientDashboardMode;
-            const tin = companyInfo?.tin || meta.tin || localBackup?.tin;
-            const clientId = meta.clientId || localBackup?.clientId;
+            const accountType = meta.accountType || centralUser?.accountType || localBackup?.accountType;
+            const companyInfo = meta.companyInfo || centralUser?.companyInfo || localBackup?.companyInfo;
+            const clientDashboardMode = meta.clientDashboardMode || centralUser?.clientDashboardMode || localBackup?.clientDashboardMode;
+            const tin = companyInfo?.tin || meta.tin || centralUser?.tin || localBackup?.tin;
+            const clientId = meta.clientId || centralUser?.clientId || localBackup?.clientId;
 
             const u: User = {
               id: session.user.id,
-              name: companyInfo?.companyName || meta.full_name || localBackup?.name || session.user.email?.split('@')[0] || 'User',
+              name: companyInfo?.companyName || centralUser?.name || meta.full_name || localBackup?.name || session.user.email?.split('@')[0] || 'User',
               email: userEmail,
-              role: isSuperAdminEmail(userEmail) ? 'Super Admin' : (meta.role || localBackup?.role || 'Compliance Officer'),
+              role: isSuperAdminEmail(userEmail) ? 'Super Admin' : (centralUser?.role || meta.role || localBackup?.role || 'Compliance Officer'),
               accountType,
               companyInfo,
               clientDashboardMode,
@@ -221,28 +234,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(u));
           } else {
             // Fallback to local / central
-            loadLocalUser();
+            await loadLocalUser();
           }
           setIsAuthLoaded(true);
         });
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
           if (session?.user) {
             const userEmail = session.user.email || '';
+            let centralUser: any = null;
+            if (userEmail) {
+              try {
+                const res = await fetch(`/api/users/find?q=${encodeURIComponent(userEmail)}`);
+                if (res.ok) {
+                  const data = await res.json();
+                  if (data.success && data.user) {
+                    centralUser = data.user;
+                  }
+                }
+              } catch (e) {}
+            }
+
             const meta = session.user.user_metadata || {};
             const localBackup = getLocalUserBackup(userEmail, session.user.id);
 
-            const accountType = meta.accountType || localBackup?.accountType;
-            const companyInfo = meta.companyInfo || localBackup?.companyInfo;
-            const clientDashboardMode = meta.clientDashboardMode || localBackup?.clientDashboardMode;
-            const tin = companyInfo?.tin || meta.tin || localBackup?.tin;
-            const clientId = meta.clientId || localBackup?.clientId;
+            const accountType = meta.accountType || centralUser?.accountType || localBackup?.accountType;
+            const companyInfo = meta.companyInfo || centralUser?.companyInfo || localBackup?.companyInfo;
+            const clientDashboardMode = meta.clientDashboardMode || centralUser?.clientDashboardMode || localBackup?.clientDashboardMode;
+            const tin = companyInfo?.tin || meta.tin || centralUser?.tin || localBackup?.tin;
+            const clientId = meta.clientId || centralUser?.clientId || localBackup?.clientId;
 
             const u: User = {
               id: session.user.id,
-              name: companyInfo?.companyName || meta.full_name || localBackup?.name || session.user.email?.split('@')[0] || 'User',
+              name: companyInfo?.companyName || centralUser?.name || meta.full_name || localBackup?.name || session.user.email?.split('@')[0] || 'User',
               email: userEmail,
-              role: isSuperAdminEmail(userEmail) ? 'Super Admin' : (meta.role || localBackup?.role || 'Compliance Officer'),
+              role: isSuperAdminEmail(userEmail) ? 'Super Admin' : (centralUser?.role || meta.role || localBackup?.role || 'Compliance Officer'),
               accountType,
               companyInfo,
               clientDashboardMode,
