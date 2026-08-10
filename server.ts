@@ -95,6 +95,30 @@ function writeDB(data: any) {
   }
 }
 
+function normEmail(e?: string): string {
+  return e ? String(e).toLowerCase().trim() : '';
+}
+
+function normTin(t?: string): string {
+  if (!t) return '';
+  return String(t).replace(/\D/g, '');
+}
+
+function isClientMatch(c: any, email?: string, tin?: string): boolean {
+  if (!c) return false;
+  const cEmail = normEmail(c.email);
+  const targetEmail = normEmail(email);
+  if (targetEmail && cEmail && cEmail === targetEmail) return true;
+
+  const cTin = normTin(c.tin);
+  const targetTin = normTin(tin);
+  if (targetTin && cTin) {
+    if (cTin === targetTin) return true;
+    if (cTin.length >= 9 && targetTin.length >= 9 && cTin.slice(0, 9) === targetTin.slice(0, 9)) return true;
+  }
+  return false;
+}
+
 async function startServer() {
   const app = express();
 
@@ -322,6 +346,77 @@ async function startServer() {
     const db = readDB();
     if (!db.user_clients) db.user_clients = {};
 
+    const users = db.users || [];
+    const currentUser = users.find((u: any) => 
+      (userEmail && u.email && u.email.toLowerCase().trim() === userEmail) ||
+      (userId && u.id === userId)
+    );
+
+    const isBusinessOwner = currentUser?.accountType === 'business_owner' || currentUser?.role === 'Client';
+
+    if (isBusinessOwner) {
+      const boEmail = currentUser?.email || userEmail;
+      const boTin = currentUser?.companyInfo?.tin || currentUser?.tin;
+      const syncedOfficerEmail = currentUser?.syncedAccountantEmail ? currentUser.syncedAccountantEmail.toLowerCase().trim() : '';
+
+      let foundClientRecord: any = null;
+      let foundOfficerKey: string = syncedOfficerEmail;
+
+      // 1. Look in synced officer's client list
+      if (syncedOfficerEmail && db.user_clients[syncedOfficerEmail]) {
+        const list = db.user_clients[syncedOfficerEmail];
+        if (Array.isArray(list)) {
+          foundClientRecord = list.find((c: any) => isClientMatch(c, boEmail, boTin));
+        }
+      }
+
+      // 2. If not found, scan all officer user_clients lists
+      if (!foundClientRecord) {
+        for (const [key, list] of Object.entries(db.user_clients)) {
+          if (key === boEmail || key === userId) continue;
+          if (Array.isArray(list)) {
+            const match = list.find((c: any) => isClientMatch(c, boEmail, boTin));
+            if (match) {
+              foundClientRecord = match;
+              foundOfficerKey = key;
+              break;
+            }
+          }
+        }
+      }
+
+      // 3. Fallback to global db.clients
+      if (!foundClientRecord && Array.isArray(db.clients)) {
+        foundClientRecord = db.clients.find((c: any) => isClientMatch(c, boEmail, boTin));
+      }
+
+      if (foundClientRecord) {
+        // Ensure user is synced with accountant
+        if (foundOfficerKey && (!currentUser.syncedAccountantEmail || currentUser.syncedAccountantEmail !== foundOfficerKey)) {
+          const officerUser = users.find((u: any) => 
+            (u.email && u.email.toLowerCase().trim() === foundOfficerKey.toLowerCase().trim()) || u.id === foundOfficerKey
+          );
+          currentUser.syncedAccountantEmail = officerUser?.email || foundOfficerKey;
+          currentUser.syncedAccountantName = officerUser?.companyInfo?.companyName || officerUser?.name || 'CAPO Management & Advisory Services';
+          currentUser.isSyncedWithAccountant = true;
+          currentUser.clientDashboardMode = 'shared_accountant';
+          writeDB(db);
+        }
+
+        // Keep business owner's user_clients array in sync
+        if (boEmail) db.user_clients[boEmail] = [foundClientRecord];
+        if (userId) db.user_clients[userId] = [foundClientRecord];
+        writeDB(db);
+
+        return res.json({ success: true, clients: [foundClientRecord] });
+      }
+
+      // If business owner saved their own client record previously
+      let boList = db.user_clients[boEmail] || db.user_clients[userId] || [];
+      return res.json({ success: true, clients: boList });
+    }
+
+    // For Compliance Officers / Accountants
     let clientList: any[] = [];
     if (userEmail && db.user_clients[userEmail]) {
       clientList = db.user_clients[userEmail];
@@ -331,70 +426,106 @@ async function startServer() {
       clientList = db.clients || [];
     }
 
-    // Special TIN / Shared Client Portal matching for business owners
-    const users = db.users || [];
-    const currentUser = users.find((u: any) => u.email && u.email.toLowerCase().trim() === userEmail);
-    if (currentUser && (currentUser.accountType === 'business_owner' || currentUser.role === 'Client')) {
-      const userTin = currentUser.companyInfo?.tin || currentUser.tin;
-      const syncedOfficerEmail = currentUser.syncedAccountantEmail ? currentUser.syncedAccountantEmail.toLowerCase().trim() : '';
-
-      let officerClients: any[] = [];
-      if (syncedOfficerEmail && db.user_clients[syncedOfficerEmail]) {
-        officerClients = db.user_clients[syncedOfficerEmail];
-      } else {
-        // Scan all user_clients for matching TIN or email
-        for (const list of Object.values(db.user_clients)) {
-          if (Array.isArray(list)) {
-            const matches = list.filter((c: any) => 
-              (c.email && c.email.toLowerCase().trim() === userEmail) ||
-              (userTin && c.tin === userTin)
-            );
-            if (matches.length > 0) {
-              officerClients.push(...matches);
-            }
-          }
-        }
-      }
-
-      const matchedOfficerClient = officerClients.find((c: any) => 
-        (c.email && c.email.toLowerCase().trim() === userEmail) ||
-        (userTin && c.tin === userTin)
-      );
-
-      const matchedGlobalClient = (db.clients || []).find((c: any) => 
-        (c.email && c.email.toLowerCase().trim() === userEmail) ||
-        (userTin && c.tin === userTin)
-      );
-
-      const matchedClient = matchedOfficerClient || matchedGlobalClient;
-
-      if (matchedClient) {
-        const idx = clientList.findIndex((c: any) => c.id === matchedClient.id || (userTin && c.tin === userTin));
-        if (idx !== -1) {
-          clientList[idx] = { ...clientList[idx], ...matchedClient };
-        } else {
-          clientList = [matchedClient, ...clientList];
-        }
-      }
-    }
-
     res.json({ success: true, clients: clientList });
   });
 
   app.post('/api/clients/sync', (req, res) => {
     const { clients, userEmail, userId } = req.body || {};
-    if (Array.isArray(clients)) {
-      const db = readDB();
-      if (!db.user_clients) db.user_clients = {};
-
-      const normEmail = userEmail ? String(userEmail).toLowerCase().trim() : '';
-      if (normEmail) db.user_clients[normEmail] = clients;
-      if (userId) db.user_clients[userId] = clients;
-      db.clients = clients;
-      writeDB(db);
-      return res.json({ success: true, count: clients.length });
+    if (!Array.isArray(clients)) {
+      return res.status(400).json({ success: false, message: 'Invalid clients array' });
     }
-    return res.status(400).json({ success: false, message: 'Invalid clients array' });
+
+    const db = readDB();
+    if (!db.user_clients) db.user_clients = {};
+    if (!db.clients) db.clients = [];
+    const users = db.users || [];
+
+    const callerEmail = userEmail ? String(userEmail).toLowerCase().trim() : '';
+    const callerUser = users.find((u: any) => 
+      (callerEmail && u.email && u.email.toLowerCase().trim() === callerEmail) ||
+      (userId && u.id === userId)
+    );
+
+    // Save under caller's keys
+    if (callerEmail) db.user_clients[callerEmail] = clients;
+    if (userId) db.user_clients[userId] = clients;
+
+    // Check caller role
+    const isCallerBusinessOwner = callerUser?.accountType === 'business_owner' || callerUser?.role === 'Client';
+
+    if (!isCallerBusinessOwner) {
+      // Officer is uploading/saving client list
+      const officerEmail = callerUser?.email || callerEmail;
+      const officerName = callerUser?.companyInfo?.companyName || callerUser?.name || 'CAPO Management & Advisory Services';
+
+      for (const clientItem of clients) {
+        if (!clientItem) continue;
+
+        // Upsert into global db.clients
+        const gIdx = db.clients.findIndex((c: any) => 
+          c.id === clientItem.id || isClientMatch(c, clientItem.email, clientItem.tin)
+        );
+        if (gIdx !== -1) {
+          db.clients[gIdx] = { ...db.clients[gIdx], ...clientItem };
+        } else {
+          db.clients.push(clientItem);
+        }
+
+        // Find registered business owner user matching this client item
+        const matchingUser = users.find((u: any) => 
+          (u.accountType === 'business_owner' || u.role === 'Client') &&
+          isClientMatch(u, clientItem.email, clientItem.companyInfo?.tin || u.tin)
+        );
+
+        if (matchingUser) {
+          matchingUser.syncedAccountantEmail = officerEmail;
+          matchingUser.syncedAccountantName = officerName;
+          matchingUser.isSyncedWithAccountant = true;
+          matchingUser.clientDashboardMode = 'shared_accountant';
+
+          // Sync client object directly to business owner's user_clients key
+          const boEmail = matchingUser.email ? matchingUser.email.toLowerCase().trim() : '';
+          if (boEmail) {
+            db.user_clients[boEmail] = [clientItem];
+          }
+          if (matchingUser.id) {
+            db.user_clients[matchingUser.id] = [clientItem];
+          }
+        }
+      }
+    } else {
+      // Business Owner is updating forms/status in Client Portal
+      const boEmail = callerUser?.email || callerEmail;
+
+      for (const boClient of clients) {
+        if (!boClient) continue;
+
+        // Update in global db.clients
+        const gIdx = db.clients.findIndex((c: any) => 
+          c.id === boClient.id || isClientMatch(c, boClient.email, boClient.tin)
+        );
+        if (gIdx !== -1) {
+          db.clients[gIdx] = { ...db.clients[gIdx], ...boClient };
+        }
+
+        // Find officer user_clients entries and update the officer's copy
+        for (const [key, list] of Object.entries(db.user_clients)) {
+          if (key === boEmail || key === userId) continue; // Skip business owner's own key
+          if (Array.isArray(list)) {
+            const idx = list.findIndex((c: any) => 
+              c.id === boClient.id || isClientMatch(c, boClient.email, boClient.tin)
+            );
+            if (idx !== -1) {
+              list[idx] = { ...list[idx], ...boClient };
+              db.user_clients[key] = list;
+            }
+          }
+        }
+      }
+    }
+
+    writeDB(db);
+    return res.json({ success: true, count: clients.length });
   });
 
   // FORMS sync API

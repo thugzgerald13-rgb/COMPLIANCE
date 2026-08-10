@@ -95,12 +95,23 @@ export function ClientPortalView({
 
   // Find the logged in client by user.clientId, user.email, or matching TIN
   const userTin = user?.companyInfo?.tin || user?.tin;
-  const currentClient = clients.find(c => 
-    c.id === user?.clientId || 
-    (c.email && c.email.toLowerCase().trim() === user?.email?.toLowerCase().trim()) ||
-    (userTin && c.tin && c.tin === userTin) ||
-    (c.tin && c.tin === user?.email) // user logging in via TIN as email
-  ) || userFallbackClient;
+  const normUserEmail = user?.email ? user.email.toLowerCase().trim() : '';
+  const normUserTin = userTin ? userTin.replace(/\D/g, '') : '';
+
+  const currentClient = clients.find(c => {
+    if (c.id === user?.clientId) return true;
+    const normCEmail = c.email ? c.email.toLowerCase().trim() : '';
+    if (normCEmail && normUserEmail && normCEmail === normUserEmail) return true;
+
+    const normCTin = c.tin ? c.tin.replace(/\D/g, '') : '';
+    if (normUserTin && normCTin) {
+      if (normUserTin === normCTin) return true;
+      if (normUserTin.length >= 9 && normCTin.length >= 9 && normUserTin.slice(0, 9) === normCTin.slice(0, 9)) return true;
+    }
+
+    if (normCTin && normUserEmail && normCTin === normUserEmail.replace(/\D/g, '')) return true;
+    return false;
+  }) || userFallbackClient;
 
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [selectedClientOverride, setSelectedClientOverride] = useState<string>(currentClient?.id || '');
