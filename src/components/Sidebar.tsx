@@ -821,6 +821,8 @@ export function Sidebar({
         onUpdateSettings={setNotificationSettings}
         onUpdateForm={onUpdateForm}
         selectedPeriod={selectedPeriod}
+        clients={clients}
+        formReferences={formReferences}
         onOpenReleaseControl={() => {
           setIsSettingsOpen(false);
           setIsAdminReleaseModalOpen(true);

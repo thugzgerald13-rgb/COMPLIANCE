@@ -4,7 +4,7 @@ import {
   X, Bell, Mail, CheckCircle2, 
   Settings, History, Volume2, VolumeX, ShieldCheck, 
   Trash2, ExternalLink, Calendar, User, FileText, Check, Send, AlertCircle, Info, RefreshCw,
-  Smartphone, Share2, HelpCircle, AlertTriangle, CheckCircle, SmartphoneNfc, Crown, Shield, Rocket, Users
+  Smartphone, Share2, HelpCircle, AlertTriangle, CheckCircle, SmartphoneNfc, Crown, Shield, Rocket, Users, Bot, Sparkles
 } from 'lucide-react';
 import { 
   DueItemForNotification, 
@@ -36,6 +36,8 @@ interface NotificationHubModalProps {
   ) => void;
   selectedPeriod: string;
   onOpenReleaseControl?: () => void;
+  clients?: Client[];
+  formReferences?: FormReference[];
 }
 
 export function NotificationHubModal({
@@ -46,13 +48,37 @@ export function NotificationHubModal({
   onUpdateSettings,
   onUpdateForm,
   selectedPeriod,
-  onOpenReleaseControl
+  onOpenReleaseControl,
+  clients = [],
+  formReferences = []
 }: NotificationHubModalProps) {
   const { user, isSuperAdmin, logout, allUsers, switchUser, workspaceMode, toggleWorkspaceMode } = useAuth();
   const isAdmin = Boolean(isSuperAdmin || user?.role === 'Super Admin' || user?.role === 'Admin' || user?.role?.includes('Admin') || user?.email?.includes('gerald13'));
   const [activeTab, setActiveTab] = useState<'profile' | 'mobile' | 'logs' | 'settings'>('mobile');
   const [logs, setLogs] = useState<NotificationLog[]>(loadNotificationLogs());
   const [dispatchSuccessMsg, setDispatchSuccessMsg] = useState<string | null>(null);
+
+  // AI Assistant Testing State
+  const [aiAnalysisOutput, setAiAnalysisOutput] = useState<string | null>(null);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+
+  const handleRunAiAnalysis = () => {
+    setIsGeneratingAI(true);
+    setAiAnalysisOutput(null);
+    setTimeout(() => {
+      const clientCount = clients.length || dueItems.length || 0;
+      const pendingCount = dueItems.length;
+      
+      const summary = `🤖 BIR AI Compliance Risk Analysis Summary for Period [${selectedPeriod}]:
+• Analyzed ${clientCount} Client Entity Record(s) and Active BIR Tax Obligation Forms.
+• Action Required: ${pendingCount} form(s) currently unfiled/due in current period.
+• BIR Compliance Risk Index: ${pendingCount > 2 ? '⚠️ ELEVATED (Action Advised)' : '✅ LOW (On Track)'}
+• Automatic compliance recommendation test generated for ${user?.name || 'Tax Administrator'}.`;
+
+      setAiAnalysisOutput(summary);
+      setIsGeneratingAI(false);
+    }, 800);
+  };
 
   // Settings form state
   const [autoLoad, setAutoLoad] = useState(settings.autoDispatchOnLoad);
@@ -808,6 +834,45 @@ export function NotificationHubModal({
                       </span>
                     </label>
                   </div>
+                </div>
+              </div>
+
+              {/* AI Compliance Assistant & Smart Advisor (Testing Environment) */}
+              <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center">
+                    <Bot className="w-4 h-4 mr-2 text-indigo-500" /> AI Compliance Assistant & Smart Advisor (Testing)
+                  </h4>
+                  <span className="text-[10px] bg-indigo-500/20 text-indigo-400 font-bold px-2 py-0.5 rounded border border-indigo-500/30">
+                    TESTING ONLY
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Internal testing panel for AI-driven tax risk analysis & automated BIR filing obligations advisor.
+                </p>
+
+                <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
+                  {aiAnalysisOutput ? (
+                    <pre className="whitespace-pre-wrap font-sans text-slate-700 dark:text-slate-200 leading-relaxed text-[11px]">
+                      {aiAnalysisOutput}
+                    </pre>
+                  ) : (
+                    <p className="text-slate-500 dark:text-slate-400 italic">
+                      Click "Run AI Tax Risk Analysis (Test)" to execute testing analysis for period [{selectedPeriod}].
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={handleRunAiAnalysis}
+                    disabled={isGeneratingAI}
+                    className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer flex items-center space-x-1.5 shadow-sm disabled:opacity-50"
+                  >
+                    <Sparkles className={`w-3.5 h-3.5 ${isGeneratingAI ? 'animate-spin' : ''}`} />
+                    <span>{isGeneratingAI ? 'Analyzing...' : 'Run AI Tax Risk Analysis (Test)'}</span>
+                  </button>
                 </div>
               </div>
 

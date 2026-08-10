@@ -39,17 +39,6 @@ const DEFAULT_FEATURE_UPDATES: FeatureUpdate[] = [
     createdBy: 'Gerald (Super Admin)'
   },
   {
-    id: 'feat_efps_sync',
-    codeKey: 'efiling_api_sync',
-    name: 'Automated eFPS / eBIRForms Direct API Sync',
-    description: 'Direct API verification pipeline for eBIRForms reference numbers and automated filing status confirmation.',
-    category: 'BIR Compliance',
-    stage: 'superadmin_only', // Available first on Super Admin for testing
-    version: 'v2.4.0-preview',
-    releaseDate: '2026-08-04',
-    createdBy: 'Gerald (Super Admin)'
-  },
-  {
     id: 'feat_multi_branch',
     codeKey: 'multi_branch_audit',
     name: 'Multi-Branch Consolidated BIR Audit Portal',

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Client, FormReference, FormStatus, BIRForm } from '../types';
-import { Users, FileClock, CheckCircle, AlertCircle, Calendar, Edit3, X, Save, FileText, Building, Check, Bell, Mail, ShieldAlert, Clock, AlertTriangle, CheckCircle2, Crown, Sparkles, Rocket, Bot, Zap, Lock, ShieldCheck, RefreshCw, Cpu, Layers, Globe } from 'lucide-react';
+import { Users, FileClock, CheckCircle, AlertCircle, Calendar, Edit3, X, Save, FileText, Building, Check, Bell, Mail, ShieldAlert, Clock, AlertTriangle, CheckCircle2, Lock, ShieldCheck } from 'lucide-react';
 import { getComplianceStatusInfo, getFormsForClientAndPeriod } from '../utils';
 import { 
   getDueFormsForNotification, 
@@ -37,9 +37,6 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
   const [filterStatus, setFilterStatus] = useState<'all' | 'Pending' | 'Processing'>('all');
   const [editingForm, setEditingForm] = useState<SelectedDashboardForm | null>(null);
   const [isNotificationHubOpen, setIsNotificationHubOpen] = useState(false);
-  const [aiAnalysisOutput, setAiAnalysisOutput] = useState<string | null>(null);
-  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
-  const [efpsSyncMsg, setEfpsSyncMsg] = useState<string | null>(null);
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(() => 
     loadNotificationSettings(user?.email)
   );
@@ -236,33 +233,6 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
     );
   };
 
-  const handleRunAiAnalysis = () => {
-    setIsGeneratingAI(true);
-    setAiAnalysisOutput(null);
-    setTimeout(() => {
-      const pendingCount = displayForms.filter(f => f.status === 'Pending').length;
-      const processingCount = displayForms.filter(f => f.status === 'Processing').length;
-      
-      const summary = `🤖 BIR AI Compliance Risk Analysis Summary for Period [${selectedPeriod}]:
-• Analyzed ${clients.length} Client Entity Records and ${allForms.length} Active BIR Tax Obligation Forms.
-• High Priority Action Required: ${pendingCount} form(s) remain PENDING filing. Recommend prioritizing BIR Form 1601-EQ and 2550Q before monthly deadline cutoff.
-• ${processingCount} form(s) currently IN PROCESSING awaiting final bank transaction reference receipt or eFPS payment confirmation.
-• BIR Compliance Risk Index: ${pendingCount > 2 ? '⚠️ ELEVATED (Action Advised)' : '✅ LOW (On Track)'}
-• Automatic compliance recommendation generated for ${user?.name || 'Tax Administrator'}.`;
-
-      setAiAnalysisOutput(summary);
-      setIsGeneratingAI(false);
-    }, 800);
-  };
-
-  const handleRunEfpsSync = () => {
-    setEfpsSyncMsg('Connecting to BIR eFPS / eBIRForms API gateway...');
-    setTimeout(() => {
-      setEfpsSyncMsg(`✅ eFPS Direct API Sync Completed! Verified ${allForms.length} BIR forms across ${clients.length} clients against BIR Central Database.`);
-      setTimeout(() => setEfpsSyncMsg(null), 5000);
-    }, 1000);
-  };
-
   return (
     <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
@@ -273,111 +243,6 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
           <p className="text-xs text-slate-600 dark:text-slate-300 font-medium mt-0.5">Click any pending or in-processing reference below to update its compliance status & details</p>
         </div>
       </div>
-
-      {/* Feature Updates Section */}
-      {((isSuperAdmin || isFeatureAvailable('ai_compliance_assistant')) || (isSuperAdmin || isFeatureAvailable('efiling_api_sync'))) && (
-        <div className="mb-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
-          
-          {/* Card 1: AI Compliance Assistant & Smart BIR Advisor */}
-          {(isSuperAdmin || isFeatureAvailable('ai_compliance_assistant')) && (
-            <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between space-y-4 relative overflow-hidden">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-500 flex items-center justify-center shrink-0">
-                    <Bot className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                      <span>AI Compliance Assistant & Smart Advisor</span>
-                    </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      AI-driven tax risk analysis & automated BIR filing obligations advisor
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/60 text-xs">
-                  {aiAnalysisOutput ? (
-                    <pre className="whitespace-pre-wrap font-sans text-slate-700 dark:text-slate-200 leading-relaxed text-[11px]">
-                      {aiAnalysisOutput}
-                    </pre>
-                  ) : (
-                    <p className="text-slate-500 dark:text-slate-400 italic">
-                      Click "Run AI Tax Risk Analysis" to generate real-time BIR compliance insights for period [{selectedPeriod}] across all client entities.
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-[11px] text-slate-400 font-mono">
-                    ⚡ Automated Analysis Execution
-                  </span>
-                  <button
-                    onClick={handleRunAiAnalysis}
-                    disabled={isGeneratingAI}
-                    className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center space-x-1.5 shadow-sm disabled:opacity-50"
-                  >
-                    <Sparkles className={`w-3.5 h-3.5 ${isGeneratingAI ? 'animate-spin' : ''}`} />
-                    <span>{isGeneratingAI ? 'Analyzing...' : 'Run AI Tax Risk Analysis'}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Card 2: Automated eFPS / eBIRForms Direct API Sync */}
-          {(isSuperAdmin || isFeatureAvailable('efiling_api_sync')) && (
-            <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between space-y-4 relative overflow-hidden">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 flex items-center justify-center shrink-0">
-                    <Cpu className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                      <span>eFPS & eBIRForms Direct API Verification</span>
-                    </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Direct API verification pipeline for BIR reference numbers & filing confirmations
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/60 text-xs">
-                  {efpsSyncMsg ? (
-                    <p className="text-emerald-600 dark:text-emerald-400 font-bold text-[11px] flex items-center space-x-1.5">
-                      <CheckCircle2 className="w-4 h-4 shrink-0" />
-                      <span>{efpsSyncMsg}</span>
-                    </p>
-                  ) : (
-                    <p className="text-slate-500 dark:text-slate-400 italic">
-                      Validate confirmation and reference numbers directly against BIR eFPS servers for {clients.length} clients in period [{selectedPeriod}].
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-[11px] text-slate-400 font-mono">
-                    ⚡ Direct API Sync Pipeline
-                  </span>
-                  <button
-                    onClick={handleRunEfpsSync}
-                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center space-x-1.5 shadow-sm"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    <span>Sync eFPS Status Now</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-        </div>
-      )}
       
       {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
