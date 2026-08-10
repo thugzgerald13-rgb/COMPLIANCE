@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, User, FileText, BookOpen, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Calendar, CalendarDays, LogOut, Cloud, Menu, X, Settings, Sun, Moon, Crown, Lock, Sparkles, ShieldCheck, Rocket, Zap } from 'lucide-react';
+import { LayoutDashboard, Users, User, FileText, BookOpen, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Calendar, CalendarDays, LogOut, Cloud, Menu, X, Settings, Sun, Moon, Crown, Lock, Sparkles, ShieldCheck, Rocket, Zap, MessageSquare } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useFeatureRelease } from '../context/FeatureReleaseContext';
@@ -13,6 +13,7 @@ import {
 } from '../utils/notificationService';
 import { NotificationHubModal } from './NotificationHubModal';
 import { AdminFeatureReleaseModal } from './AdminFeatureReleaseModal';
+import { OfficerMessagingModal } from './OfficerMessagingModal';
 
 interface SidebarProps {
   currentView: 'dashboard' | 'clients' | 'forms' | 'calendar';
@@ -43,6 +44,8 @@ export function Sidebar({
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAdminReleaseModalOpen, setIsAdminReleaseModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isOfficerMessagingOpen, setIsOfficerMessagingOpen] = useState(false);
+  const [selectedMessagingClientEmail, setSelectedMessagingClientEmail] = useState<string | undefined>(undefined);
   const [showLockedNotice, setShowLockedNotice] = useState(false);
   const { 
     user, 
@@ -233,6 +236,17 @@ export function Sidebar({
               >
                 <BookOpen className="w-5 h-5 shrink-0" />
                 <span className="font-medium">Monitoring Reference</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setIsOfficerMessagingOpen(true);
+                  setIsMobileOpen(false);
+                }}
+                className="w-full flex items-center space-x-3 px-3 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
+              >
+                <MessageSquare className="w-5 h-5 shrink-0 text-blue-400" />
+                <span className="font-medium">Client Messages</span>
               </button>
             </nav>
 
@@ -540,6 +554,18 @@ export function Sidebar({
             <BookOpen className="w-5 h-5 flex-shrink-0" />
             {!isCollapsed && <span className="font-medium truncate">Monitoring Reference</span>}
           </button>
+
+          <button
+            onClick={() => {
+              setIsOfficerMessagingOpen(true);
+              setIsUserMenuOpen(false);
+            }}
+            title={isCollapsed ? "Client Messages" : undefined}
+            className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'space-x-3 px-3'} py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer`}
+          >
+            <MessageSquare className="w-5 h-5 flex-shrink-0 text-blue-400" />
+            {!isCollapsed && <span className="font-medium truncate">Client Messages</span>}
+          </button>
         </nav>
 
         {/* User Profile Footer - Clickable for Settings & Notification Hub */}
@@ -801,6 +827,15 @@ export function Sidebar({
       <AdminFeatureReleaseModal
         isOpen={isAdminReleaseModalOpen}
         onClose={() => setIsAdminReleaseModalOpen(false)}
+      />
+
+      {/* Compliance Officer Messaging Desk Modal */}
+      <OfficerMessagingModal
+        isOpen={isOfficerMessagingOpen}
+        onClose={() => setIsOfficerMessagingOpen(false)}
+        clients={clients}
+        initialSelectedClientEmail={selectedMessagingClientEmail}
+        formReferences={formReferences}
       />
     </>
   );

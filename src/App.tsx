@@ -15,11 +15,19 @@ import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { OfflineSyncProvider } from './context/OfflineSyncContext';
 import { useClients, useFormReferences } from './store';
 import { AppLockShield } from './components/AppLockShield';
+import { OfficerMessagingModal } from './components/OfficerMessagingModal';
 
 function MainContent() {
   const { user, isAuthLoaded, workspaceMode, setWorkspaceMode } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [currentView, setCurrentView] = useState<'dashboard' | 'calendar' | 'clients' | 'forms'>('dashboard');
+  const [isOfficerMessagingOpen, setIsOfficerMessagingOpen] = useState(false);
+  const [selectedMessagingClientEmail, setSelectedMessagingClientEmail] = useState<string | undefined>(undefined);
+
+  const handleOpenOfficerMessaging = (clientEmail?: string) => {
+    setSelectedMessagingClientEmail(clientEmail);
+    setIsOfficerMessagingOpen(true);
+  };
   const [selectedPeriod, setSelectedPeriod] = useState(() => {
     const today = new Date();
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
@@ -112,6 +120,7 @@ function MainContent() {
                 onAddFormToClient={addFormToClient}
                 onRemoveFormFromClient={removeFormFromClient}
                 selectedPeriod={selectedPeriod}
+                onOpenMessaging={handleOpenOfficerMessaging}
               />
             )}
 
@@ -126,6 +135,15 @@ function MainContent() {
           </main>
         </div>
       </div>
+
+      {/* Compliance Officer Messaging Desk Modal */}
+      <OfficerMessagingModal
+        isOpen={isOfficerMessagingOpen}
+        onClose={() => setIsOfficerMessagingOpen(false)}
+        clients={clients}
+        initialSelectedClientEmail={selectedMessagingClientEmail}
+        formReferences={forms}
+      />
     </div>
   );
 }

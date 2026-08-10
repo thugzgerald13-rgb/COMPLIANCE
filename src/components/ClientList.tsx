@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Client, FormStatus, FormReference, BIRForm, TaxPayerType } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { Search, ChevronDown, ChevronRight, FileText, Plus, Trash2, XCircle, Users, Mail, Edit3, Building2, Filter, ArrowUpDown, Clock, Calendar, RotateCcw, X, CheckCircle2 } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, FileText, Plus, Trash2, XCircle, Users, Mail, Edit3, Building2, Filter, ArrowUpDown, Clock, Calendar, RotateCcw, X, CheckCircle2, MessageSquare } from 'lucide-react';
 import { AddClientModal } from './AddClientModal';
 import { UpdatePayableModal } from './UpdatePayableModal';
 import { isFormAllowedForTaxpayerType, calculateDeadline, isFormVisibleForPeriod, getEffectiveDeadline, getComplianceStatusInfo, getComplianceDeadlineForPeriod, getFormsForClientAndPeriod } from '../utils';
@@ -22,6 +22,7 @@ interface ClientListProps {
   onAddFormToClient: (clientId: string, formRef: FormReference, deadline?: string, period?: string, assignedPeriod?: string) => void;
   onRemoveFormFromClient: (clientId: string, formId: string, formCode?: string) => void;
   selectedPeriod: string;
+  onOpenMessaging?: (clientEmail?: string) => void;
 }
 
 export function ClientList({ 
@@ -33,7 +34,8 @@ export function ClientList({
   onClearAllClients,
   onAddFormToClient,
   onRemoveFormFromClient,
-  selectedPeriod
+  selectedPeriod,
+  onOpenMessaging
 }: ClientListProps) {
   const { loginAsClientPortal } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
@@ -414,6 +416,18 @@ export function ClientList({
                         All Cleared
                       </span>
                     )}
+                    {onOpenMessaging && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenMessaging(client.email);
+                        }}
+                        className="text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50 p-1.5 rounded-lg transition-colors cursor-pointer"
+                        title={`Message ${client.name}`}
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                      </button>
+                    )}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -454,18 +468,34 @@ export function ClientList({
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          loginAsClientPortal(client.id, client.name, client.tin, client.email);
-                        }}
-                        className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 transition-colors cursor-pointer"
-                        title="Sign in as client to test Client Portal view"
-                      >
-                        <Building2 className="w-3.5 h-3.5" />
-                        <span>Launch Client Portal</span>
-                      </button>
+                      <div className="flex items-center space-x-2">
+                        {onOpenMessaging && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onOpenMessaging(client.email);
+                            }}
+                            className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors cursor-pointer shadow-sm"
+                            title={`Send direct message to ${client.name}`}
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                            <span>Message Client</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            loginAsClientPortal(client.id, client.name, client.tin, client.email);
+                          }}
+                          className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 transition-colors cursor-pointer"
+                          title="Sign in as client to test Client Portal view"
+                        >
+                          <Building2 className="w-3.5 h-3.5" />
+                          <span>Launch Client Portal</span>
+                        </button>
+                      </div>
                     </div>
 
                     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
