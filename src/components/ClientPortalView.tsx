@@ -3,6 +3,7 @@ import { Client, FormStatus, FormReference, BIRForm } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { ClientDashboardModeModal } from './ClientDashboardModeModal';
+import { ClientAccountantMessaging } from './ClientAccountantMessaging';
 import { 
   Building2, 
   FileText, 
@@ -592,41 +593,14 @@ export function ClientPortalView({
             </div>
           </div>
 
-          {/* Card 2: Submit Direct Request / Document Note */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-500 flex items-center justify-center shrink-0">
-                <MessageSquare className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">Direct Client Support Request</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Send notes, payment confirmation numbers, or document requests to your CPA</p>
-              </div>
-            </div>
-
-            {supportSentMsg ? (
-              <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-2xl text-xs text-emerald-800 dark:text-emerald-300 font-bold flex items-center space-x-2">
-                <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
-                <span>Your request has been delivered to your handling CPA team!</span>
-              </div>
-            ) : (
-              <form onSubmit={handleSendSupportMessage} className="space-y-3">
-                <textarea
-                  rows={2}
-                  value={supportMessage}
-                  onChange={(e) => setSupportMessage(e.target.value)}
-                  placeholder="e.g. Please send the BIR payment confirmation receipt for Form 2550Q..."
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button
-                  type="submit"
-                  className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center justify-center space-x-1.5 shadow-sm"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Send Message to Accountant</span>
-                </button>
-              </form>
-            )}
+          {/* Card 2: Messaging with Synced Accountant */}
+          <div className="md:col-span-2">
+            <ClientAccountantMessaging
+              clientEmail={activeClient.email || user?.email}
+              clientName={activeClient.name}
+              formCodes={activeForms.map(f => f.code)}
+              onOpenSyncModal={() => setIsDashboardModeModalOpen(true)}
+            />
           </div>
 
         </div>

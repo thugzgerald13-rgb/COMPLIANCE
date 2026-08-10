@@ -23,6 +23,21 @@ export interface User {
   clientDashboardMode?: 'shared_accountant' | 'business_owner';
   accountType?: 'accountant' | 'business_owner';
   companyInfo?: CompanyInfo;
+  syncedAccountantEmail?: string;
+  syncedAccountantName?: string;
+  isSyncedWithAccountant?: boolean;
+}
+
+export interface ChatMessage {
+  id: string;
+  senderEmail: string;
+  senderName: string;
+  senderRole: string;
+  recipientEmail?: string;
+  clientEmail: string;
+  text: string;
+  formCode?: string;
+  timestamp: string;
 }
 
 export interface BIRForm {

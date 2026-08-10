@@ -24,6 +24,8 @@ interface AuthContextType {
   loginWithGoogle: (email: string, name?: string, roleHint?: string) => Promise<{ success: boolean; message?: string }> | { success: boolean; message?: string };
   updateUserDashboardMode: (mode: 'shared_accountant' | 'business_owner') => void;
   updateUserAccountInfo: (accountType: 'accountant' | 'business_owner', companyInfo: CompanyInfo, clientDashboardMode?: 'shared_accountant' | 'business_owner') => void;
+  syncWithAccountant: (accountantEmail: string, accountantName?: string) => Promise<{ success: boolean; accountant?: any; message?: string }>;
+  checkAccountantSyncStatus: () => Promise<{ isSynced: boolean; accountant?: any }>;
   logout: () => void;
   switchUser: (userId: string) => void;
   isAuthLoaded: boolean;
@@ -885,6 +887,62 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshUsersList();
   };
 
+  const syncWithAccountant = async (accountantEmail: string, accountantName?: string) => {
+    if (!user || !user.email) return { success: false, message: 'Not logged in' };
+    try {
+      const res = await fetch('/api/accountant/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientEmail: user.email,
+          accountantEmail,
+          accountantName,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const updatedUser: User = {
+          ...user,
+          syncedAccountantEmail: accountantEmail,
+          syncedAccountantName: data.accountant?.name || accountantName,
+          isSyncedWithAccountant: true,
+          clientDashboardMode: 'shared_accountant',
+        };
+        setUser(updatedUser);
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+        refreshUsersList();
+        return { success: true, accountant: data.accountant, message: data.message };
+      }
+      return { success: false, message: data.message || 'Failed to sync with accountant' };
+    } catch (e: any) {
+      return { success: false, message: e.message || 'Error connecting to server' };
+    }
+  };
+
+  const checkAccountantSyncStatus = async () => {
+    if (!user || !user.email) return { isSynced: false, accountant: null };
+    try {
+      const res = await fetch(`/api/accountant/status?email=${encodeURIComponent(user.email)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.isSynced) {
+          if (!user.isSyncedWithAccountant || user.syncedAccountantEmail !== data.accountant?.email) {
+            const updatedUser: User = {
+              ...user,
+              syncedAccountantEmail: data.accountant?.email,
+              syncedAccountantName: data.accountant?.name,
+              isSyncedWithAccountant: true,
+            };
+            setUser(updatedUser);
+            localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+          }
+          return { isSynced: true, accountant: data.accountant };
+        }
+      }
+    } catch (e) {}
+    return { isSynced: !!user.isSyncedWithAccountant, accountant: null };
+  };
+
   const switchUser = (userId: string) => {
     const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
     const usersList = rawUsers ? JSON.parse(rawUsers) : DEFAULT_USERS;
@@ -935,6 +993,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loginWithGoogle,
       updateUserDashboardMode,
       updateUserAccountInfo,
+      syncWithAccountant,
+      checkAccountantSyncStatus,
       logout,
       switchUser,
       isAuthLoaded,

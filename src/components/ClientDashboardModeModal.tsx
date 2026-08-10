@@ -1,5 +1,5 @@
-import React from 'react';
-import { Building2, Users, Check, ArrowRight, ShieldCheck, Briefcase, Sparkles, User, HelpCircle, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Building2, Users, Check, ArrowRight, ShieldCheck, Briefcase, Sparkles, User, HelpCircle, X, Lock, Link, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface ClientDashboardModeModalProps {
@@ -17,9 +17,64 @@ export function ClientDashboardModeModal({
   onClose,
   isFirstLogin = false,
 }: ClientDashboardModeModalProps) {
-  const { user } = useAuth();
+  const { user, syncWithAccountant } = useAuth();
+
+  const [isSyncStepOpen, setIsSyncStepOpen] = useState(false);
+  const [accountantList, setAccountantList] = useState<any[]>([]);
+  const [selectedAccEmail, setSelectedAccEmail] = useState('');
+  const [customAccEmail, setCustomAccEmail] = useState('');
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+
+  const isSynced = !!(user?.isSyncedWithAccountant || user?.syncedAccountantEmail);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetch('/api/accountants/list')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && Array.isArray(data.accountants)) {
+            setAccountantList(data.accountants);
+            if (data.accountants.length > 0) {
+              setSelectedAccEmail(data.accountants[0].email);
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
+
+  const handleSelectSharedAccountantMode = () => {
+    if (isSynced) {
+      onSelectMode('shared_accountant');
+    } else {
+      setIsSyncStepOpen(true);
+    }
+  };
+
+  const handleExecuteSync = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const emailToSync = customAccEmail.trim() || selectedAccEmail;
+    if (!emailToSync) {
+      setSyncError('Please enter or select an Accountant / CPA email.');
+      return;
+    }
+
+    setSyncLoading(true);
+    setSyncError(null);
+
+    const result = await syncWithAccountant(emailToSync);
+    setSyncLoading(false);
+
+    if (result.success) {
+      setIsSyncStepOpen(false);
+      onSelectMode('shared_accountant');
+    } else {
+      setSyncError(result.message || 'Failed to sync with accountant.');
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
@@ -55,120 +110,209 @@ export function ClientDashboardModeModal({
           </p>
         </div>
 
-        {/* Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 pt-2">
-          
-          {/* Option 1: Shared by Accountant / Bookkeeper */}
-          <div
-            onClick={() => onSelectMode('shared_accountant')}
-            className={`group relative p-6 rounded-2xl border transition-all duration-200 cursor-pointer flex flex-col justify-between hover:scale-[1.02] ${
-              currentMode === 'shared_accountant'
-                ? 'bg-slate-800/90 border-blue-500 ring-2 ring-blue-500/30 shadow-xl shadow-blue-500/10'
-                : 'bg-slate-800/50 hover:bg-slate-800/80 border-slate-700/80 hover:border-blue-500/50'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 flex items-center justify-center font-bold group-hover:scale-110 transition-transform">
-                <Briefcase className="w-6 h-6" />
-              </div>
-
-              <span className="text-[10px] uppercase font-mono font-bold px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 flex items-center space-x-1">
-                <Users className="w-3 h-3 mr-1" />
-                <span>Accountant Managed</span>
-              </span>
-            </div>
-
-            <div className="space-y-3 mb-6">
-              <h3 className="text-base font-bold text-white group-hover:text-blue-300 transition-colors flex items-center justify-between">
-                <span>Dashboard Shared with Accountant / Bookkeeper</span>
-                <Check className={`w-5 h-5 text-blue-400 transition-opacity ${currentMode === 'shared_accountant' ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'}`} />
-              </h3>
-
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Ideal for taxpayers working with an external CPA firm or designated bookkeeper who handles and files BIR tax returns for you.
-              </p>
-
-              <div className="space-y-2 pt-3 border-t border-slate-700/50 text-xs text-slate-300">
-                <div className="flex items-start space-x-2">
-                  <ShieldCheck className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-                  <span>Real-time filing confirmation & eFPS payment receipt tracking</span>
+        {/* Inline Accountant Sync Form if requested */}
+        {isSyncStepOpen ? (
+          <div className="p-6 bg-blue-950/40 border border-blue-500/40 rounded-2xl space-y-4 animate-in fade-in duration-200">
+            <div className="flex items-center justify-between border-b border-blue-500/30 pb-3">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">
+                  <Link className="w-5 h-5" />
                 </div>
-                <div className="flex items-start space-x-2">
-                  <ShieldCheck className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-                  <span>Direct contact & inquiry box with your handling CPA</span>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <ShieldCheck className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-                  <span>Review tax form computations uploaded by your practitioner</span>
+                <div>
+                  <h3 className="text-sm font-extrabold text-white">Sync with Accountant / Compliance Officer</h3>
+                  <p className="text-xs text-slate-300">Link your taxpayer record to your designated CPA firm to unlock the shared dashboard.</p>
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={() => setIsSyncStepOpen(false)}
+                className="text-xs text-slate-400 hover:text-white px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors cursor-pointer"
+              >
+                Back
+              </button>
             </div>
 
-            <button
-              type="button"
-              className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl transition-colors flex items-center justify-center space-x-2 shadow-lg shadow-blue-900/30 group-hover:shadow-blue-600/30 cursor-pointer"
-            >
-              <span>Select Shared Accountant Dashboard</span>
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </button>
+            {syncError && (
+              <div className="p-3 bg-red-500/20 border border-red-500/40 rounded-xl text-xs text-red-300 flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                <span>{syncError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleExecuteSync} className="space-y-4 text-xs">
+              {accountantList.length > 0 && (
+                <div>
+                  <label className="block text-slate-300 font-bold mb-1">Select Registered Compliance CPA Firm:</label>
+                  <select
+                    value={selectedAccEmail}
+                    onChange={(e) => setSelectedAccEmail(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {accountantList.map(acc => (
+                      <option key={acc.id} value={acc.email}>
+                        {acc.name} — ({acc.email}) [{acc.cpaLicenseNo}]
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-slate-300 font-bold mb-1">Or Enter Accountant's Email Address:</label>
+                <input
+                  type="email"
+                  value={customAccEmail}
+                  onChange={(e) => setCustomAccEmail(e.target.value)}
+                  placeholder="e.g. cpa.gerald@bizcomply.ph"
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex items-center space-x-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsSyncStepOpen(false)}
+                  className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={syncLoading}
+                  className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors shadow-lg cursor-pointer flex items-center justify-center space-x-2"
+                >
+                  <Link className="w-4 h-4" />
+                  <span>{syncLoading ? 'Syncing...' : 'Sync & Unlock Shared Dashboard'}</span>
+                </button>
+              </div>
+            </form>
           </div>
-
-          {/* Option 2: Business Owner (Self-Managed) */}
-          <div
-            onClick={() => onSelectMode('business_owner')}
-            className={`group relative p-6 rounded-2xl border transition-all duration-200 cursor-pointer flex flex-col justify-between hover:scale-[1.02] ${
-              currentMode === 'business_owner'
-                ? 'bg-slate-800/90 border-amber-500 ring-2 ring-amber-500/30 shadow-xl shadow-amber-500/10'
-                : 'bg-slate-800/50 hover:bg-slate-800/80 border-slate-700/80 hover:border-amber-500/50'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center font-bold group-hover:scale-110 transition-transform">
-                <Building2 className="w-6 h-6" />
-              </div>
-
-              <span className="text-[10px] uppercase font-mono font-bold px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center space-x-1">
-                <User className="w-3 h-3 mr-1" />
-                <span>Self-Managed</span>
-              </span>
-            </div>
-
-            <div className="space-y-3 mb-6">
-              <h3 className="text-base font-bold text-white group-hover:text-amber-300 transition-colors flex items-center justify-between">
-                <span>Managed as Business Owner</span>
-                <Check className={`w-5 h-5 text-amber-400 transition-opacity ${currentMode === 'business_owner' ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'}`} />
-              </h3>
-
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Ideal for independent business owners, sole proprietors, or internal tax teams who directly manage their own BIR obligations.
-              </p>
-
-              <div className="space-y-2 pt-3 border-t border-slate-700/50 text-xs text-slate-300">
-                <div className="flex items-start space-x-2">
-                  <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                  <span>Self-assign BIR form obligations (2550Q, 1701Q, 1601-EQ, etc.)</span>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                  <span>Direct payment reference logging & BIR deadline alerts</span>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                  <span>Full control over compliance schedules and self-audits</span>
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl transition-colors flex items-center justify-center space-x-2 shadow-lg shadow-amber-950/30 group-hover:shadow-amber-500/30 cursor-pointer"
+        ) : (
+          /* Cards Grid */
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 pt-2">
+            
+            {/* Option 1: Shared by Accountant / Bookkeeper */}
+            <div
+              onClick={handleSelectSharedAccountantMode}
+              className={`group relative p-6 rounded-2xl border transition-all duration-200 cursor-pointer flex flex-col justify-between hover:scale-[1.02] ${
+                currentMode === 'shared_accountant'
+                  ? 'bg-slate-800/90 border-blue-500 ring-2 ring-blue-500/30 shadow-xl shadow-blue-500/10'
+                  : 'bg-slate-800/50 hover:bg-slate-800/80 border-slate-700/80 hover:border-blue-500/50'
+              }`}
             >
-              <span>Select Business Owner Dashboard</span>
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </button>
-          </div>
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 flex items-center justify-center font-bold group-hover:scale-110 transition-transform">
+                  <Briefcase className="w-6 h-6" />
+                </div>
 
-        </div>
+                {isSynced ? (
+                  <span className="text-[10px] uppercase font-mono font-bold px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center space-x-1">
+                    <Check className="w-3 h-3 mr-1" />
+                    <span>Synced with CPA</span>
+                  </span>
+                ) : (
+                  <span className="text-[10px] uppercase font-mono font-bold px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center space-x-1">
+                    <Lock className="w-3 h-3 mr-1" />
+                    <span>Sync Required</span>
+                  </span>
+                )}
+              </div>
+
+              <div className="space-y-3 mb-6">
+                <h3 className="text-base font-bold text-white group-hover:text-blue-300 transition-colors flex items-center justify-between">
+                  <span>Shared Accountant Dashboard</span>
+                  {currentMode === 'shared_accountant' && <Check className="w-5 h-5 text-blue-400" />}
+                </h3>
+
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Ideal for taxpayers working with an external CPA firm or designated bookkeeper who handles and files BIR tax returns for you.
+                </p>
+
+                {!isSynced && (
+                  <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-[11px] text-amber-300 flex items-center space-x-2 font-medium">
+                    <Lock className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>Requires syncing with an Accountant / Compliance Officer first.</span>
+                  </div>
+                )}
+
+                <div className="space-y-2 pt-3 border-t border-slate-700/50 text-xs text-slate-300">
+                  <div className="flex items-start space-x-2">
+                    <ShieldCheck className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                    <span>Real-time filing confirmation & eFPS payment receipt tracking</span>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <ShieldCheck className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                    <span>Direct contact & 2-way message chat with your handling CPA</span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className={`w-full py-2.5 px-4 text-white font-bold text-xs rounded-xl transition-colors flex items-center justify-center space-x-2 shadow-lg cursor-pointer ${
+                  isSynced 
+                    ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-900/30' 
+                    : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-900/30'
+                }`}
+              >
+                <span>{isSynced ? 'Select Shared Accountant Dashboard' : 'Sync with Accountant to Unlock'}</span>
+                {isSynced ? <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /> : <Lock className="w-4 h-4" />}
+              </button>
+            </div>
+
+            {/* Option 2: Business Owner (Self-Managed) */}
+            <div
+              onClick={() => onSelectMode('business_owner')}
+              className={`group relative p-6 rounded-2xl border transition-all duration-200 cursor-pointer flex flex-col justify-between hover:scale-[1.02] ${
+                currentMode === 'business_owner'
+                  ? 'bg-slate-800/90 border-amber-500 ring-2 ring-amber-500/30 shadow-xl shadow-amber-500/10'
+                  : 'bg-slate-800/50 hover:bg-slate-800/80 border-slate-700/80 hover:border-amber-500/50'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center font-bold group-hover:scale-110 transition-transform">
+                  <Building2 className="w-6 h-6" />
+                </div>
+
+                <span className="text-[10px] uppercase font-mono font-bold px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center space-x-1">
+                  <User className="w-3 h-3 mr-1" />
+                  <span>Self-Managed</span>
+                </span>
+              </div>
+
+              <div className="space-y-3 mb-6">
+                <h3 className="text-base font-bold text-white group-hover:text-amber-300 transition-colors flex items-center justify-between">
+                  <span>Managed as Business Owner</span>
+                  <Check className={`w-5 h-5 text-amber-400 transition-opacity ${currentMode === 'business_owner' ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'}`} />
+                </h3>
+
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Ideal for independent business owners, sole proprietors, or internal tax teams who directly manage their own BIR obligations.
+                </p>
+
+                <div className="space-y-2 pt-3 border-t border-slate-700/50 text-xs text-slate-300">
+                  <div className="flex items-start space-x-2">
+                    <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <span>Self-assign BIR form obligations (2550Q, 1701Q, 1601-EQ, etc.)</span>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <span>Direct payment reference logging & BIR deadline alerts</span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl transition-colors flex items-center justify-center space-x-2 shadow-lg shadow-amber-950/30 group-hover:shadow-amber-500/30 cursor-pointer"
+              >
+                <span>Select Business Owner Dashboard</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
+
+          </div>
+        )}
 
         {/* Footer Note */}
         <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">

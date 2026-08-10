@@ -58,6 +58,7 @@ function readDB() {
     if (!parsed.user_forms) parsed.user_forms = {};
     if (!parsed.logs) parsed.logs = {};
     if (!parsed.settings) parsed.settings = {};
+    if (!parsed.messages) parsed.messages = [];
     return parsed;
   } catch (err) {
     console.error('Error reading central_db.json:', err);
@@ -69,6 +70,7 @@ function readDB() {
       user_forms: {},
       logs: {},
       settings: {},
+      messages: [],
     };
   }
 }
@@ -408,6 +410,245 @@ async function startServer() {
       return res.json({ success: true });
     }
     return res.status(400).json({ success: false, message: 'Invalid settings object' });
+  });
+
+  // ACCOUNTANTS LIST API (For business owners to select / sync with an accountant)
+  app.get('/api/accountants/list', (_req, res) => {
+    const db = readDB();
+    const users = db.users || [];
+    const accountants = users.filter((u: any) => 
+      u.accountType === 'accountant' || 
+      u.role === 'Compliance Officer' || 
+      u.role === 'Compliance Specialist' || 
+      u.role === 'Super Admin' || 
+      u.role === 'Admin'
+    ).map((u: any) => ({
+      id: u.id,
+      name: u.companyInfo?.companyName || u.name || 'CPA Firm',
+      email: u.email,
+      role: u.role || 'Compliance Officer',
+      cpaLicenseNo: u.companyInfo?.cpaLicenseNo || 'CPA-LIC-009812',
+    }));
+
+    // If empty, add a default compliance firm so business owners can always sync
+    if (accountants.length === 0) {
+      accountants.push({
+        id: 'cpa_main_firm',
+        name: 'BIZ-COMPLY CPA & Compliance Firm',
+        email: 'thugz.gerald13@gmail.com',
+        role: 'Lead Compliance CPA',
+        cpaLicenseNo: 'CPA-LIC-009812',
+      });
+    }
+
+    res.json({ success: true, accountants });
+  });
+
+  // ACCOUNTANT SYNC STATUS API
+  app.get('/api/accountant/status', (req, res) => {
+    const clientEmail = req.query.email ? String(req.query.email).toLowerCase().trim() : '';
+    if (!clientEmail) {
+      return res.status(400).json({ success: false, message: 'Client email required' });
+    }
+
+    const db = readDB();
+    const users = db.users || [];
+    const user = users.find((u: any) => u.email && u.email.toLowerCase().trim() === clientEmail);
+
+    let isSynced = false;
+    let accountantObj: any = null;
+
+    // Check direct user property
+    if (user && (user.syncedAccountantEmail || user.isSyncedWithAccountant)) {
+      isSynced = true;
+      const accEmail = user.syncedAccountantEmail ? user.syncedAccountantEmail.toLowerCase().trim() : '';
+      const foundAcc = users.find((u: any) => u.email && u.email.toLowerCase().trim() === accEmail);
+      if (foundAcc) {
+        accountantObj = {
+          name: foundAcc.companyInfo?.companyName || foundAcc.name || 'Lead CPA Officer',
+          email: foundAcc.email,
+          role: foundAcc.role || 'Compliance Officer',
+          cpaLicenseNo: foundAcc.companyInfo?.cpaLicenseNo || 'CPA-LIC-009812',
+        };
+      } else {
+        accountantObj = {
+          name: user.syncedAccountantName || 'Designated CPA Firm',
+          email: accEmail || 'compliance@bizcomply.ph',
+          role: 'Compliance Officer',
+          cpaLicenseNo: 'CPA-LIC-009812',
+        };
+      }
+    }
+
+    // Secondary check: Has any accountant added this client in db.user_clients or db.clients?
+    if (!isSynced) {
+      const userClientsMap = db.user_clients || {};
+      for (const [accEmail, clientList] of Object.entries(userClientsMap)) {
+        if (Array.isArray(clientList)) {
+          const match = clientList.find((c: any) => 
+            (c.email && c.email.toLowerCase().trim() === clientEmail) ||
+            (user && user.tin && c.tin === user.tin)
+          );
+          if (match) {
+            isSynced = true;
+            const foundAcc = users.find((u: any) => u.email && u.email.toLowerCase().trim() === accEmail.toLowerCase().trim());
+            accountantObj = {
+              name: foundAcc?.companyInfo?.companyName || foundAcc?.name || 'BIZ-COMPLY Practice Firm',
+              email: accEmail,
+              role: foundAcc?.role || 'Compliance Officer',
+              cpaLicenseNo: foundAcc?.companyInfo?.cpaLicenseNo || 'CPA-LIC-009812',
+            };
+            // Persist sync state back on user profile
+            if (user) {
+              user.syncedAccountantEmail = accEmail;
+              user.syncedAccountantName = accountantObj.name;
+              user.isSyncedWithAccountant = true;
+              writeDB(db);
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    res.json({ success: true, isSynced, accountant: accountantObj });
+  });
+
+  // CONNECT & SYNC ACCOUNTANT API
+  app.post('/api/accountant/sync', (req, res) => {
+    const { clientEmail, accountantEmail, accountantName } = req.body || {};
+    if (!clientEmail || !accountantEmail) {
+      return res.status(400).json({ success: false, message: 'Client email and Accountant email are required' });
+    }
+
+    const normClientEmail = String(clientEmail).toLowerCase().trim();
+    const normAccEmail = String(accountantEmail).toLowerCase().trim();
+
+    const db = readDB();
+    const users = db.users || [];
+
+    // Find or update client user
+    let clientUserIdx = users.findIndex((u: any) => u.email && u.email.toLowerCase().trim() === normClientEmail);
+    const accUser = users.find((u: any) => u.email && u.email.toLowerCase().trim() === normAccEmail);
+    const accDisplayName = accUser?.companyInfo?.companyName || accUser?.name || accountantName || 'Designated CPA Firm';
+
+    if (clientUserIdx !== -1) {
+      users[clientUserIdx].syncedAccountantEmail = normAccEmail;
+      users[clientUserIdx].syncedAccountantName = accDisplayName;
+      users[clientUserIdx].isSyncedWithAccountant = true;
+    } else {
+      users.push({
+        id: 'user_' + Date.now(),
+        email: normClientEmail,
+        name: normClientEmail.split('@')[0],
+        accountType: 'business_owner',
+        clientDashboardMode: 'shared_accountant',
+        syncedAccountantEmail: normAccEmail,
+        syncedAccountantName: accDisplayName,
+        isSyncedWithAccountant: true,
+      });
+    }
+
+    // Ensure client is present in accountant's user_clients array
+    if (!db.user_clients) db.user_clients = {};
+    const accClients = db.user_clients[normAccEmail] || db.clients || [];
+    const clientExists = accClients.some((c: any) => c.email && c.email.toLowerCase().trim() === normClientEmail);
+
+    if (!clientExists) {
+      const clientUser = users.find((u: any) => u.email && u.email.toLowerCase().trim() === normClientEmail);
+      const newClientRecord = {
+        id: clientUser?.clientId || 'client_' + Date.now(),
+        name: clientUser?.companyInfo?.companyName || clientUser?.name || normClientEmail.split('@')[0],
+        email: normClientEmail,
+        tin: clientUser?.companyInfo?.tin || clientUser?.tin || '000-000-000-00000',
+        rdo: clientUser?.companyInfo?.rdo || '043',
+        type: 'Corporate',
+        status: 'Active',
+        forms: [],
+      };
+      accClients.push(newClientRecord);
+      db.user_clients[normAccEmail] = accClients;
+      db.clients = accClients;
+    }
+
+    db.users = users;
+    writeDB(db);
+
+    return res.json({
+      success: true,
+      isSynced: true,
+      accountant: {
+        name: accDisplayName,
+        email: normAccEmail,
+        role: accUser?.role || 'Compliance Officer',
+        cpaLicenseNo: accUser?.companyInfo?.cpaLicenseNo || 'CPA-LIC-009812',
+      },
+      message: `Successfully synced with ${accDisplayName}!`,
+    });
+  });
+
+  // MESSAGES API - GET conversation history
+  app.get('/api/messages', (req, res) => {
+    const clientEmail = req.query.clientEmail ? String(req.query.clientEmail).toLowerCase().trim() : '';
+    const db = readDB();
+    const allMessages = db.messages || [];
+
+    if (!clientEmail) {
+      return res.json({ success: true, messages: allMessages });
+    }
+
+    // Filter messages for this client
+    const conversation = allMessages.filter((m: any) => 
+      (m.clientEmail && m.clientEmail.toLowerCase().trim() === clientEmail) ||
+      (m.senderEmail && m.senderEmail.toLowerCase().trim() === clientEmail) ||
+      (m.recipientEmail && m.recipientEmail.toLowerCase().trim() === clientEmail)
+    );
+
+    res.json({ success: true, messages: conversation });
+  });
+
+  // MESSAGES API - POST send new message
+  app.post('/api/messages', (req, res) => {
+    const { id, senderEmail, senderName, senderRole, recipientEmail, clientEmail, text, formCode } = req.body || {};
+    if (!text || (!senderEmail && !clientEmail)) {
+      return res.status(400).json({ success: false, message: 'Message text and sender/client email are required' });
+    }
+
+    const normSender = senderEmail ? String(senderEmail).toLowerCase().trim() : '';
+    const normClient = clientEmail ? String(clientEmail).toLowerCase().trim() : normSender;
+    const normRecipient = recipientEmail ? String(recipientEmail).toLowerCase().trim() : '';
+
+    const db = readDB();
+    if (!db.messages) db.messages = [];
+
+    const newMessage = {
+      id: id || 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+      senderEmail: normSender,
+      senderName: senderName || 'User',
+      senderRole: senderRole || 'Client',
+      recipientEmail: normRecipient,
+      clientEmail: normClient,
+      text: text.trim(),
+      formCode: formCode || null,
+      timestamp: new Date().toISOString(),
+    };
+
+    db.messages.push(newMessage);
+
+    // If client is sending to recipient, or accountant replying to client, maintain sync state
+    if (normClient && normRecipient) {
+      const users = db.users || [];
+      const clientIdx = users.findIndex((u: any) => u.email && u.email.toLowerCase().trim() === normClient);
+      if (clientIdx !== -1) {
+        users[clientIdx].syncedAccountantEmail = normRecipient;
+        users[clientIdx].isSyncedWithAccountant = true;
+        db.users = users;
+      }
+    }
+
+    writeDB(db);
+
+    return res.json({ success: true, message: newMessage });
   });
 
   // Vite middleware in dev mode or static files in production
