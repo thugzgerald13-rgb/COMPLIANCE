@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Client, FormReference, FormStatus, BIRForm } from '../types';
-import { Users, FileClock, CheckCircle, AlertCircle, Calendar, Edit3, X, Save, FileText, Building, Check, Bell, Mail, ShieldAlert, Clock, AlertTriangle, CheckCircle2, Lock, ShieldCheck } from 'lucide-react';
+import { Users, FileClock, CheckCircle, AlertCircle, Calendar, Edit3, X, Save, FileText, Building, Check, Bell, Mail, ShieldAlert, Clock, AlertTriangle, CheckCircle2, Lock, ShieldCheck, Search, ArrowRight, ExternalLink } from 'lucide-react';
 import { getComplianceStatusInfo, getFormsForClientAndPeriod } from '../utils';
 import { 
   getDueFormsForNotification, 
@@ -40,6 +40,12 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(() => 
     loadNotificationSettings(user?.email)
   );
+
+  // Modals state for Pending and In Processing references
+  const [isPendingModalOpen, setIsPendingModalOpen] = useState(false);
+  const [isInProcessingModalOpen, setIsInProcessingModalOpen] = useState(false);
+  const [pendingSearchQuery, setPendingSearchQuery] = useState('');
+  const [processingSearchQuery, setProcessingSearchQuery] = useState('');
 
   useEffect(() => {
     if (user?.email) {
@@ -90,14 +96,29 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
     { id: 'filed', title: 'Filed & Paid', value: filedForms, icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-100' },
   ];
 
-  // Recently updated or upcoming deadlines within the selected period
-  const displayForms = allForms
-    .filter(f => {
-      if (filterStatus === 'Pending') return f.status === 'Pending';
-      if (filterStatus === 'Processing') return f.status === 'Processing';
-      return f.status === 'Pending' || f.status === 'Processing';
-    })
+  const pendingFormsList = allForms
+    .filter(f => f.status === 'Pending')
     .sort((a, b) => new Date(a.deadline || '').getTime() - new Date(b.deadline || '').getTime());
+
+  const processingFormsList = allForms
+    .filter(f => f.status === 'Processing')
+    .sort((a, b) => new Date(a.deadline || '').getTime() - new Date(b.deadline || '').getTime());
+
+  const filteredPendingForms = pendingFormsList.filter(f => 
+    !pendingSearchQuery || 
+    f.clientName.toLowerCase().includes(pendingSearchQuery.toLowerCase()) ||
+    f.clientTin.includes(pendingSearchQuery) ||
+    f.code.toLowerCase().includes(pendingSearchQuery.toLowerCase()) ||
+    f.description.toLowerCase().includes(pendingSearchQuery.toLowerCase())
+  );
+
+  const filteredProcessingForms = processingFormsList.filter(f => 
+    !processingSearchQuery || 
+    f.clientName.toLowerCase().includes(processingSearchQuery.toLowerCase()) ||
+    f.clientTin.includes(processingSearchQuery) ||
+    f.code.toLowerCase().includes(processingSearchQuery.toLowerCase()) ||
+    f.description.toLowerCase().includes(processingSearchQuery.toLowerCase())
+  );
 
   const handleOpenEditModal = (form: SelectedDashboardForm) => {
     setEditingForm(form);
@@ -247,30 +268,31 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
       {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {stats.map((stat, i) => {
-          const isSelected = 
-            (stat.id === 'Pending' && filterStatus === 'Pending') ||
-            (stat.id === 'Processing' && filterStatus === 'Processing') ||
-            (stat.id === 'all' && filterStatus === 'all');
-            
           return (
             <div 
               key={i} 
               onClick={() => {
-                if (stat.id === 'Pending') setFilterStatus('Pending');
-                else if (stat.id === 'Processing') setFilterStatus('Processing');
+                if (stat.id === 'Pending') setIsPendingModalOpen(true);
+                else if (stat.id === 'Processing') setIsInProcessingModalOpen(true);
                 else setFilterStatus('all');
               }}
-              className={`bg-white dark:bg-slate-900 rounded-xl shadow-sm border p-6 flex items-center justify-between transition-all cursor-pointer ${
-                isSelected ? 'border-blue-500 ring-2 ring-blue-500/20 shadow-md' : 'border-slate-100 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-              }`}
+              className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-600 p-6 flex items-center justify-between transition-all cursor-pointer group hover:shadow-md"
+              title={stat.id === 'Pending' ? 'Click to view Pending References Modal' : stat.id === 'Processing' ? 'Click to view In Processing References Modal' : undefined}
             >
               <div className="flex items-center space-x-4">
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${stat.bg}`}>
+                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${stat.bg} group-hover:scale-105 transition-transform`}>
                   <stat.icon className={`w-6 h-6 ${stat.color}`} />
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">{stat.title}</p>
-                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{stat.value}</p>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>{stat.value}</span>
+                    {(stat.id === 'Pending' || stat.id === 'Processing') && (
+                      <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800">
+                        View Modal
+                      </span>
+                    )}
+                  </p>
                 </div>
               </div>
             </div>
@@ -278,197 +300,481 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
         })}
       </div>
 
-      {/* Pending & In Processing References Table */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
-        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      {/* Pending & In Processing References Overview Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        
+        {/* Card 1: Pending References Modal Launcher */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-red-100 dark:border-red-900/30 shadow-sm flex flex-col justify-between space-y-4 hover:border-red-300 dark:hover:border-red-800 transition-all">
           <div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center">
-              <Calendar className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
-              Pending & In Processing References
-            </h2>
-            <p className="text-xs text-slate-600 dark:text-slate-300 font-medium mt-0.5">
-              Click any row or use the Edit button to open full reference controls
-            </p>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-950/80 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+                  <AlertCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>Pending References</span>
+                    <span className="text-xs font-mono bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 px-2 py-0.5 rounded-full font-bold">
+                      {pendingFormsList.length} Items
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Unfiled tax forms requiring attention for period [{selectedPeriod}]
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Preview List */}
+            <div className="space-y-2 mt-4">
+              {pendingFormsList.length === 0 ? (
+                <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-xl text-center">
+                  <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center justify-center gap-1.5">
+                    <CheckCircle className="w-4 h-4" />
+                    <span>No pending references for this period!</span>
+                  </p>
+                </div>
+              ) : (
+                pendingFormsList.slice(0, 3).map((item) => {
+                  const deadlineInfo = getComplianceStatusInfo(item, item.deadline);
+                  return (
+                    <div 
+                      key={`${item.clientId}-${item.id || item.code}`}
+                      onClick={() => setIsPendingModalOpen(true)}
+                      className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs cursor-pointer hover:bg-red-50/50 dark:hover:bg-slate-800 transition-colors"
+                    >
+                      <div className="flex items-center space-x-2.5 min-w-0 pr-2">
+                        <span className="font-bold text-slate-900 dark:text-white bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-[11px]">
+                          {item.code}
+                        </span>
+                        <span className="truncate font-medium text-slate-700 dark:text-slate-200">{item.clientName}</span>
+                      </div>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded border shrink-0 ${deadlineInfo.color}`}>
+                        {deadlineInfo.label}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center space-x-1 bg-slate-100 dark:bg-slate-800/90 p-1 rounded-lg text-xs border border-slate-200 dark:border-slate-700">
-            <button
-              onClick={() => setFilterStatus('all')}
-              className={`px-3 py-1.5 rounded-md font-semibold transition-colors cursor-pointer ${
-                filterStatus === 'all' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              All Active ({pendingForms + processingForms})
-            </button>
-            <button
-              onClick={() => setFilterStatus('Pending')}
-              className={`px-3 py-1.5 rounded-md font-semibold transition-colors cursor-pointer ${
-                filterStatus === 'Pending' ? 'bg-white dark:bg-slate-700 text-red-700 dark:text-red-400 shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              Pending ({pendingForms})
-            </button>
-            <button
-              onClick={() => setFilterStatus('Processing')}
-              className={`px-3 py-1.5 rounded-md font-semibold transition-colors cursor-pointer ${
-                filterStatus === 'Processing' ? 'bg-white dark:bg-slate-700 text-amber-700 dark:text-amber-400 shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              In Processing ({processingForms})
-            </button>
-          </div>
+          <button
+            onClick={() => setIsPendingModalOpen(true)}
+            className="w-full py-2.5 px-4 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm flex items-center justify-center space-x-2 mt-2"
+          >
+            <span>Open Pending References Modal ({pendingFormsList.length})</span>
+            <ExternalLink className="w-4 h-4" />
+          </button>
         </div>
 
-        <div className="divide-y divide-slate-100 dark:divide-slate-800">
-          {displayForms.length === 0 ? (
-            <div className="p-12 text-center text-slate-500 dark:text-slate-400">
-              <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-3 opacity-80" />
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">No active {filterStatus !== 'all' ? filterStatus.toLowerCase() : 'pending/processing'} references found!</p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">All assigned tax compliance forms for this period are cleared or filed.</p>
+        {/* Card 2: In Processing References Modal Launcher */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-amber-100 dark:border-amber-900/30 shadow-sm flex flex-col justify-between space-y-4 hover:border-amber-300 dark:hover:border-amber-800 transition-all">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                  <FileClock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>In Processing References</span>
+                    <span className="text-xs font-mono bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full font-bold">
+                      {processingFormsList.length} Items
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Forms currently awaiting confirmation or bank payment for period [{selectedPeriod}]
+                  </p>
+                </div>
+              </div>
             </div>
-          ) : (
-            displayForms.map((item) => {
-              const deadlineInfo = getComplianceStatusInfo(item, item.deadline);
-              const refDesc = formReferences.find(r => r.code === item.code)?.description;
-              
-              return (
-                <div 
-                  key={`${item.clientId}-${item.id || item.code}`} 
-                  onClick={() => handleOpenEditModal(item)}
-                  className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-blue-50/40 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group ${
-                    deadlineInfo.urgency === 'high' ? 'bg-red-50/20 dark:bg-red-950/20' : ''
-                  }`}
-                >
-                  <div className="flex items-center space-x-4 mb-3 sm:mb-0 flex-1 pr-4">
-                    <div className="w-11 h-11 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-900/50 flex items-center justify-center text-blue-700 dark:text-blue-300 font-bold text-sm flex-shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors shadow-sm">
-                      {item.code}
-                    </div>
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <span className="font-bold text-slate-900 dark:text-white text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{item.clientName}</span>
-                        <span className="text-xs font-mono text-slate-400 dark:text-slate-500">({item.clientTin})</span>
-                      </div>
-                      <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">{refDesc || item.description}</p>
-                      {item.notes && (
-                        <p className="text-[11px] text-slate-400 dark:text-slate-500 italic mt-0.5 truncate max-w-md">Note: {item.notes}</p>
-                      )}
-                    </div>
-                  </div>
 
-                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 justify-end" onClick={(e) => e.stopPropagation()}>
-                    <div className={`inline-flex items-center px-2.5 py-1 rounded text-xs border ${deadlineInfo.color}`}>
-                      {deadlineInfo.label} ({new Date(item.deadline || '').toLocaleDateString()})
-                    </div>
-
-                    {/* 1. FIRST CHOICE: Tax Payable Status */}
-                    <select
-                      value={item.taxStatus || ''}
-                      onChange={(e) => {
-                        const newTaxStatus = e.target.value as 'With Payable' | 'W/O Payable';
-                        const updates: Partial<BIRForm> = { taxStatus: newTaxStatus };
-                        if (newTaxStatus === 'W/O Payable') {
-                          if (!item.dateFiled) {
-                            updates.status = 'Processing';
-                          } else {
-                            updates.status = 'Filed';
-                          }
-                          updates.datePaid = undefined;
-                          updates.amount = undefined;
-                        }
-                        if (onUpdateForm) {
-                          onUpdateForm(
-                            item.clientId,
-                            item.id,
-                            updates,
-                            {
-                              code: item.code,
-                              description: item.description,
-                              deadline: item.deadline || '',
-                              period: item.period || selectedPeriod,
-                              assignedPeriod: item.assignedPeriod
-                            }
-                          );
-                        }
-                        if (newTaxStatus === 'With Payable') {
-                          handleOpenEditModal({ ...item, taxStatus: 'With Payable' });
-                        }
-                      }}
-                      className="text-xs font-bold rounded-lg px-2.5 py-1.5 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-xs"
+            {/* Quick Preview List */}
+            <div className="space-y-2 mt-4">
+              {processingFormsList.length === 0 ? (
+                <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-xl text-center">
+                  <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center justify-center gap-1.5">
+                    <CheckCircle className="w-4 h-4" />
+                    <span>No in-processing references for this period!</span>
+                  </p>
+                </div>
+              ) : (
+                processingFormsList.slice(0, 3).map((item) => {
+                  const deadlineInfo = getComplianceStatusInfo(item, item.deadline);
+                  return (
+                    <div 
+                      key={`${item.clientId}-${item.id || item.code}`}
+                      onClick={() => setIsInProcessingModalOpen(true)}
+                      className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs cursor-pointer hover:bg-amber-50/50 dark:hover:bg-slate-800 transition-colors"
                     >
-                      {!item.taxStatus && <option value="" disabled className="bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400">Select Payable Choice</option>}
-                      <option value="With Payable" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100">With Payable</option>
-                      <option value="W/O Payable" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100">W/O Payable</option>
-                    </select>
+                      <div className="flex items-center space-x-2.5 min-w-0 pr-2">
+                        <span className="font-bold text-slate-900 dark:text-white bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-[11px]">
+                          {item.code}
+                        </span>
+                        <span className="truncate font-medium text-slate-700 dark:text-slate-200">{item.clientName}</span>
+                      </div>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded border shrink-0 ${deadlineInfo.color}`}>
+                        {deadlineInfo.label}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
 
-                    {/* 2. NEXT TO APPEAR ACCORDING TO CHOICE */}
-                    {item.taxStatus === 'W/O Payable' ? (
-                      <div className="flex items-center space-x-1.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1">
-                        <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap">Filed Date:</span>
-                        <input
-                          type="date"
-                          value={item.dateFiled || ''}
+          <button
+            onClick={() => setIsInProcessingModalOpen(true)}
+            className="w-full py-2.5 px-4 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm flex items-center justify-center space-x-2 mt-2"
+          >
+            <span>Open In Processing References Modal ({processingFormsList.length})</span>
+            <ExternalLink className="w-4 h-4" />
+          </button>
+        </div>
+
+      </div>
+
+      {/* MODAL 1: PENDING REFERENCES MODAL */}
+      {isPendingModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3 sm:p-6">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-slate-900 dark:text-slate-100">
+            
+            {/* Header */}
+            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-50/60 dark:bg-slate-800/40">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-950/80 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+                  <AlertCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>Pending BIR Tax References</span>
+                    <span className="text-xs bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300 font-bold px-2.5 py-0.5 rounded-full border border-red-200 dark:border-red-800 font-mono">
+                      {pendingFormsList.length} Total
+                    </span>
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Period: [{selectedPeriod}] • Click any row or use quick controls to update compliance status
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-3 w-full sm:w-auto justify-end">
+                <div className="relative flex-1 sm:flex-none">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search client or form..."
+                    value={pendingSearchQuery}
+                    onChange={(e) => setPendingSearchQuery(e.target.value)}
+                    className="pl-8 pr-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-red-500 w-full sm:w-48"
+                  />
+                </div>
+
+                <button
+                  onClick={() => setIsPendingModalOpen(false)}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* List Body */}
+            <div className="p-4 sm:p-6 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 space-y-1">
+              {filteredPendingForms.length === 0 ? (
+                <div className="p-12 text-center text-slate-500 dark:text-slate-400 space-y-2">
+                  <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto opacity-80" />
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">No pending references found!</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">All forms for this period are either in processing or filed.</p>
+                </div>
+              ) : (
+                filteredPendingForms.map((item) => {
+                  const deadlineInfo = getComplianceStatusInfo(item, item.deadline);
+                  const refDesc = formReferences.find(r => r.code === item.code)?.description;
+
+                  return (
+                    <div 
+                      key={`pending-modal-${item.clientId}-${item.id || item.code}`}
+                      onClick={() => handleOpenEditModal(item)}
+                      className="py-3 px-2 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-xl transition-colors cursor-pointer group gap-3"
+                    >
+                      <div className="flex items-center space-x-3 flex-1 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-100 dark:border-red-900/50 flex items-center justify-center text-red-700 dark:text-red-300 font-bold text-xs shrink-0 group-hover:bg-red-600 group-hover:text-white transition-colors">
+                          {item.code}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-bold text-slate-900 dark:text-white text-sm truncate">{item.clientName}</span>
+                            <span className="text-[11px] font-mono text-slate-400">({item.clientTin})</span>
+                          </div>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">{refDesc || item.description}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
+                        <div className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] border ${deadlineInfo.color}`}>
+                          {deadlineInfo.label} ({new Date(item.deadline || '').toLocaleDateString()})
+                        </div>
+
+                        {/* Tax Payable Choice */}
+                        <select
+                          value={item.taxStatus || ''}
                           onChange={(e) => {
-                            const dateVal = e.target.value;
+                            const newTaxStatus = e.target.value as 'With Payable' | 'W/O Payable';
+                            const updates: Partial<BIRForm> = { taxStatus: newTaxStatus };
+                            if (newTaxStatus === 'W/O Payable') {
+                              updates.status = item.dateFiled ? 'Filed' : 'Processing';
+                            }
                             if (onUpdateForm) {
-                              onUpdateForm(
-                                item.clientId,
-                                item.id,
-                                {
-                                  dateFiled: dateVal || undefined,
-                                  status: dateVal ? 'Filed' : 'Processing'
-                                },
-                                {
-                                  code: item.code,
-                                  description: item.description,
-                                  deadline: item.deadline || '',
-                                  period: item.period || selectedPeriod,
-                                  assignedPeriod: item.assignedPeriod
-                                }
-                              );
+                              onUpdateForm(item.clientId, item.id, updates, {
+                                code: item.code,
+                                description: item.description,
+                                deadline: item.deadline || '',
+                                period: item.period || selectedPeriod,
+                                assignedPeriod: item.assignedPeriod
+                              });
+                            }
+                            if (newTaxStatus === 'With Payable') {
+                              handleOpenEditModal({ ...item, taxStatus: 'With Payable' });
                             }
                           }}
-                          className="text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-0.5 text-slate-800 dark:text-slate-100 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
-                      </div>
-                    ) : (
-                      <button 
-                        onClick={() => handleOpenEditModal(item)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center space-x-1 shadow-xs cursor-pointer"
-                        title="Edit Date Filed, Amount Paid, Reference No. & Notes"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                        <span>Edit Details</span>
-                      </button>
-                    )}
+                          className="text-xs font-bold rounded-lg px-2 py-1 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 cursor-pointer"
+                        >
+                          {!item.taxStatus && <option value="" disabled>Select Payable</option>}
+                          <option value="With Payable">With Payable</option>
+                          <option value="W/O Payable">W/O Payable</option>
+                        </select>
 
-                    {/* Status Dropdown */}
-                    <select
-                      value={item.status}
-                      onChange={(e) => handleQuickStatusChange(e, item)}
-                      className={`text-xs font-bold rounded-lg px-2.5 py-1.5 border-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs appearance-none ${
-                        item.status === 'Pending' 
-                          ? 'bg-red-100 text-red-800 dark:bg-red-950/80 dark:text-red-300' 
-                          : item.status === 'Processing'
-                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
-                          : 'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300'
-                      }`}
-                    >
-                      <option value="Pending" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100">Pending</option>
-                      <option value="Processing" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100">In Processing</option>
-                      <option value="Filed" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100">Filed</option>
-                      {item.taxStatus !== 'W/O Payable' && <option value="Paid" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100">Paid</option>}
-                    </select>
-                  </div>
-                </div>
-              );
-            })
-          )}
+                        {/* Quick Edit */}
+                        <button
+                          onClick={() => handleOpenEditModal(item)}
+                          className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-lg transition-colors flex items-center space-x-1 cursor-pointer"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                          <span>Edit</span>
+                        </button>
+
+                        {/* Status Select */}
+                        <select
+                          value={item.status}
+                          onChange={(e) => handleQuickStatusChange(e, item)}
+                          className="text-xs font-bold rounded-lg px-2 py-1 bg-red-100 text-red-800 dark:bg-red-950/80 dark:text-red-300 border-none cursor-pointer"
+                        >
+                          <option value="Pending">Pending</option>
+                          <option value="Processing">In Processing</option>
+                          <option value="Filed">Filed</option>
+                          {item.taxStatus !== 'W/O Payable' && <option value="Paid">Paid</option>}
+                        </select>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
+              <span className="text-xs text-slate-500 font-mono">
+                Showing {filteredPendingForms.length} of {pendingFormsList.length} Pending
+              </span>
+              <button
+                onClick={() => setIsPendingModalOpen(false)}
+                className="px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+              >
+                Close Modal
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* MODAL 2: IN PROCESSING REFERENCES MODAL */}
+      {isInProcessingModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3 sm:p-6">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-slate-900 dark:text-slate-100">
+            
+            {/* Header */}
+            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-50/60 dark:bg-slate-800/40">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-950/80 border border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                  <FileClock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>In Processing BIR Tax References</span>
+                    <span className="text-xs bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 font-bold px-2.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-800 font-mono">
+                      {processingFormsList.length} Total
+                    </span>
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Period: [{selectedPeriod}] • Click any row or use quick controls to update compliance status
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-3 w-full sm:w-auto justify-end">
+                <div className="relative flex-1 sm:flex-none">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search client or form..."
+                    value={processingSearchQuery}
+                    onChange={(e) => setProcessingSearchQuery(e.target.value)}
+                    className="pl-8 pr-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 w-full sm:w-48"
+                  />
+                </div>
+
+                <button
+                  onClick={() => setIsInProcessingModalOpen(false)}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* List Body */}
+            <div className="p-4 sm:p-6 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 space-y-1">
+              {filteredProcessingForms.length === 0 ? (
+                <div className="p-12 text-center text-slate-500 dark:text-slate-400 space-y-2">
+                  <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto opacity-80" />
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">No in-processing references found!</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">All assigned forms are either pending or completed/filed.</p>
+                </div>
+              ) : (
+                filteredProcessingForms.map((item) => {
+                  const deadlineInfo = getComplianceStatusInfo(item, item.deadline);
+                  const refDesc = formReferences.find(r => r.code === item.code)?.description;
+
+                  return (
+                    <div 
+                      key={`processing-modal-${item.clientId}-${item.id || item.code}`}
+                      onClick={() => handleOpenEditModal(item)}
+                      className="py-3 px-2 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-xl transition-colors cursor-pointer group gap-3"
+                    >
+                      <div className="flex items-center space-x-3 flex-1 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-100 dark:border-amber-900/50 flex items-center justify-center text-amber-700 dark:text-amber-300 font-bold text-xs shrink-0 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                          {item.code}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-bold text-slate-900 dark:text-white text-sm truncate">{item.clientName}</span>
+                            <span className="text-[11px] font-mono text-slate-400">({item.clientTin})</span>
+                          </div>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">{refDesc || item.description}</p>
+                          {item.notes && (
+                            <p className="text-[11px] text-amber-600 dark:text-amber-400 italic truncate">Note: {item.notes}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
+                        <div className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] border ${deadlineInfo.color}`}>
+                          {deadlineInfo.label} ({new Date(item.deadline || '').toLocaleDateString()})
+                        </div>
+
+                        {/* Tax Payable Choice */}
+                        <select
+                          value={item.taxStatus || ''}
+                          onChange={(e) => {
+                            const newTaxStatus = e.target.value as 'With Payable' | 'W/O Payable';
+                            const updates: Partial<BIRForm> = { taxStatus: newTaxStatus };
+                            if (newTaxStatus === 'W/O Payable') {
+                              updates.status = item.dateFiled ? 'Filed' : 'Processing';
+                            }
+                            if (onUpdateForm) {
+                              onUpdateForm(item.clientId, item.id, updates, {
+                                code: item.code,
+                                description: item.description,
+                                deadline: item.deadline || '',
+                                period: item.period || selectedPeriod,
+                                assignedPeriod: item.assignedPeriod
+                              });
+                            }
+                            if (newTaxStatus === 'With Payable') {
+                              handleOpenEditModal({ ...item, taxStatus: 'With Payable' });
+                            }
+                          }}
+                          className="text-xs font-bold rounded-lg px-2 py-1 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 cursor-pointer"
+                        >
+                          {!item.taxStatus && <option value="" disabled>Select Payable</option>}
+                          <option value="With Payable">With Payable</option>
+                          <option value="W/O Payable">W/O Payable</option>
+                        </select>
+
+                        {/* Date Filed inline if W/O Payable */}
+                        {item.taxStatus === 'W/O Payable' ? (
+                          <div className="flex items-center space-x-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-0.5">
+                            <span className="text-[10px] font-bold text-slate-500">Filed:</span>
+                            <input
+                              type="date"
+                              value={item.dateFiled || ''}
+                              onChange={(e) => {
+                                const dateVal = e.target.value;
+                                if (onUpdateForm) {
+                                  onUpdateForm(item.clientId, item.id, {
+                                    dateFiled: dateVal || undefined,
+                                    status: dateVal ? 'Filed' : 'Processing'
+                                  }, {
+                                    code: item.code,
+                                    description: item.description,
+                                    deadline: item.deadline || '',
+                                    period: item.period || selectedPeriod,
+                                    assignedPeriod: item.assignedPeriod
+                                  });
+                                }
+                              }}
+                              className="text-xs bg-transparent border-none p-0 text-slate-800 dark:text-slate-100 font-medium focus:outline-none"
+                            />
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleOpenEditModal(item)}
+                            className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-lg transition-colors flex items-center space-x-1 cursor-pointer"
+                          >
+                            <Edit3 className="w-3 h-3" />
+                            <span>Edit</span>
+                          </button>
+                        )}
+
+                        {/* Status Select */}
+                        <select
+                          value={item.status}
+                          onChange={(e) => handleQuickStatusChange(e, item)}
+                          className="text-xs font-bold rounded-lg px-2 py-1 bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border-none cursor-pointer"
+                        >
+                          <option value="Pending">Pending</option>
+                          <option value="Processing">In Processing</option>
+                          <option value="Filed">Filed</option>
+                          {item.taxStatus !== 'W/O Payable' && <option value="Paid">Paid</option>}
+                        </select>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
+              <span className="text-xs text-slate-500 font-mono">
+                Showing {filteredProcessingForms.length} of {processingFormsList.length} In Processing
+              </span>
+              <button
+                onClick={() => setIsInProcessingModalOpen(false)}
+                className="px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+              >
+                Close Modal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Reference Modal */}
       {editingForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-slate-900 dark:text-slate-100">
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
               <div className="flex items-center space-x-3">
