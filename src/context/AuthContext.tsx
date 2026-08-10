@@ -46,14 +46,24 @@ const DEFAULT_USERS = [
     name: 'Gerald (Super Admin)',
     email: 'thugz.gerald13@gmail.com',
     password: 'password123',
-    role: 'Super Admin',
+    role: 'Compliance Officer',
+    accountType: 'accountant' as const,
+    companyInfo: {
+      companyName: 'CAPO Management & Advisory Services',
+      cpaLicenseNo: 'CPA-0192834',
+    },
   },
   {
     id: 'super_admin_tagz',
     name: 'Gerald (Super Admin)',
     email: 'tagz.gerald13@gmail.com',
     password: 'password123',
-    role: 'Super Admin',
+    role: 'Compliance Officer',
+    accountType: 'accountant' as const,
+    companyInfo: {
+      companyName: 'CAPO Management & Advisory Services',
+      cpaLicenseNo: 'CPA-0192834',
+    },
   },
 ];
 
@@ -513,7 +523,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginAsClientPortal = (clientId: string, clientName: string, clientTin: string, clientEmail?: string, organizationId?: string) => {
     // Current officer details before launching client portal
     const officerEmail = (user && user.accountType !== 'business_owner' && user.email) ? user.email : (user?.syncedAccountantEmail || 'thugz.gerald13@gmail.com');
-    const officerName = (user && user.accountType !== 'business_owner') ? (user.companyInfo?.companyName || user.name) : (user?.syncedAccountantName || 'Gerald Tagz, CPA Practice Firm');
+    const officerName = (user && user.accountType !== 'business_owner') ? (user.companyInfo?.companyName || user.name) : (user?.syncedAccountantName || 'CAPO Management & Advisory Services');
 
     const normClientEmail = clientEmail ? clientEmail.toLowerCase().trim() : '';
     const normClientTin = clientTin ? clientTin.trim() : '';
@@ -987,7 +997,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!syncedAccName) {
       if (normAccEmail === 'thugz.gerald13@gmail.com') {
-        syncedAccName = 'Gerald Tagz, CPA';
+        syncedAccName = 'CAPO Management & Advisory Services';
       } else if (normAccEmail === 'mawcons.bir@gmail.com') {
         syncedAccName = 'MAW Tax & Accounting Services';
       } else {

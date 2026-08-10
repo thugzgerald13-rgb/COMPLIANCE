@@ -78,7 +78,7 @@ export function ClientDashboardModeModal({
             }
             if (list.length === 0) {
               list = [
-                { id: 'acc1', name: 'Gerald Tagz, CPA Practice Firm', email: 'thugz.gerald13@gmail.com', cpaLicenseNo: 'CPA-0192834' },
+                { id: 'acc1', name: 'CAPO Management & Advisory Services', email: 'thugz.gerald13@gmail.com', cpaLicenseNo: 'CPA-0192834' },
                 { id: 'acc2', name: 'MAW Tax & Accounting Services', email: 'mawcons.bir@gmail.com', cpaLicenseNo: 'CPA-0884120' }
               ];
             }
@@ -88,7 +88,7 @@ export function ClientDashboardModeModal({
         })
         .catch(() => {
           const defaultList = [
-            { id: 'acc1', name: 'Gerald Tagz, CPA Practice Firm', email: 'thugz.gerald13@gmail.com', cpaLicenseNo: 'CPA-0192834' },
+            { id: 'acc1', name: 'CAPO Management & Advisory Services', email: 'thugz.gerald13@gmail.com', cpaLicenseNo: 'CPA-0192834' },
             { id: 'acc2', name: 'MAW Tax & Accounting Services', email: 'mawcons.bir@gmail.com', cpaLicenseNo: 'CPA-0884120' }
           ];
           setAccountantList(defaultList);

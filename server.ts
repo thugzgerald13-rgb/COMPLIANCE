@@ -19,16 +19,26 @@ const DEFAULT_USERS = [
     name: 'Gerald (Super Admin)',
     email: 'thugz.gerald13@gmail.com',
     password: 'password123',
-    role: 'Super Admin',
+    role: 'Compliance Officer',
+    accountType: 'accountant',
     organization_id: 'org_main_practice',
+    companyInfo: {
+      companyName: 'CAPO Management & Advisory Services',
+      cpaLicenseNo: 'CPA-0192834',
+    },
   },
   {
     id: 'super_admin_tagz',
     name: 'Gerald (Super Admin)',
     email: 'tagz.gerald13@gmail.com',
     password: 'password123',
-    role: 'Super Admin',
+    role: 'Compliance Officer',
+    accountType: 'accountant',
     organization_id: 'org_main_practice',
+    companyInfo: {
+      companyName: 'CAPO Management & Advisory Services',
+      cpaLicenseNo: 'CPA-0192834',
+    },
   },
 ];
 
@@ -494,7 +504,7 @@ async function startServer() {
       accountants.push(
         {
           id: 'acc_tagz_cpa',
-          name: 'Gerald Tagz, CPA Practice Firm',
+          name: 'CAPO Management & Advisory Services',
           email: 'thugz.gerald13@gmail.com',
           role: 'Compliance Officer',
           accountType: 'accountant',

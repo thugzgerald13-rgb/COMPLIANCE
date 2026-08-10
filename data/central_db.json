@@ -1,0 +1,36 @@
+{
+  "users": [
+    {
+      "id": "super_admin_thugz",
+      "name": "Gerald (Super Admin)",
+      "email": "thugz.gerald13@gmail.com",
+      "password": "password123",
+      "role": "Compliance Officer",
+      "accountType": "accountant",
+      "organization_id": "org_main_practice",
+      "companyInfo": {
+        "companyName": "CAPO Management & Advisory Services",
+        "cpaLicenseNo": "CPA-0192834"
+      }
+    },
+    {
+      "id": "super_admin_tagz",
+      "name": "Gerald (Super Admin)",
+      "email": "tagz.gerald13@gmail.com",
+      "password": "password123",
+      "role": "Compliance Officer",
+      "accountType": "accountant",
+      "organization_id": "org_main_practice",
+      "companyInfo": {
+        "companyName": "CAPO Management & Advisory Services",
+        "cpaLicenseNo": "CPA-0192834"
+      }
+    }
+  ],
+  "clients": [],
+  "forms": [],
+  "user_clients": {},
+  "user_forms": {},
+  "logs": {},
+  "settings": {}
+}
