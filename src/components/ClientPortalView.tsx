@@ -93,13 +93,14 @@ export function ClientPortalView({
     forms: []
   } : null;
 
-  // Find the logged in client by user.clientId, user.email, or user.tin
+  // Find the logged in client by user.clientId, user.email, or matching TIN
+  const userTin = user?.companyInfo?.tin || user?.tin;
   const currentClient = clients.find(c => 
     c.id === user?.clientId || 
     (c.email && c.email.toLowerCase().trim() === user?.email?.toLowerCase().trim()) ||
-    c.tin === user?.tin ||
-    c.tin === user?.email // user logging in via TIN as email
-  ) || clients[0] || userFallbackClient;
+    (userTin && c.tin && c.tin === userTin) ||
+    (c.tin && c.tin === user?.email) // user logging in via TIN as email
+  ) || userFallbackClient;
 
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [selectedClientOverride, setSelectedClientOverride] = useState<string>(currentClient?.id || '');

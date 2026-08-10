@@ -311,13 +311,60 @@ async function startServer() {
     const db = readDB();
     if (!db.user_clients) db.user_clients = {};
 
-    let clientList = [];
+    let clientList: any[] = [];
     if (userEmail && db.user_clients[userEmail]) {
       clientList = db.user_clients[userEmail];
     } else if (userId && db.user_clients[userId]) {
       clientList = db.user_clients[userId];
     } else {
       clientList = db.clients || [];
+    }
+
+    // Special TIN / Shared Client Portal matching for business owners
+    const users = db.users || [];
+    const currentUser = users.find((u: any) => u.email && u.email.toLowerCase().trim() === userEmail);
+    if (currentUser && (currentUser.accountType === 'business_owner' || currentUser.role === 'Client')) {
+      const userTin = currentUser.companyInfo?.tin || currentUser.tin;
+      const syncedOfficerEmail = currentUser.syncedAccountantEmail ? currentUser.syncedAccountantEmail.toLowerCase().trim() : '';
+
+      let officerClients: any[] = [];
+      if (syncedOfficerEmail && db.user_clients[syncedOfficerEmail]) {
+        officerClients = db.user_clients[syncedOfficerEmail];
+      } else {
+        // Scan all user_clients for matching TIN or email
+        for (const list of Object.values(db.user_clients)) {
+          if (Array.isArray(list)) {
+            const matches = list.filter((c: any) => 
+              (c.email && c.email.toLowerCase().trim() === userEmail) ||
+              (userTin && c.tin === userTin)
+            );
+            if (matches.length > 0) {
+              officerClients.push(...matches);
+            }
+          }
+        }
+      }
+
+      const matchedOfficerClient = officerClients.find((c: any) => 
+        (c.email && c.email.toLowerCase().trim() === userEmail) ||
+        (userTin && c.tin === userTin)
+      );
+
+      const matchedGlobalClient = (db.clients || []).find((c: any) => 
+        (c.email && c.email.toLowerCase().trim() === userEmail) ||
+        (userTin && c.tin === userTin)
+      );
+
+      const matchedClient = matchedOfficerClient || matchedGlobalClient;
+
+      if (matchedClient) {
+        const idx = clientList.findIndex((c: any) => c.id === matchedClient.id || (userTin && c.tin === userTin));
+        if (idx !== -1) {
+          clientList[idx] = { ...clientList[idx], ...matchedClient };
+        } else {
+          clientList = [matchedClient, ...clientList];
+        }
+      }
     }
 
     res.json({ success: true, clients: clientList });

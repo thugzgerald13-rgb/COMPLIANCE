@@ -511,24 +511,75 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const loginAsClientPortal = (clientId: string, clientName: string, clientTin: string, clientEmail?: string, organizationId?: string) => {
+    // Current officer details before launching client portal
+    const officerEmail = (user && user.accountType !== 'business_owner' && user.email) ? user.email : (user?.syncedAccountantEmail || 'thugz.gerald13@gmail.com');
+    const officerName = (user && user.accountType !== 'business_owner') ? (user.companyInfo?.companyName || user.name) : (user?.syncedAccountantName || 'Gerald Tagz, CPA Practice Firm');
+
+    const normClientEmail = clientEmail ? clientEmail.toLowerCase().trim() : '';
+    const normClientTin = clientTin ? clientTin.trim() : '';
+
+    // Search registered users for matching TIN or Email
+    const matchedUser = allUsers.find(u => 
+      (normClientEmail && u.email?.toLowerCase().trim() === normClientEmail) ||
+      (normClientTin && (u.tin === normClientTin || u.companyInfo?.tin === normClientTin))
+    );
+
+    const targetEmail = matchedUser?.email || clientEmail || `${clientTin}@taxpayer.bizcomply.ph`;
+    const targetName = matchedUser?.companyInfo?.companyName || matchedUser?.name || clientName;
+
     const clientUser: User = {
-      id: clientId,
-      name: clientName,
-      email: clientEmail || `${clientTin}@taxpayer.bizcomply.ph`,
+      id: matchedUser?.id || clientId,
+      name: targetName,
+      email: targetEmail,
       role: 'Client',
       organization_id: organizationId || 'org_main_practice',
       clientId: clientId,
       tin: clientTin,
       accountType: 'business_owner',
-      clientDashboardMode: 'business_owner',
+      clientDashboardMode: 'shared_accountant',
+      syncedAccountantEmail: officerEmail,
+      syncedAccountantName: officerName,
+      isSyncedWithAccountant: true,
       companyInfo: {
-        companyName: clientName,
+        companyName: targetName,
         tin: clientTin,
-        rdo: '043',
+        rdo: matchedUser?.companyInfo?.rdo || '043',
       }
     };
+
     setUser(clientUser);
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(clientUser));
+
+    // Also persist sync link for matched registered Business Owner account
+    if (matchedUser) {
+      try {
+        const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
+        if (rawUsers) {
+          const usersList = JSON.parse(rawUsers);
+          const idx = usersList.findIndex((u: any) => u.id === matchedUser.id);
+          if (idx !== -1) {
+            usersList[idx].syncedAccountantEmail = officerEmail;
+            usersList[idx].syncedAccountantName = officerName;
+            usersList[idx].isSyncedWithAccountant = true;
+            usersList[idx].clientDashboardMode = 'shared_accountant';
+            localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
+          }
+        }
+      } catch (e) {}
+
+      fetch('/api/users/update-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: matchedUser.id,
+          email: matchedUser.email,
+          syncedAccountantEmail: officerEmail,
+          syncedAccountantName: officerName,
+          isSyncedWithAccountant: true,
+          clientDashboardMode: 'shared_accountant',
+        }),
+      }).catch(() => {});
+    }
   };
 
   const register = async (name: string, email: string, password: string, role: string) => {

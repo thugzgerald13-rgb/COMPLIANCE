@@ -42,12 +42,15 @@ export function ClientDashboardModeModal({
         })
         .then(data => {
           if (data && data.success && Array.isArray(data.accountants) && data.accountants.length > 0) {
-            const listWithCompanyNames = data.accountants.map((acc: any) => ({
+            const filtered = data.accountants.filter((acc: any) => acc.accountType !== 'business_owner');
+            const listWithCompanyNames = filtered.map((acc: any) => ({
               ...acc,
-              name: acc.name || acc.companyInfo?.companyName || 'Registered Compliance Firm',
+              name: acc.companyInfo?.companyName || acc.name || 'Registered Compliance Officer Practice',
             }));
             setAccountantList(listWithCompanyNames);
-            setSelectedAccEmail(listWithCompanyNames[0].email);
+            if (listWithCompanyNames.length > 0) {
+              setSelectedAccEmail(listWithCompanyNames[0].email);
+            }
           } else {
             // Local fallback accountants
             const rawUsers = localStorage.getItem('biz_comply_users_v2');
@@ -62,7 +65,7 @@ export function ClientDashboardModeModal({
                   )
                   .map((u: any) => ({
                     id: u.id,
-                    name: u.companyInfo?.companyName || u.name || 'Compliance CPA Firm',
+                    name: u.companyInfo?.companyName || u.name || 'Compliance Officer Practice',
                     email: u.email,
                     cpaLicenseNo: u.companyInfo?.cpaLicenseNo || 'CPA-0192834',
                   }));
@@ -103,7 +106,7 @@ export function ClientDashboardModeModal({
     e.preventDefault();
     const emailToSync = customAccEmail.trim() || selectedAccEmail;
     if (!emailToSync) {
-      setSyncError('Please enter or select a Registered Compliance CPA Firm email.');
+      setSyncError('Please enter or select a Registered Compliance Officer email.');
       return;
     }
 
@@ -120,7 +123,7 @@ export function ClientDashboardModeModal({
       setIsSyncStepOpen(false);
       onSelectMode('shared_accountant');
     } else {
-      setSyncError(result.message || 'Failed to sync with accountant.');
+      setSyncError(result.message || 'Failed to sync with compliance officer.');
     }
   };
 
@@ -190,7 +193,7 @@ export function ClientDashboardModeModal({
             <form onSubmit={handleExecuteSync} className="space-y-4 text-xs">
               {accountantList.length > 0 && (
                 <div>
-                  <label className="block text-slate-300 font-bold mb-1">Select Registered Compliance CPA Firm:</label>
+                  <label className="block text-slate-300 font-bold mb-1">Select Registered Compliance Officer:</label>
                   <select
                     value={selectedAccEmail}
                     onChange={(e) => setSelectedAccEmail(e.target.value)}
@@ -206,7 +209,7 @@ export function ClientDashboardModeModal({
               )}
 
               <div>
-                <label className="block text-slate-300 font-bold mb-1">Or Enter Accountant's Email Address:</label>
+                <label className="block text-slate-300 font-bold mb-1">Or Enter Compliance Officer's Email Address:</label>
                 <input
                   type="email"
                   value={customAccEmail}
