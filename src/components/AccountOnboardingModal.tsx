@@ -27,7 +27,7 @@ export function AccountOnboardingModal() {
   const [address, setAddress] = useState(user?.companyInfo?.address || '');
   const [phone, setPhone] = useState(user?.companyInfo?.phone || '');
   const [clientDashboardMode, setClientDashboardMode] = useState<'shared_accountant' | 'business_owner'>(
-    user?.clientDashboardMode || 'business_owner'
+    user?.clientDashboardMode || 'shared_accountant'
   );
 
   const [formError, setFormError] = useState<string | null>(null);

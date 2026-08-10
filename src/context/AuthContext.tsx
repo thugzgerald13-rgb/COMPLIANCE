@@ -877,7 +877,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       newRole = accountType === 'accountant' ? 'Compliance Officer' : 'Client';
     }
 
-    const effectiveDashboardMode = clientDashboardMode || (accountType === 'business_owner' ? 'business_owner' : 'shared_accountant');
+    const effectiveDashboardMode = clientDashboardMode || 'shared_accountant';
 
     const updatedUser: User = {
       ...user,

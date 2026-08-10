@@ -269,7 +269,7 @@ async function startServer() {
         role: role || 'Compliance Officer',
         accountType,
         companyInfo,
-        clientDashboardMode: clientDashboardMode || (accountType === 'business_owner' ? 'business_owner' : 'shared_accountant'),
+        clientDashboardMode: clientDashboardMode || 'shared_accountant',
         tin: companyInfo?.tin || tin,
         syncedAccountantEmail,
         syncedAccountantName,
