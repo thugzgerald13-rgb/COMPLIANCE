@@ -220,6 +220,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const tin = companyInfo?.tin || meta.tin || centralUser?.tin || localBackup?.tin;
             const clientId = meta.clientId || centralUser?.clientId || localBackup?.clientId;
 
+            const syncedAccountantEmail = centralUser?.syncedAccountantEmail || localBackup?.syncedAccountantEmail || meta.syncedAccountantEmail;
+            const syncedAccountantName = centralUser?.syncedAccountantName || localBackup?.syncedAccountantName || meta.syncedAccountantName;
+            const isSyncedWithAccountant = centralUser?.isSyncedWithAccountant ?? localBackup?.isSyncedWithAccountant ?? meta.isSyncedWithAccountant;
+
             const u: User = {
               id: session.user.id,
               name: companyInfo?.companyName || centralUser?.name || meta.full_name || localBackup?.name || session.user.email?.split('@')[0] || 'User',
@@ -230,6 +234,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               clientDashboardMode,
               tin,
               clientId,
+              syncedAccountantEmail,
+              syncedAccountantName,
+              isSyncedWithAccountant,
               organization_id: localBackup?.organization_id || 'org_main_practice',
             };
             setUser(u);
@@ -266,6 +273,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const tin = companyInfo?.tin || meta.tin || centralUser?.tin || localBackup?.tin;
             const clientId = meta.clientId || centralUser?.clientId || localBackup?.clientId;
 
+            const syncedAccountantEmail = centralUser?.syncedAccountantEmail || localBackup?.syncedAccountantEmail || meta.syncedAccountantEmail;
+            const syncedAccountantName = centralUser?.syncedAccountantName || localBackup?.syncedAccountantName || meta.syncedAccountantName;
+            const isSyncedWithAccountant = centralUser?.isSyncedWithAccountant ?? localBackup?.isSyncedWithAccountant ?? meta.isSyncedWithAccountant;
+
             const u: User = {
               id: session.user.id,
               name: companyInfo?.companyName || centralUser?.name || meta.full_name || localBackup?.name || session.user.email?.split('@')[0] || 'User',
@@ -276,6 +287,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               clientDashboardMode,
               tin,
               clientId,
+              syncedAccountantEmail,
+              syncedAccountantName,
+              isSyncedWithAccountant,
               organization_id: localBackup?.organization_id || 'org_main_practice',
             };
             setUser(u);
@@ -337,6 +351,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   companyInfo: central.companyInfo || parsed.companyInfo,
                   clientDashboardMode: central.clientDashboardMode || parsed.clientDashboardMode,
                   tin: central.companyInfo?.tin || central.tin || parsed.tin,
+                  syncedAccountantEmail: central.syncedAccountantEmail || parsed.syncedAccountantEmail,
+                  syncedAccountantName: central.syncedAccountantName || parsed.syncedAccountantName,
+                  isSyncedWithAccountant: central.isSyncedWithAccountant ?? parsed.isSyncedWithAccountant,
                 };
               }
             }
@@ -350,6 +367,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           parsed.clientDashboardMode = parsed.clientDashboardMode || localBackup.clientDashboardMode;
           parsed.tin = parsed.tin || localBackup.tin;
           parsed.clientId = parsed.clientId || localBackup.clientId;
+          parsed.syncedAccountantEmail = parsed.syncedAccountantEmail || localBackup.syncedAccountantEmail;
+          parsed.syncedAccountantName = parsed.syncedAccountantName || localBackup.syncedAccountantName;
+          parsed.isSyncedWithAccountant = parsed.isSyncedWithAccountant ?? localBackup.isSyncedWithAccountant;
         }
 
         setUser(parsed);
@@ -370,6 +390,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const data = await res.json();
         if (data.success && data.user) {
           const foundUser = data.user;
+          const localBackup = getLocalUserBackup(normalizedEmail, foundUser.id);
           if (foundUser.password && foundUser.password !== password) {
             return { success: false, message: 'Incorrect password. Please try again.' };
           }
@@ -385,6 +406,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             clientDashboardMode: foundUser.clientDashboardMode,
             accountType: foundUser.accountType,
             companyInfo: foundUser.companyInfo,
+            syncedAccountantEmail: foundUser.syncedAccountantEmail || localBackup?.syncedAccountantEmail,
+            syncedAccountantName: foundUser.syncedAccountantName || localBackup?.syncedAccountantName,
+            isSyncedWithAccountant: foundUser.isSyncedWithAccountant ?? localBackup?.isSyncedWithAccountant,
           };
 
           setUser(authenticatedUser);
@@ -425,6 +449,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           companyInfo,
           clientDashboardMode,
           tin,
+          syncedAccountantEmail: meta.syncedAccountantEmail || localBackup?.syncedAccountantEmail,
+          syncedAccountantName: meta.syncedAccountantName || localBackup?.syncedAccountantName,
+          isSyncedWithAccountant: meta.isSyncedWithAccountant ?? localBackup?.isSyncedWithAccountant,
         };
         setUser(authenticatedUser);
         localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
@@ -677,6 +704,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             companyInfo: u.companyInfo || centralUser?.companyInfo,
             tin: u.companyInfo?.tin || u.tin || centralUser?.tin,
             clientId: u.clientId,
+            syncedAccountantEmail: u.syncedAccountantEmail || centralUser?.syncedAccountantEmail,
+            syncedAccountantName: u.syncedAccountantName || centralUser?.syncedAccountantName,
+            isSyncedWithAccountant: u.isSyncedWithAccountant ?? centralUser?.isSyncedWithAccountant,
             organization_id: u.organization_id || 'org_main_practice',
           };
           refreshUsersList();
@@ -710,6 +740,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         companyInfo: existing.companyInfo,
         tin: existing.companyInfo?.tin || existing.tin,
         clientId: existing.clientId,
+        syncedAccountantEmail: existing.syncedAccountantEmail,
+        syncedAccountantName: existing.syncedAccountantName,
+        isSyncedWithAccountant: existing.isSyncedWithAccountant,
       };
     } else {
       const newUserObj = {
@@ -901,15 +934,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       const data = await res.json();
       if (data.success) {
+        const accName = data.accountant?.name || accountantName || 'Designated CPA Firm';
         const updatedUser: User = {
           ...user,
           syncedAccountantEmail: accountantEmail,
-          syncedAccountantName: data.accountant?.name || accountantName,
+          syncedAccountantName: accName,
           isSyncedWithAccountant: true,
           clientDashboardMode: 'shared_accountant',
         };
         setUser(updatedUser);
         localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+
+        // Backup to USERS_STORAGE_KEY
+        try {
+          const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
+          if (rawUsers) {
+            const usersList = JSON.parse(rawUsers);
+            const normEmail = user.email.toLowerCase().trim();
+            const idx = usersList.findIndex((u: any) => u.id === user.id || (u.email && u.email.toLowerCase().trim() === normEmail));
+            if (idx !== -1) {
+              usersList[idx].syncedAccountantEmail = accountantEmail;
+              usersList[idx].syncedAccountantName = accName;
+              usersList[idx].isSyncedWithAccountant = true;
+              usersList[idx].clientDashboardMode = 'shared_accountant';
+              localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
+            }
+          }
+        } catch (e) {}
+
+        // Persist to Central Server
+        try {
+          await fetch('/api/users/update-profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: user.id,
+              email: user.email,
+              syncedAccountantEmail: accountantEmail,
+              syncedAccountantName: accName,
+              isSyncedWithAccountant: true,
+              clientDashboardMode: 'shared_accountant',
+            }),
+          });
+        } catch (e) {}
+
         refreshUsersList();
         return { success: true, accountant: data.accountant, message: data.message };
       }

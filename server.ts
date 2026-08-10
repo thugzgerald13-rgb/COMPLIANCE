@@ -246,7 +246,7 @@ async function startServer() {
 
   // UPDATE user profile (onboarding & dashboard mode)
   app.post('/api/users/update-profile', (req, res) => {
-    const { id, email, accountType, companyInfo, clientDashboardMode, name, role, tin } = req.body || {};
+    const { id, email, accountType, companyInfo, clientDashboardMode, name, role, tin, syncedAccountantEmail, syncedAccountantName, isSyncedWithAccountant } = req.body || {};
     if (!id && !email) {
       return res.status(400).json({ success: false, message: 'User ID or Email is required' });
     }
@@ -270,6 +270,9 @@ async function startServer() {
         companyInfo,
         clientDashboardMode: clientDashboardMode || (accountType === 'business_owner' ? 'business_owner' : 'shared_accountant'),
         tin: companyInfo?.tin || tin,
+        syncedAccountantEmail,
+        syncedAccountantName,
+        isSyncedWithAccountant: isSyncedWithAccountant ?? false,
         organization_id: 'org_main_practice',
         updatedAt: new Date().toISOString(),
       };
@@ -288,6 +291,9 @@ async function startServer() {
       clientDashboardMode: clientDashboardMode !== undefined ? clientDashboardMode : existing.clientDashboardMode,
       role: role || existing.role,
       tin: companyInfo?.tin || tin || existing.tin,
+      syncedAccountantEmail: syncedAccountantEmail !== undefined ? syncedAccountantEmail : existing.syncedAccountantEmail,
+      syncedAccountantName: syncedAccountantName !== undefined ? syncedAccountantName : existing.syncedAccountantName,
+      isSyncedWithAccountant: isSyncedWithAccountant !== undefined ? isSyncedWithAccountant : existing.isSyncedWithAccountant,
       updatedAt: new Date().toISOString(),
     };
 
@@ -549,26 +555,54 @@ async function startServer() {
       });
     }
 
-    // Ensure client is present in accountant's user_clients array
+    // Ensure client is present in accountant's user_clients array and global clients list
     if (!db.user_clients) db.user_clients = {};
-    const accClients = db.user_clients[normAccEmail] || db.clients || [];
-    const clientExists = accClients.some((c: any) => c.email && c.email.toLowerCase().trim() === normClientEmail);
+    if (!db.clients) db.clients = [];
 
-    if (!clientExists) {
-      const clientUser = users.find((u: any) => u.email && u.email.toLowerCase().trim() === normClientEmail);
+    const accClients = db.user_clients[normAccEmail] || [];
+    const clientUser = users.find((u: any) => u.email && u.email.toLowerCase().trim() === normClientEmail);
+
+    const clientName = clientUser?.companyInfo?.companyName || clientUser?.name || normClientEmail.split('@')[0];
+    const clientTin = clientUser?.companyInfo?.tin || clientUser?.tin || '000-000-000-00000';
+    const clientRdo = clientUser?.companyInfo?.rdo || '043';
+
+    const accClientIdx = accClients.findIndex((c: any) => c.email && c.email.toLowerCase().trim() === normClientEmail);
+    if (accClientIdx !== -1) {
+      accClients[accClientIdx].name = clientName;
+      accClients[accClientIdx].tin = clientTin;
+      accClients[accClientIdx].rdo = clientRdo;
+    } else {
       const newClientRecord = {
         id: clientUser?.clientId || 'client_' + Date.now(),
-        name: clientUser?.companyInfo?.companyName || clientUser?.name || normClientEmail.split('@')[0],
+        name: clientName,
         email: normClientEmail,
-        tin: clientUser?.companyInfo?.tin || clientUser?.tin || '000-000-000-00000',
-        rdo: clientUser?.companyInfo?.rdo || '043',
+        tin: clientTin,
+        rdo: clientRdo,
         type: 'Corporate',
         status: 'Active',
         forms: [],
       };
       accClients.push(newClientRecord);
-      db.user_clients[normAccEmail] = accClients;
-      db.clients = accClients;
+    }
+    db.user_clients[normAccEmail] = accClients;
+
+    // Also update or add in db.clients
+    const globalIdx = db.clients.findIndex((c: any) => c.email && c.email.toLowerCase().trim() === normClientEmail);
+    if (globalIdx !== -1) {
+      db.clients[globalIdx].name = clientName;
+      db.clients[globalIdx].tin = clientTin;
+      db.clients[globalIdx].rdo = clientRdo;
+    } else {
+      db.clients.push({
+        id: clientUser?.clientId || 'client_' + Date.now(),
+        name: clientName,
+        email: normClientEmail,
+        tin: clientTin,
+        rdo: clientRdo,
+        type: 'Corporate',
+        status: 'Active',
+        forms: [],
+      });
     }
 
     db.users = users;

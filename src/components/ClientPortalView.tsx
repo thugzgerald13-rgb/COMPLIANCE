@@ -71,8 +71,14 @@ export function ClientPortalView({
   onRemoveFormFromClient,
   onSwitchBackToPractice
 }: ClientPortalViewProps) {
-  const { user, isSuperAdmin, logout, switchUser, allUsers, updateUserDashboardMode } = useAuth();
+  const { user, isSuperAdmin, logout, switchUser, allUsers, updateUserDashboardMode, checkAccountantSyncStatus } = useAuth();
   const { theme, toggleTheme } = useTheme();
+
+  useEffect(() => {
+    if (user?.email) {
+      checkAccountantSyncStatus();
+    }
+  }, [user?.email]);
 
   const userFallbackClient: Client | null = user ? {
     id: user.clientId || `client-${user.id}`,
