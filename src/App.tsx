@@ -51,7 +51,7 @@ function MainContent() {
     return <AccountOnboardingModal />;
   }
 
-  if (user.role === 'Client') {
+  if (user.role === 'Client' || user.accountType === 'business_owner') {
     return (
       <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
         <OfflineSyncBanner />

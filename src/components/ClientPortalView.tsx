@@ -123,7 +123,7 @@ export function ClientPortalView({
   }) || clients[0] || userFallbackClient;
 
   const [copiedField, setCopiedField] = useState<string | null>(null);
-  const [selectedClientOverride, setSelectedClientOverride] = useState<string>(currentClient?.id || '');
+  const [selectedClientOverride, setSelectedClientOverride] = useState<string>('');
   const [supportMessage, setSupportMessage] = useState('');
   const [supportSentMsg, setSupportSentMsg] = useState(false);
   const [paymentReceiptForm, setPaymentReceiptForm] = useState<BIRForm | null>(null);
@@ -156,7 +156,7 @@ export function ClientPortalView({
   };
 
   // Effective active client
-  const activeClient = clients.find(c => c.id === (selectedClientOverride || currentClient?.id)) || currentClient || userFallbackClient;
+  const activeClient = (selectedClientOverride ? clients.find(c => c.id === selectedClientOverride) : null) || currentClient || userFallbackClient;
 
   if (!activeClient) {
     return (

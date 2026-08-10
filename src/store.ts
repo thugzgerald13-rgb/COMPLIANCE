@@ -174,8 +174,19 @@ export function useClients() {
 
       // 2. Sync from Central Storage Server
       try {
-        const emailParam = user?.email ? `?email=${encodeURIComponent(user.email)}&userId=${encodeURIComponent(user.id)}` : '';
-        const res = await fetch(`/api/clients${emailParam}`);
+        const userEmail = user?.email || '';
+        const userTin = user?.companyInfo?.tin || user?.tin || '';
+        const userName = user?.companyInfo?.companyName || user?.name || '';
+        const userClientId = user?.clientId || user?.id || '';
+
+        const params = new URLSearchParams();
+        if (userEmail) params.append('email', userEmail);
+        if (user?.id) params.append('userId', user.id);
+        if (userTin) params.append('tin', userTin);
+        if (userName) params.append('name', userName);
+        if (userClientId) params.append('clientId', userClientId);
+
+        const res = await fetch(`/api/clients?${params.toString()}`);
         if (res.ok) {
           const data = await res.json();
           if (data.success && Array.isArray(data.clients) && data.clients.length > 0) {

@@ -140,6 +140,10 @@ function isClientMatch(c: any, email?: string, tin?: string, name?: string, clie
     if (cName.length >= 5 && targetName.length >= 5 && (cName.includes(targetName) || targetName.includes(cName))) return true;
   }
 
+  // 5. TIN contained in Email or Email contained in TIN
+  if (cTin && cTin.length >= 9 && targetEmail && targetEmail.includes(cTin.slice(0, 9))) return true;
+  if (targetTin && targetTin.length >= 9 && cEmail && cEmail.includes(targetTin.slice(0, 9))) return true;
+
   return false;
 }
 
@@ -367,29 +371,39 @@ async function startServer() {
   app.get('/api/clients', (req, res) => {
     const userEmail = req.query.email ? String(req.query.email).toLowerCase().trim() : '';
     const userId = req.query.userId ? String(req.query.userId) : '';
+    const queryTin = req.query.tin ? String(req.query.tin).trim() : '';
+    const queryName = req.query.name ? String(req.query.name).trim() : '';
+    const queryClientId = req.query.clientId ? String(req.query.clientId).trim() : '';
+
     const db = readDB();
     if (!db.user_clients) db.user_clients = {};
 
     const users = db.users || [];
     const currentUser = users.find((u: any) => 
       (userEmail && u.email && u.email.toLowerCase().trim() === userEmail) ||
-      (userId && u.id === userId)
+      (userId && u.id === userId) ||
+      (queryTin && (u.tin === queryTin || u.companyInfo?.tin === queryTin))
     );
 
-    const isBusinessOwner = currentUser?.accountType === 'business_owner' || currentUser?.role === 'Client';
+    const isComplianceOfficer = currentUser && (
+      currentUser.accountType === 'compliance_officer' || 
+      currentUser.role === 'Compliance Officer' || 
+      currentUser.role === 'Super Admin' || 
+      currentUser.role === 'Tax Officer'
+    );
 
-    if (isBusinessOwner) {
-      const boEmail = currentUser?.email || userEmail;
-      const boTin = currentUser?.companyInfo?.tin || currentUser?.tin;
-      const boName = currentUser?.companyInfo?.companyName || currentUser?.name;
-      const boId = currentUser?.id || userId;
-      const boClientId = currentUser?.clientId;
+    if (!isComplianceOfficer) {
+      const boEmail = userEmail || currentUser?.email || '';
+      const boTin = queryTin || currentUser?.companyInfo?.tin || currentUser?.tin || '';
+      const boName = queryName || currentUser?.companyInfo?.companyName || currentUser?.name || '';
+      const boId = userId || currentUser?.id || '';
+      const boClientId = queryClientId || currentUser?.clientId || '';
       const syncedOfficerEmail = currentUser?.syncedAccountantEmail ? currentUser.syncedAccountantEmail.toLowerCase().trim() : '';
 
       const matchedClients: any[] = [];
       const matchedClientKeys = new Set<string>();
 
-      const addMatched = (c: any, officerKey?: string) => {
+      const addMatched = (c: any) => {
         if (!c) return;
         const key = c.id || c.name || c.tin;
         if (key && !matchedClientKeys.has(key)) {
@@ -404,7 +418,7 @@ async function startServer() {
         if (Array.isArray(list)) {
           for (const c of list) {
             if (isClientMatch(c, boEmail, boTin, boName, boClientId || boId)) {
-              addMatched(c, syncedOfficerEmail);
+              addMatched(c);
             }
           }
         }
@@ -416,7 +430,7 @@ async function startServer() {
         if (Array.isArray(list)) {
           for (const c of list) {
             if (isClientMatch(c, boEmail, boTin, boName, boClientId || boId)) {
-              addMatched(c, key);
+              addMatched(c);
 
               // Auto-sync officer link on business owner profile if missing
               if (currentUser && !currentUser.syncedAccountantEmail) {
@@ -460,7 +474,8 @@ async function startServer() {
         return res.json({ success: true, clients: matchedClients });
       }
 
-      return res.json({ success: true, clients: boList });
+      const fallbackList = boList.length > 0 ? boList : (Array.isArray(db.clients) ? db.clients : []);
+      return res.json({ success: true, clients: fallbackList });
     }
 
     // For Compliance Officers / Accountants
