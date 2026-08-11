@@ -17,7 +17,6 @@ export interface User {
   name: string;
   email: string;
   role: string;
-  organization_id?: string;
   clientId?: string;
   tin?: string;
   clientDashboardMode?: 'shared_accountant' | 'business_owner';
@@ -77,7 +76,6 @@ export interface Client {
   notifyEmail?: boolean;
   notifyPhone?: boolean;
   forms: BIRForm[];
-  organization_id?: string;
 }
 
 export interface NotificationLog {

@@ -247,7 +247,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               syncedAccountantEmail,
               syncedAccountantName,
               isSyncedWithAccountant,
-              organization_id: localBackup?.organization_id || 'org_main_practice',
             };
             setUser(u);
             localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(u));
@@ -300,7 +299,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               syncedAccountantEmail,
               syncedAccountantName,
               isSyncedWithAccountant,
-              organization_id: localBackup?.organization_id || 'org_main_practice',
             };
             setUser(u);
             localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(u));
@@ -410,7 +408,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             name: foundUser.companyInfo?.companyName || foundUser.name,
             email: foundUser.email,
             role: isSuperAdminEmail(foundUser.email) ? 'Super Admin' : (foundUser.role || 'Compliance Officer'),
-            organization_id: foundUser.organization_id || 'org_main_practice',
             clientId: foundUser.clientId,
             tin: foundUser.companyInfo?.tin || foundUser.tin,
             clientDashboardMode: foundUser.clientDashboardMode,
@@ -454,7 +451,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           name: companyInfo?.companyName || meta.full_name || localBackup?.name || data.user.email?.split('@')[0] || 'User',
           email: userEmail,
           role: isSuperAdminEmail(userEmail) ? 'Super Admin' : (meta.role || localBackup?.role || 'Compliance Officer'),
-          organization_id: 'org_main_practice',
           accountType,
           companyInfo,
           clientDashboardMode,
@@ -504,7 +500,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name: foundUser.companyInfo?.companyName || foundUser.name,
         email: foundUser.email,
         role: isSuperAdminEmail(foundUser.email) ? 'Super Admin' : (foundUser.role || 'Compliance Officer'),
-        organization_id: foundUser.organization_id || 'org_main_practice',
         clientId: foundUser.clientId,
         tin: foundUser.companyInfo?.tin || foundUser.tin,
         clientDashboardMode: foundUser.clientDashboardMode,
@@ -520,7 +515,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: false, message: 'No user account found with this email address. Please check your credentials or register.' };
   };
 
-  const loginAsClientPortal = (clientId: string, clientName: string, clientTin: string, clientEmail?: string, organizationId?: string) => {
+  const loginAsClientPortal = (clientId: string, clientName: string, clientTin: string, clientEmail?: string) => {
     // Current officer details before launching client portal
     const officerEmail = (user && user.accountType !== 'business_owner' && user.email) ? user.email : (user?.syncedAccountantEmail || 'thugz.gerald13@gmail.com');
     const officerName = (user && user.accountType !== 'business_owner') ? (user.companyInfo?.companyName || user.name) : (user?.syncedAccountantName || 'CAPO Management & Advisory Services');
@@ -553,7 +548,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       name: targetName,
       email: targetEmail,
       role: 'Client',
-      organization_id: organizationId || 'org_main_practice',
       clientId: clientId,
       tin: clientTin,
       accountType: 'business_owner',
@@ -630,7 +624,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             name: newUserObj.name,
             email: newUserObj.email,
             role: assignedRole,
-            organization_id: 'org_main_practice',
             accountType: newUserObj.accountType,
             companyInfo: newUserObj.companyInfo,
             clientDashboardMode: newUserObj.clientDashboardMode,
@@ -674,7 +667,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: normalizedEmail,
       password,
       role: assignedRole,
-      organization_id: 'org_main_practice',
     };
 
     const updatedUsers = [...usersList, newUserObj];
@@ -686,7 +678,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       name: newUserObj.name,
       email: newUserObj.email,
       role: newUserObj.role,
-      organization_id: newUserObj.organization_id,
     };
 
     setUser(authenticatedUser);
@@ -739,7 +730,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         companyInfo: centralUser.companyInfo,
         tin: centralUser.companyInfo?.tin || centralUser.tin,
         clientId: centralUser.clientId,
-        organization_id: centralUser.organization_id || 'org_main_practice',
       };
       refreshUsersList();
       setUser(googleUser);
@@ -779,7 +769,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             syncedAccountantEmail: u.syncedAccountantEmail || centralUser?.syncedAccountantEmail,
             syncedAccountantName: u.syncedAccountantName || centralUser?.syncedAccountantName,
             isSyncedWithAccountant: u.isSyncedWithAccountant ?? centralUser?.isSyncedWithAccountant,
-            organization_id: u.organization_id || 'org_main_practice',
           };
           refreshUsersList();
           setUser(googleUser);
@@ -966,7 +955,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: newRole,
         tin: companyInfo.tin || user.tin,
         clientDashboardMode: effectiveDashboardMode,
-        organization_id: user.organization_id || 'org_main_practice',
       });
     }
 
@@ -1187,7 +1175,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name: target.companyInfo?.companyName || target.name,
         email: target.email,
         role: target.role || 'Compliance Officer',
-        organization_id: target.organization_id || 'org_main_practice',
         clientId: target.clientId,
         tin: target.companyInfo?.tin || target.tin,
         clientDashboardMode: target.clientDashboardMode,

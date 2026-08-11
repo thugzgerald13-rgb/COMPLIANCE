@@ -249,8 +249,6 @@ export function ClientPortalView({
                 <span>•</span>
                 <span>RDO: <strong className="text-slate-200">{activeClient.rdo}</strong> ({getRDOLocationDisplay(activeClient.rdo)})</span>
                 <span>•</span>
-                <span>Org ID: <strong className="text-indigo-300 font-mono bg-indigo-500/20 border border-indigo-400/30 px-1.5 py-0.2 rounded">{activeClient.organization_id || user?.organization_id || 'org_main_practice'}</strong></span>
-                <span>•</span>
                 <span className="text-amber-400 font-medium">{activeClient.type} Taxpayer</span>
               </p>
             </div>

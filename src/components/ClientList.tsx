@@ -460,12 +460,6 @@ export function ClientList({
                             {client.email || 'Default System Email'}
                           </span>
                         </div>
-                        <div className="flex items-center space-x-1.5 ml-0 sm:ml-2">
-                          <span className="font-semibold text-slate-700 dark:text-slate-200">Org ID:</span>
-                          <span className="text-indigo-600 dark:text-indigo-400 font-mono bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-800/50">
-                            {client.organization_id || 'org_main_practice'}
-                          </span>
-                        </div>
                       </div>
 
                       <div className="flex items-center space-x-2">

@@ -123,7 +123,6 @@ export const generateInitialClients = (): Client[] => {
       tin: generateTIN(),
       rdo: String(Math.floor(20 + Math.random() * 80)).padStart(3, '0'),
       type: isCorporate ? 'Corporate' : 'Individual',
-      organization_id: index % 2 === 0 ? 'org_main_practice' : 'org_metro_branch',
       forms: getRandomForms(isCorporate),
     };
   });
