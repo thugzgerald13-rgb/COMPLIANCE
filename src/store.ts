@@ -5,12 +5,27 @@ import { useAuth } from './context/AuthContext';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 
 const FORMS_STORAGE_KEY = 'bir_monitor_forms_v2';
+const OFFLINE_SYNC_QUEUE_KEY = 'bizcomply_offline_sync_queue_v1';
+
+function readQueuedOfflineActions(): unknown[] {
+  try {
+    const stored = localStorage.getItem(OFFLINE_SYNC_QUEUE_KEY);
+    if (!stored) return [];
+
+    const queue = JSON.parse(stored);
+    return Array.isArray(queue) ? queue : [];
+  } catch {
+    return [];
+  }
+}
+
+function hasQueuedOfflineActions(): boolean {
+  return readQueuedOfflineActions().length > 0;
+}
 
 function recordOfflineAction(type: 'UPDATE_FORM' | 'ADD_CLIENT' | 'DELETE_CLIENT' | 'ADD_FORM_TO_CLIENT' | 'REMOVE_FORM' | 'UPDATE_PAYABLE', description: string, payload: any) {
   try {
-    const QUEUE_KEY = 'bizcomply_offline_sync_queue_v1';
-    const stored = localStorage.getItem(QUEUE_KEY);
-    const queue = stored ? JSON.parse(stored) : [];
+    const queue = readQueuedOfflineActions();
     const newAction = {
       id: crypto.randomUUID(),
       type,
@@ -19,7 +34,7 @@ function recordOfflineAction(type: 'UPDATE_FORM' | 'ADD_CLIENT' | 'DELETE_CLIENT
       payload
     };
     queue.unshift(newAction);
-    localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+    localStorage.setItem(OFFLINE_SYNC_QUEUE_KEY, JSON.stringify(queue));
     window.dispatchEvent(new Event('bizcomply_offline_queue_updated'));
   } catch (e) {
     console.warn('Failed to record offline action:', e);
@@ -340,7 +355,7 @@ export function useClients() {
       return client;
     });
     
-    if (!navigator.onLine || localStorage.getItem('bizcomply_offline_sync_queue_v1')) {
+    if (!navigator.onLine || hasQueuedOfflineActions()) {
       const formCode = formMeta?.code || 'BIR Form';
       const statusText = updates.status ? `status to ${updates.status}` : 'details';
       recordOfflineAction('UPDATE_FORM', `Updated ${formCode} ${statusText} for ${clientName}`, { clientId, formId, updates });
@@ -351,7 +366,7 @@ export function useClients() {
 
   const addClient = (client: Client) => {
     const updatedClients = [client, ...clients];
-    if (!navigator.onLine || localStorage.getItem('bizcomply_offline_sync_queue_v1')) {
+    if (!navigator.onLine || hasQueuedOfflineActions()) {
       recordOfflineAction('ADD_CLIENT', `Added new client entity ${client.name} (TIN: ${client.tin})`, client);
     }
     saveClients(updatedClients);
@@ -360,7 +375,7 @@ export function useClients() {
   const deleteClient = (clientId: string) => {
     const target = clients.find(c => c.id === clientId);
     const updatedClients = clients.filter(c => c.id !== clientId);
-    if (!navigator.onLine || localStorage.getItem('bizcomply_offline_sync_queue_v1')) {
+    if (!navigator.onLine || hasQueuedOfflineActions()) {
       recordOfflineAction('DELETE_CLIENT', `Removed client entity ${target?.name || clientId}`, { clientId });
     }
     saveClients(updatedClients);

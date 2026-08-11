@@ -26,6 +26,18 @@ const LAST_SYNC_KEY = 'bizcomply_last_sync_timestamp_v1';
 
 const OfflineSyncContext = createContext<OfflineSyncContextType | undefined>(undefined);
 
+function readStoredQueue(): OfflineAction[] {
+  try {
+    const stored = localStorage.getItem(STORAGE_QUEUE_KEY);
+    if (!stored) return [];
+
+    const queue = JSON.parse(stored);
+    return Array.isArray(queue) ? queue : [];
+  } catch {
+    return [];
+  }
+}
+
 export const OfflineSyncProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const [simulatedOfflineMode, setSimulatedOfflineMode] = useState<boolean>(false);
@@ -33,21 +45,18 @@ export const OfflineSyncProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(() => {
     return localStorage.getItem(LAST_SYNC_KEY) || null;
   });
-  const [pendingActions, setPendingActions] = useState<OfflineAction[]>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_QUEUE_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [pendingActions, setPendingActions] = useState<OfflineAction[]>(readStoredQueue);
 
   // Effective online state taking simulation into account
   const effectiveOnline = isOnline && !simulatedOfflineMode;
 
   // Persist queue changes
   useEffect(() => {
-    localStorage.setItem(STORAGE_QUEUE_KEY, JSON.stringify(pendingActions));
+    if (pendingActions.length > 0) {
+      localStorage.setItem(STORAGE_QUEUE_KEY, JSON.stringify(pendingActions));
+    } else {
+      localStorage.removeItem(STORAGE_QUEUE_KEY);
+    }
   }, [pendingActions]);
 
   // Monitor network online/offline events
@@ -65,10 +74,7 @@ export const OfflineSyncProvider: React.FC<{ children: ReactNode }> = ({ childre
     };
 
     const handleQueueUpdated = () => {
-      try {
-        const stored = localStorage.getItem(STORAGE_QUEUE_KEY);
-        setPendingActions(stored ? JSON.parse(stored) : []);
-      } catch (e) {}
+      setPendingActions(readStoredQueue());
     };
 
     window.addEventListener('online', handleOnline);
@@ -76,33 +82,31 @@ export const OfflineSyncProvider: React.FC<{ children: ReactNode }> = ({ childre
     window.addEventListener('bizcomply_offline_queue_updated', handleQueueUpdated);
 
     // Listen to Service Worker message triggers
+    const handleServiceWorkerMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'TRIGGER_OFFLINE_SYNC') {
+        triggerAutoSync();
+      }
+    };
+
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.addEventListener('message', (event) => {
-        if (event.data && event.data.type === 'TRIGGER_OFFLINE_SYNC') {
-          triggerAutoSync();
-        }
-      });
+      navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
     }
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('bizcomply_offline_queue_updated', handleQueueUpdated);
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
+      }
     };
   }, []);
 
   const triggerAutoSync = async () => {
     if (!navigator.onLine) return;
-    const currentQueueStr = localStorage.getItem(STORAGE_QUEUE_KEY);
-    if (currentQueueStr) {
-      try {
-        const queue: OfflineAction[] = JSON.parse(currentQueueStr);
-        if (queue.length > 0) {
-          await processQueue(queue);
-        }
-      } catch (e) {
-        console.warn('Error reading offline queue:', e);
-      }
+    const queue = readStoredQueue();
+    if (queue.length > 0) {
+      await processQueue(queue);
     }
   };
 
