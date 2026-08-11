@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Client, FormStatus, FormReference, BIRForm, TaxPayerType } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { Search, ChevronDown, ChevronRight, FileText, Plus, Trash2, XCircle, Users, Mail, Edit3, Building2, Filter, ArrowUpDown, Clock, Calendar, RotateCcw, X, CheckCircle2, MessageSquare } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, FileText, Plus, Trash2, XCircle, Users, Mail, Edit3, Building2, Filter, ArrowUpDown, Clock, Calendar, RotateCcw, X, CheckCircle2, MessageSquare, Share2 } from 'lucide-react';
 import { AddClientModal } from './AddClientModal';
 import { UpdatePayableModal } from './UpdatePayableModal';
+import { ShareClientPortalModal } from './ShareClientPortalModal';
 import { isFormAllowedForTaxpayerType, calculateDeadline, isFormVisibleForPeriod, getEffectiveDeadline, getComplianceStatusInfo, getComplianceDeadlineForPeriod, getFormsForClientAndPeriod } from '../utils';
 import { getRDOLocationDisplay } from '../rdoData';
 
@@ -43,6 +44,7 @@ export function ClientList({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedRefToAdd, setSelectedRefToAdd] = useState<{ [clientId: string]: string }>({});
   const [deletingFormState, setDeletingFormState] = useState<{ clientId: string; formId: string; formCode: string; clientName: string } | null>(null);
+  const [sharingClient, setSharingClient] = useState<Client | null>(null);
   const [payableModalForm, setPayableModalForm] = useState<{
     clientId: string;
     clientName: string;
@@ -481,6 +483,18 @@ export function ClientList({
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
+                            setSharingClient(client);
+                          }}
+                          className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-400 border border-blue-500/30 transition-colors cursor-pointer"
+                          title="Share Client Portal with Business Owner by TIN #"
+                        >
+                          <Share2 className="w-3.5 h-3.5" />
+                          <span>Share Client Portal</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
                             loginAsClientPortal(client.id, client.name, client.tin, client.email);
                           }}
                           className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 transition-colors cursor-pointer"
@@ -771,6 +785,12 @@ export function ClientList({
           </div>
         </div>
       )}
+      {/* Share Client Portal Modal */}
+      <ShareClientPortalModal
+        isOpen={!!sharingClient}
+        onClose={() => setSharingClient(null)}
+        client={sharingClient}
+      />
     </div>
   );
 }

@@ -30,8 +30,10 @@ import {
   Plus,
   Trash2,
   SlidersHorizontal,
+  Share2,
   X
 } from 'lucide-react';
+import { ShareClientPortalModal } from './ShareClientPortalModal';
 import { getFormsForClientAndPeriod, getEffectiveDeadline, getComplianceStatusInfo } from '../utils';
 import { getRDOLocationDisplay } from '../rdoData';
 
@@ -140,6 +142,9 @@ export function ClientPortalView({
 
   // Quick Messaging Modal state for Business Owners
   const [isMessagingModalOpen, setIsMessagingModalOpen] = useState(false);
+
+  // Share Portal Modal state
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   useEffect(() => {
     // If client user logged in for first time without selecting a dashboard setup mode, prompt modal
@@ -285,6 +290,16 @@ export function ClientPortalView({
                 </select>
               </div>
             )}
+
+            {/* Share Portal Button */}
+            <button
+              onClick={() => setIsShareModalOpen(true)}
+              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center space-x-1.5 shadow-lg shadow-indigo-900/30"
+              title="Share this Client Portal with Business Owner by TIN #"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span>Share Portal</span>
+            </button>
 
             {/* Messaging Quick Button */}
             <button
@@ -911,6 +926,13 @@ export function ClientPortalView({
           </div>
         </div>
       )}
+
+      {/* Share Client Portal Modal */}
+      <ShareClientPortalModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        client={activeClient}
+      />
 
     </div>
   );
