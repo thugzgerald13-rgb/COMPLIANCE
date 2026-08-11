@@ -46,7 +46,7 @@ export function AuthPage() {
   const [googleAccounts, setGoogleAccounts] = useState<GoogleAccount[]>([]);
 
   useEffect(() => {
-    const rawSaved = localStorage.getItem(SAVED_GOOGLE_ACCOUNTS_KEY);
+    const rawSaved = sessionStorage.getItem(SAVED_GOOGLE_ACCOUNTS_KEY);
     if (rawSaved) {
       try {
         const parsed = JSON.parse(rawSaved);
@@ -63,7 +63,7 @@ export function AuthPage() {
 
   const saveAccountsList = (list: GoogleAccount[]) => {
     setGoogleAccounts(list);
-    localStorage.setItem(SAVED_GOOGLE_ACCOUNTS_KEY, JSON.stringify(list));
+    sessionStorage.setItem(SAVED_GOOGLE_ACCOUNTS_KEY, JSON.stringify(list));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

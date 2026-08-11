@@ -8,9 +8,6 @@ const FORMS_STORAGE_KEY = 'bir_monitor_forms_v2';
 
 function recordOfflineAction(type: 'UPDATE_FORM' | 'ADD_CLIENT' | 'DELETE_CLIENT' | 'ADD_FORM_TO_CLIENT' | 'REMOVE_FORM' | 'UPDATE_PAYABLE', description: string, payload: any) {
   try {
-    const QUEUE_KEY = 'bizcomply_offline_sync_queue_v1';
-    const stored = localStorage.getItem(QUEUE_KEY);
-    const queue = stored ? JSON.parse(stored) : [];
     const newAction = {
       id: crypto.randomUUID(),
       type,
@@ -18,11 +15,9 @@ function recordOfflineAction(type: 'UPDATE_FORM' | 'ADD_CLIENT' | 'DELETE_CLIENT
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       payload
     };
-    queue.unshift(newAction);
-    localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
-    window.dispatchEvent(new Event('bizcomply_offline_queue_updated'));
+    window.dispatchEvent(new CustomEvent('bizcomply_offline_queue_updated', { detail: newAction }));
   } catch (e) {
-    console.warn('Failed to record offline action:', e);
+    console.warn('Failed to record action:', e);
   }
 }
 
@@ -33,27 +28,8 @@ export function useFormReferences() {
 
   useEffect(() => {
     let isMounted = true;
-    const userFormsKey = user ? `bir_monitor_forms_u_${user.id}` : FORMS_STORAGE_KEY;
-    const stored = localStorage.getItem(userFormsKey) || localStorage.getItem(FORMS_STORAGE_KEY);
-    
-    if (stored) {
-      try {
-        const parsed: FormReference[] = JSON.parse(stored);
-        const existingCodes = new Set(parsed.map(f => f.code));
-        const missingCommon = commonForms.filter(f => !existingCodes.has(f.code));
-        const merged = missingCommon.length > 0 ? [...parsed, ...missingCommon] : parsed;
-        setForms(merged);
-        if (missingCommon.length > 0) {
-          localStorage.setItem(userFormsKey, JSON.stringify(merged));
-        }
-      } catch (e) {
-        setForms(commonForms);
-      }
-    } else {
-      setForms(commonForms);
-    }
 
-    // Sync from Central Storage Server
+    // Load from Central Storage Server directly
     const emailParam = user?.email ? `?email=${encodeURIComponent(user.email)}&userId=${encodeURIComponent(user.id)}` : '';
     fetch(`/api/forms${emailParam}`)
       .then(res => res.json())
@@ -64,10 +40,12 @@ export function useFormReferences() {
           const missingCommon = commonForms.filter(f => !existingCodes.has(f.code));
           const merged = missingCommon.length > 0 ? [...remoteForms, ...missingCommon] : remoteForms;
           setForms(merged);
-          localStorage.setItem(userFormsKey, JSON.stringify(merged));
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (isMounted) setIsLoaded(true);
+      });
 
     if (supabase && isSupabaseConfigured && user) {
       supabase.auth.getUser().then(({ data: { user: supabaseUser } }) => {
@@ -77,22 +55,17 @@ export function useFormReferences() {
           const missingCommon = commonForms.filter(f => !existingCodes.has(f.code));
           const merged = missingCommon.length > 0 ? [...remoteForms, ...missingCommon] : remoteForms;
           setForms(merged);
-          localStorage.setItem(userFormsKey, JSON.stringify(merged));
         }
       }).catch(() => {});
     }
 
-    setIsLoaded(true);
-
     return () => {
       isMounted = false;
     };
-  }, [user?.id]);
+  }, [user?.id, user?.email]);
 
   const saveForms = async (updatedForms: FormReference[]) => {
     setForms(updatedForms);
-    const userFormsKey = user ? `bir_monitor_forms_u_${user.id}` : FORMS_STORAGE_KEY;
-    localStorage.setItem(userFormsKey, JSON.stringify(updatedForms));
 
     // Sync to Central Storage Server
     try {
@@ -105,14 +78,12 @@ export function useFormReferences() {
 
     if (supabase && isSupabaseConfigured && user) {
       try {
-        // Sync to Supabase Storage bucket
         const blob = new Blob([JSON.stringify(updatedForms, null, 2)], { type: 'application/json' });
         await supabase.storage
           .from('bizcomply-data')
           .upload(`users/${user.id}/forms.json`, blob, { upsert: true, contentType: 'application/json' })
           .catch(() => {});
 
-        // Centralized metadata sync
         await supabase.auth.updateUser({
           data: { custom_forms: updatedForms }
         });
@@ -157,22 +128,7 @@ export function useClients() {
     let isMounted = true;
 
     async function loadClientData() {
-      // 1. Load local cache first for immediate rendering
-      const stored = localStorage.getItem(userKey);
-      let localClients: Client[] = [];
-      if (stored) {
-        try {
-          localClients = JSON.parse(stored);
-        } catch (e) {
-          localClients = [];
-        }
-      }
-
-      if (isMounted) {
-        setClients(localClients);
-      }
-
-      // 2. Sync from Central Storage Server
+      // 1. Sync directly from Central Storage Server
       try {
         const userEmail = user?.email || '';
         const userTin = user?.companyInfo?.tin || user?.tin || '';
@@ -192,16 +148,16 @@ export function useClients() {
           if (data.success && Array.isArray(data.clients) && data.clients.length > 0) {
             if (isMounted) {
               setClients(data.clients);
-              localStorage.setItem(userKey, JSON.stringify(data.clients));
+              setIsLoaded(true);
+              return;
             }
           }
         }
       } catch (e) {}
 
-      // 3. Sync from Supabase Cloud Storage/Database if configured
+      // 2. Sync from Supabase Cloud Storage/Database if configured
       if (supabase && isSupabaseConfigured && user) {
         try {
-          // Attempt 1: Fetch from Supabase Storage Bucket 'bizcomply-data'
           const { data: storageFile, error: storageErr } = await supabase.storage
             .from('bizcomply-data')
             .download(`users/${user.id}/clients.json`);
@@ -211,22 +167,18 @@ export function useClients() {
             const remoteClients = JSON.parse(text);
             if (Array.isArray(remoteClients) && isMounted) {
               setClients(remoteClients);
-              localStorage.setItem(userKey, JSON.stringify(remoteClients));
               setIsLoaded(true);
               return;
             }
           }
 
-          // Attempt 2: Check Supabase User Metadata cloud storage
           const { data: { user: supabaseUser } } = await supabase.auth.getUser();
           if (supabaseUser?.user_metadata?.clients && Array.isArray(supabaseUser.user_metadata.clients)) {
             const remoteClients = supabaseUser.user_metadata.clients as Client[];
             if (isMounted) {
               setClients(remoteClients);
-              localStorage.setItem(userKey, JSON.stringify(remoteClients));
             }
           } else {
-            // Attempt 3: Fetch from Supabase database table 'user_clients'
             const { data } = await supabase
               .from('user_clients')
               .select('clients_data')
@@ -235,7 +187,6 @@ export function useClients() {
 
             if (data?.clients_data && Array.isArray(data.clients_data) && isMounted) {
               setClients(data.clients_data);
-              localStorage.setItem(userKey, JSON.stringify(data.clients_data));
             }
           }
         } catch (err) {
@@ -253,13 +204,10 @@ export function useClients() {
     return () => {
       isMounted = false;
     };
-  }, [user?.id, userKey]);
+  }, [user?.id]);
 
   const saveClients = async (updated: Client[]) => {
     setClients(updated);
-    if (userKey) {
-      localStorage.setItem(userKey, JSON.stringify(updated));
-    }
 
     // Sync to Central Storage Server
     try {
@@ -340,7 +288,7 @@ export function useClients() {
       return client;
     });
     
-    if (!navigator.onLine || localStorage.getItem('bizcomply_offline_sync_queue_v1')) {
+    if (!navigator.onLine || sessionStorage.getItem('bizcomply_offline_sync_queue_v1')) {
       const formCode = formMeta?.code || 'BIR Form';
       const statusText = updates.status ? `status to ${updates.status}` : 'details';
       recordOfflineAction('UPDATE_FORM', `Updated ${formCode} ${statusText} for ${clientName}`, { clientId, formId, updates });
@@ -351,7 +299,7 @@ export function useClients() {
 
   const addClient = (client: Client) => {
     const updatedClients = [client, ...clients];
-    if (!navigator.onLine || localStorage.getItem('bizcomply_offline_sync_queue_v1')) {
+    if (!navigator.onLine || sessionStorage.getItem('bizcomply_offline_sync_queue_v1')) {
       recordOfflineAction('ADD_CLIENT', `Added new client entity ${client.name} (TIN: ${client.tin})`, client);
     }
     saveClients(updatedClients);
@@ -360,7 +308,7 @@ export function useClients() {
   const deleteClient = (clientId: string) => {
     const target = clients.find(c => c.id === clientId);
     const updatedClients = clients.filter(c => c.id !== clientId);
-    if (!navigator.onLine || localStorage.getItem('bizcomply_offline_sync_queue_v1')) {
+    if (!navigator.onLine || sessionStorage.getItem('bizcomply_offline_sync_queue_v1')) {
       recordOfflineAction('DELETE_CLIENT', `Removed client entity ${target?.name || clientId}`, { clientId });
     }
     saveClients(updatedClients);

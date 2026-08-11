@@ -31,11 +31,11 @@ export const OfflineSyncProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [simulatedOfflineMode, setSimulatedOfflineMode] = useState<boolean>(false);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(() => {
-    return localStorage.getItem(LAST_SYNC_KEY) || null;
+    return sessionStorage.getItem(LAST_SYNC_KEY) || null;
   });
   const [pendingActions, setPendingActions] = useState<OfflineAction[]>(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_QUEUE_KEY);
+      const stored = sessionStorage.getItem(STORAGE_QUEUE_KEY);
       return stored ? JSON.parse(stored) : [];
     } catch {
       return [];
@@ -47,7 +47,7 @@ export const OfflineSyncProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   // Persist queue changes
   useEffect(() => {
-    localStorage.setItem(STORAGE_QUEUE_KEY, JSON.stringify(pendingActions));
+    sessionStorage.setItem(STORAGE_QUEUE_KEY, JSON.stringify(pendingActions));
   }, [pendingActions]);
 
   // Monitor network online/offline events
@@ -64,11 +64,15 @@ export const OfflineSyncProvider: React.FC<{ children: ReactNode }> = ({ childre
       setIsOnline(false);
     };
 
-    const handleQueueUpdated = () => {
-      try {
-        const stored = localStorage.getItem(STORAGE_QUEUE_KEY);
-        setPendingActions(stored ? JSON.parse(stored) : []);
-      } catch (e) {}
+    const handleQueueUpdated = (e: any) => {
+      if (e.detail) {
+        setPendingActions(prev => [e.detail, ...prev]);
+      } else {
+        try {
+          const stored = sessionStorage.getItem(STORAGE_QUEUE_KEY);
+          setPendingActions(stored ? JSON.parse(stored) : []);
+        } catch (err) {}
+      }
     };
 
     window.addEventListener('online', handleOnline);
@@ -93,7 +97,7 @@ export const OfflineSyncProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   const triggerAutoSync = async () => {
     if (!navigator.onLine) return;
-    const currentQueueStr = localStorage.getItem(STORAGE_QUEUE_KEY);
+    const currentQueueStr = sessionStorage.getItem(STORAGE_QUEUE_KEY);
     if (currentQueueStr) {
       try {
         const queue: OfflineAction[] = JSON.parse(currentQueueStr);
@@ -115,7 +119,6 @@ export const OfflineSyncProvider: React.FC<{ children: ReactNode }> = ({ childre
     try {
       // Simulate/perform network sync for each item
       for (const item of queueToProcess) {
-        // If Supabase is configured, sync item payload or refresh cloud user state
         if (supabase && isSupabaseConfigured) {
           try {
             const { data: { user } } = await supabase.auth.getUser();
@@ -136,11 +139,11 @@ export const OfflineSyncProvider: React.FC<{ children: ReactNode }> = ({ childre
 
       // Clear processed queue
       setPendingActions([]);
-      localStorage.removeItem(STORAGE_QUEUE_KEY);
+      sessionStorage.removeItem(STORAGE_QUEUE_KEY);
 
       const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       setLastSyncedAt(nowStr);
-      localStorage.setItem(LAST_SYNC_KEY, nowStr);
+      sessionStorage.setItem(LAST_SYNC_KEY, nowStr);
 
     } catch (err) {
       console.error('Offline sync execution failed:', err);
@@ -181,7 +184,7 @@ export const OfflineSyncProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   const clearQueue = () => {
     setPendingActions([]);
-    localStorage.removeItem(STORAGE_QUEUE_KEY);
+    sessionStorage.removeItem(STORAGE_QUEUE_KEY);
   };
 
   return (

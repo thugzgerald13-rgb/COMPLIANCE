@@ -61,7 +61,7 @@ export function ClientDashboardModeModal({
             // unreachable or returns no results. Uses the exact same eligibility
             // predicate as the server so the fallback can't drift into showing
             // business_owner/client accounts that the server would have excluded.
-            const rawUsers = localStorage.getItem('biz_comply_users_v2');
+            const rawUsers = sessionStorage.getItem('biz_comply_users_v2');
             let list: any[] = [];
             if (rawUsers) {
               try {

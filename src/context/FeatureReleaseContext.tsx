@@ -89,7 +89,7 @@ const FeatureReleaseContext = createContext<FeatureReleaseContextType | undefine
 export function FeatureReleaseProvider({ children }: { children: ReactNode }) {
   const { isSuperAdmin } = useAuth();
   const [featureUpdates, setFeatureUpdates] = useState<FeatureUpdate[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = sessionStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -101,7 +101,7 @@ export function FeatureReleaseProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(featureUpdates));
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(featureUpdates));
   }, [featureUpdates]);
 
   // Check feature availability for the active user

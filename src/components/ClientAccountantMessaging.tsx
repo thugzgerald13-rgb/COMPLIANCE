@@ -40,24 +40,15 @@ export function ClientAccountantMessaging({
           const data = await res.json();
           if (data.success && Array.isArray(data.messages)) {
             setMessages(data.messages);
-            localStorage.setItem(`biz_comply_msg_${effectiveClientEmail.toLowerCase()}`, JSON.stringify(data.messages));
             return;
           }
         }
       }
     } catch (err) {
-      console.error('Failed to load messages from server, using local storage:', err);
+      console.error('Failed to load messages from server:', err);
     } finally {
       setLoading(false);
     }
-
-    // Local storage fallback for messages
-    try {
-      const stored = localStorage.getItem(`biz_comply_msg_${effectiveClientEmail.toLowerCase()}`);
-      if (stored) {
-        setMessages(JSON.parse(stored));
-      }
-    } catch (e) {}
   };
 
   useEffect(() => {
@@ -90,7 +81,6 @@ export function ClientAccountantMessaging({
       setSending(true);
       setError(null);
       
-      let sentViaServer = false;
       const res = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -106,30 +96,15 @@ export function ClientAccountantMessaging({
       });
 
       if (res.ok) {
-        const ct = res.headers.get('content-type') || '';
-        if (ct.includes('application/json')) {
-          const data = await res.json();
-          if (data.success) {
-            sentViaServer = true;
-          }
-        }
+        fetchMessages();
+      } else {
+        setMessages(prev => [...prev, newMsgObj]);
       }
-
-      // Always persist to local storage for reliability
-      const currentList = [...messages, newMsgObj];
-      setMessages(currentList);
-      localStorage.setItem(`biz_comply_msg_${effectiveClientEmail.toLowerCase()}`, JSON.stringify(currentList));
 
       setInputText('');
       setSelectedFormCode('');
-      if (sentViaServer) {
-        fetchMessages();
-      }
     } catch (err: any) {
-      // Local fallback on error
-      const currentList = [...messages, newMsgObj];
-      setMessages(currentList);
-      localStorage.setItem(`biz_comply_msg_${effectiveClientEmail.toLowerCase()}`, JSON.stringify(currentList));
+      setMessages(prev => [...prev, newMsgObj]);
       setInputText('');
       setSelectedFormCode('');
     } finally {

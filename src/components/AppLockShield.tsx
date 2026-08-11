@@ -7,7 +7,7 @@ interface AppLockShieldProps {
 
 export function AppLockShield({ onToggleLock }: AppLockShieldProps) {
   const [isLocked, setIsLocked] = useState<boolean>(() => {
-    const saved = localStorage.getItem('biz_comply_app_locked');
+    const saved = sessionStorage.getItem('biz_comply_app_locked');
     return saved !== null ? saved === 'true' : true;
   });
 
@@ -23,7 +23,7 @@ export function AppLockShield({ onToggleLock }: AppLockShieldProps) {
 
   const toggleLock = (newState: boolean) => {
     setIsLocked(newState);
-    localStorage.setItem('biz_comply_app_locked', String(newState));
+    sessionStorage.setItem('biz_comply_app_locked', String(newState));
     if (onToggleLock) onToggleLock(newState);
     if (newState) {
       showSecurityToast('🔒 Security Shield Enabled', 'Source code, right-click, and inspection tools locked.');

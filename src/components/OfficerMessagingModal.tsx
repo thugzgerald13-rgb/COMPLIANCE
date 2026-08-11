@@ -61,27 +61,14 @@ export function OfficerMessagingModal({
           const data = await res.json();
           if (data.success && Array.isArray(data.messages)) {
             setMessages(data.messages);
-            localStorage.setItem(`biz_comply_msg_${selectedClientEmail.toLowerCase()}`, JSON.stringify(data.messages));
             return;
           }
         }
       }
     } catch (err) {
-      console.error('Failed to load messages from server, using local fallback:', err);
+      console.error('Failed to load messages from server:', err);
     } finally {
       setLoading(false);
-    }
-
-    // Local fallback
-    try {
-      const stored = localStorage.getItem(`biz_comply_msg_${selectedClientEmail.toLowerCase()}`);
-      if (stored) {
-        setMessages(JSON.parse(stored));
-      } else {
-        setMessages([]);
-      }
-    } catch (e) {
-      setMessages([]);
     }
   };
 
@@ -119,7 +106,6 @@ export function OfficerMessagingModal({
       setSending(true);
       setError(null);
 
-      let sentViaServer = false;
       const res = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -135,29 +121,15 @@ export function OfficerMessagingModal({
       });
 
       if (res.ok) {
-        const ct = res.headers.get('content-type') || '';
-        if (ct.includes('application/json')) {
-          const data = await res.json();
-          if (data.success) {
-            sentViaServer = true;
-          }
-        }
+        fetchMessages();
+      } else {
+        setMessages(prev => [...prev, newMsgObj]);
       }
-
-      // Local storage backup
-      const currentList = [...messages, newMsgObj];
-      setMessages(currentList);
-      localStorage.setItem(`biz_comply_msg_${selectedClientEmail.toLowerCase()}`, JSON.stringify(currentList));
 
       setInputText('');
       setSelectedFormCode('');
-      if (sentViaServer) {
-        fetchMessages();
-      }
     } catch (err) {
-      const currentList = [...messages, newMsgObj];
-      setMessages(currentList);
-      localStorage.setItem(`biz_comply_msg_${selectedClientEmail.toLowerCase()}`, JSON.stringify(currentList));
+      setMessages(prev => [...prev, newMsgObj]);
       setInputText('');
       setSelectedFormCode('');
     } finally {

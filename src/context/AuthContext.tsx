@@ -79,14 +79,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [subscriptionTier, setSubscriptionTierState] = useState<SubscriptionTier>(() => {
-    const saved = localStorage.getItem(SUBSCRIPTION_TIER_KEY);
+    const saved = sessionStorage.getItem(SUBSCRIPTION_TIER_KEY);
     return saved === 'subscriber' ? 'subscriber' : 'free_trial';
   });
   const [isWorkspaceLocked, setIsWorkspaceLockedState] = useState<boolean>(() => {
-    return localStorage.getItem(WORKSPACE_LOCKED_KEY) === 'true';
+    return sessionStorage.getItem(WORKSPACE_LOCKED_KEY) === 'true';
   });
   const [workspaceMode, setWorkspaceModeState] = useState<WorkspaceMode | null>(() => {
-    const saved = localStorage.getItem(WORKSPACE_MODE_KEY);
+    const saved = sessionStorage.getItem(WORKSPACE_MODE_KEY);
     return (saved === 'single' || saved === 'multi') ? saved : null;
   });
   const [isAuthLoaded, setIsAuthLoaded] = useState(false);
@@ -96,47 +96,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const toggleWorkspaceMode = () => {
     const nextMode: WorkspaceMode = workspaceMode === 'single' ? 'multi' : 'single';
     setWorkspaceModeState(nextMode);
-    localStorage.setItem(WORKSPACE_MODE_KEY, nextMode);
+    sessionStorage.setItem(WORKSPACE_MODE_KEY, nextMode);
   };
 
   const setWorkspaceMode = (mode: WorkspaceMode) => {
     setWorkspaceModeState(mode);
-    localStorage.setItem(WORKSPACE_MODE_KEY, mode);
+    sessionStorage.setItem(WORKSPACE_MODE_KEY, mode);
 
     if (subscriptionTier === 'subscriber' && !isSuperAdmin) {
       setIsWorkspaceLockedState(true);
-      localStorage.setItem(WORKSPACE_LOCKED_KEY, 'true');
+      sessionStorage.setItem(WORKSPACE_LOCKED_KEY, 'true');
     }
   };
 
   const resetWorkspaceMode = (force: boolean = false) => {
     if (subscriptionTier === 'free_trial' || !isWorkspaceLocked || force || isSuperAdmin) {
       setWorkspaceModeState(null);
-      localStorage.removeItem(WORKSPACE_MODE_KEY);
+      sessionStorage.removeItem(WORKSPACE_MODE_KEY);
     }
   };
 
   const upgradeToSubscriber = () => {
     setSubscriptionTierState('subscriber');
-    localStorage.setItem(SUBSCRIPTION_TIER_KEY, 'subscriber');
+    sessionStorage.setItem(SUBSCRIPTION_TIER_KEY, 'subscriber');
 
     // Prompt user again to choose single or multi, which will lock in their subscriber status
     setIsWorkspaceLockedState(false);
-    localStorage.removeItem(WORKSPACE_LOCKED_KEY);
+    sessionStorage.removeItem(WORKSPACE_LOCKED_KEY);
     setWorkspaceModeState(null);
-    localStorage.removeItem(WORKSPACE_MODE_KEY);
+    sessionStorage.removeItem(WORKSPACE_MODE_KEY);
   };
 
   const unlockWorkspaceMode = () => {
     setIsWorkspaceLockedState(false);
-    localStorage.setItem(WORKSPACE_LOCKED_KEY, 'false');
+    sessionStorage.setItem(WORKSPACE_LOCKED_KEY, 'false');
   };
 
   const downgradeToFreeTrial = () => {
     setSubscriptionTierState('free_trial');
-    localStorage.setItem(SUBSCRIPTION_TIER_KEY, 'free_trial');
+    sessionStorage.setItem(SUBSCRIPTION_TIER_KEY, 'free_trial');
     setIsWorkspaceLockedState(false);
-    localStorage.setItem(WORKSPACE_LOCKED_KEY, 'false');
+    sessionStorage.setItem(WORKSPACE_LOCKED_KEY, 'false');
   };
 
   // Sync users list to state & central storage
@@ -153,16 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (e) {}
 
     if (usersList.length === 0) {
-      const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
-      if (rawUsers) {
-        try {
-          usersList = JSON.parse(rawUsers);
-        } catch (e) {
-          usersList = DEFAULT_USERS;
-        }
-      } else {
-        usersList = DEFAULT_USERS;
-      }
+      usersList = DEFAULT_USERS;
     }
 
     // Ensure super admin emails are present and have Super Admin role
@@ -181,14 +172,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
+    sessionStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
     setAllUsers(usersList.map(({ password, ...u }: any) => u));
     return usersList;
   };
 
   const getLocalUserBackup = (userEmail?: string, userId?: string) => {
     if (!userEmail && !userId) return null;
-    const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
+    const rawUsers = sessionStorage.getItem(USERS_STORAGE_KEY);
     if (!rawUsers) return null;
     try {
       const uList = JSON.parse(rawUsers);
@@ -249,7 +240,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               isSyncedWithAccountant,
             };
             setUser(u);
-            localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(u));
+            sessionStorage.setItem(CURRENT_USER_KEY, JSON.stringify(u));
           } else {
             // Fallback to local / central
             await loadLocalUser();
@@ -301,10 +292,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               isSyncedWithAccountant,
             };
             setUser(u);
-            localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(u));
+            sessionStorage.setItem(CURRENT_USER_KEY, JSON.stringify(u));
           } else {
             setUser(null);
-            localStorage.removeItem(CURRENT_USER_KEY);
+            sessionStorage.removeItem(CURRENT_USER_KEY);
           }
         });
 
@@ -335,7 +326,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loadLocalUser = async () => {
-    const storedCurrentUser = localStorage.getItem(CURRENT_USER_KEY);
+    const storedCurrentUser = sessionStorage.getItem(CURRENT_USER_KEY);
     if (storedCurrentUser) {
       try {
         let parsed: User = JSON.parse(storedCurrentUser);
@@ -381,9 +372,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         setUser(parsed);
-        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(parsed));
+        sessionStorage.setItem(CURRENT_USER_KEY, JSON.stringify(parsed));
       } catch (e) {
-        localStorage.removeItem(CURRENT_USER_KEY);
+        sessionStorage.removeItem(CURRENT_USER_KEY);
       }
     }
   };
@@ -419,7 +410,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           };
 
           setUser(authenticatedUser);
-          localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
+          sessionStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
           return { success: true };
         }
       }
@@ -460,7 +451,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isSyncedWithAccountant: meta.isSyncedWithAccountant ?? localBackup?.isSyncedWithAccountant,
         };
         setUser(authenticatedUser);
-        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
+        sessionStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
 
         // Sync to central storage server
         try {
@@ -485,7 +476,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     // 3. Local fallback
-    const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
+    const rawUsers = sessionStorage.getItem(USERS_STORAGE_KEY);
     const usersList = rawUsers ? JSON.parse(rawUsers) : DEFAULT_USERS;
 
     const foundUser = usersList.find((u: any) => u.email.toLowerCase().trim() === normalizedEmail);
@@ -508,7 +499,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
 
       setUser(authenticatedUser);
-      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
+      sessionStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
       return { success: true };
     }
 
@@ -563,12 +554,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     setUser(clientUser);
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(clientUser));
+    sessionStorage.setItem(CURRENT_USER_KEY, JSON.stringify(clientUser));
 
     // Also persist sync link for matched registered Business Owner account
     if (matchedUser) {
       try {
-        const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
+        const rawUsers = sessionStorage.getItem(USERS_STORAGE_KEY);
         if (rawUsers) {
           const usersList = JSON.parse(rawUsers);
           const idx = usersList.findIndex((u: any) => u.id === matchedUser.id);
@@ -577,7 +568,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             usersList[idx].syncedAccountantName = officerName;
             usersList[idx].isSyncedWithAccountant = true;
             usersList[idx].clientDashboardMode = 'shared_accountant';
-            localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
+            sessionStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
           }
         }
       } catch (e) {}
@@ -630,7 +621,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           };
 
           setUser(authenticatedUser);
-          localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
+          sessionStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
 
           if (supabase && isSupabaseConfigured) {
             await supabase.auth.signUp({
@@ -652,7 +643,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (e) {}
 
     // Local fallback
-    const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
+    const rawUsers = sessionStorage.getItem(USERS_STORAGE_KEY);
     const usersList = rawUsers ? JSON.parse(rawUsers) : DEFAULT_USERS;
 
     const existing = usersList.find((u: any) => u.email.toLowerCase().trim() === normalizedEmail);
@@ -670,7 +661,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     const updatedUsers = [...usersList, newUserObj];
-    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
+    sessionStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
     refreshUsersList();
 
     const authenticatedUser: User = {
@@ -681,7 +672,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     setUser(authenticatedUser);
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
+    sessionStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
     return { success: true };
   };
 
@@ -733,7 +724,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
       refreshUsersList();
       setUser(googleUser);
-      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(googleUser));
+      sessionStorage.setItem(CURRENT_USER_KEY, JSON.stringify(googleUser));
       return { success: true };
     }
 
@@ -772,14 +763,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           };
           refreshUsersList();
           setUser(googleUser);
-          localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(googleUser));
+          sessionStorage.setItem(CURRENT_USER_KEY, JSON.stringify(googleUser));
           return { success: true };
         }
       }
     } catch (e) {}
 
     // Fallback
-    const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
+    const rawUsers = sessionStorage.getItem(USERS_STORAGE_KEY);
     const usersList = rawUsers ? JSON.parse(rawUsers) : DEFAULT_USERS;
 
     let existing = usersList.find((u: any) => u.email.toLowerCase().trim() === googleEmail);
@@ -814,7 +805,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: defaultRole,
       };
       usersList.push(newUserObj);
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
+      sessionStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
       googleUser = {
         id: newUserObj.id,
         name: newUserObj.name,
@@ -825,7 +816,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     refreshUsersList();
     setUser(googleUser);
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(googleUser));
+    sessionStorage.setItem(CURRENT_USER_KEY, JSON.stringify(googleUser));
     return { success: true };
   };
 
@@ -836,7 +827,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clientDashboardMode: mode,
     };
     setUser(updatedUser);
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+    sessionStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
 
     // Sync to Central Server
     try {
@@ -851,7 +842,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     } catch (e) {}
 
-    const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
+    const rawUsers = sessionStorage.getItem(USERS_STORAGE_KEY);
     if (rawUsers) {
       try {
         const usersList = JSON.parse(rawUsers);
@@ -859,7 +850,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const idx = usersList.findIndex((u: any) => u.id === user.id || (normEmail && u.email?.toLowerCase().trim() === normEmail));
         if (idx !== -1) {
           usersList[idx].clientDashboardMode = mode;
-          localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
+          sessionStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
         }
       } catch (e) {}
     }
@@ -900,7 +891,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     setUser(updatedUser);
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+    sessionStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
 
     // SYNC TO CENTRAL SERVER
     try {
@@ -922,7 +913,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Failed to sync user profile to central storage server:', err);
     }
 
-    const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
+    const rawUsers = sessionStorage.getItem(USERS_STORAGE_KEY);
     let usersList: any[] = [];
     if (rawUsers) {
       try {
@@ -958,7 +949,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     }
 
-    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
+    sessionStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
 
     if (supabase && isSupabaseConfigured) {
       try {
@@ -1044,11 +1035,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     setUser(updatedUser);
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+    sessionStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
 
     // Update USERS_STORAGE_KEY
     try {
-      const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
+      const rawUsers = sessionStorage.getItem(USERS_STORAGE_KEY);
       if (rawUsers) {
         const usersList = JSON.parse(rawUsers);
         const normUserEmail = user.email.toLowerCase().trim();
@@ -1058,38 +1049,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           usersList[idx].syncedAccountantName = syncedAccName;
           usersList[idx].isSyncedWithAccountant = true;
           usersList[idx].clientDashboardMode = 'shared_accountant';
-          localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
+          sessionStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
         }
       }
-    } catch (e) {}
-
-    // Ensure client is present in accountant's client list in localStorage
-    try {
-      const rawClients = localStorage.getItem('biz_comply_clients');
-      let clientsList = rawClients ? JSON.parse(rawClients) : [];
-      const normClientEmail = user.email.toLowerCase().trim();
-      const existingIdx = clientsList.findIndex((c: any) => c.email && c.email.toLowerCase().trim() === normClientEmail);
-      const clientName = user.companyInfo?.companyName || user.name || normClientEmail.split('@')[0];
-      const clientTin = user.companyInfo?.tin || user.tin || '000-000-000-00000';
-      const clientRdo = user.companyInfo?.rdo || '043';
-
-      if (existingIdx !== -1) {
-        clientsList[existingIdx].name = clientName;
-        clientsList[existingIdx].tin = clientTin;
-        clientsList[existingIdx].rdo = clientRdo;
-      } else {
-        clientsList.push({
-          id: user.clientId || `client_${Date.now()}`,
-          name: clientName,
-          email: normClientEmail,
-          tin: clientTin,
-          rdo: clientRdo,
-          type: 'Corporate',
-          status: 'Active',
-          forms: [],
-        });
-      }
-      localStorage.setItem('biz_comply_clients', JSON.stringify(clientsList));
     } catch (e) {}
 
     // Background update-profile call
@@ -1133,7 +1095,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 isSyncedWithAccountant: true,
               };
               setUser(updatedUser);
-              localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+              sessionStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
             }
             return { isSynced: true, accountant: data.accountant };
           }
@@ -1150,7 +1112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isSyncedWithAccountant: false,
         };
         setUser(updatedUser);
-        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+        sessionStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
         return { isSynced: false, accountant: null };
       }
 
@@ -1166,7 +1128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const switchUser = (userId: string) => {
-    const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
+    const rawUsers = sessionStorage.getItem(USERS_STORAGE_KEY);
     const usersList = rawUsers ? JSON.parse(rawUsers) : DEFAULT_USERS;
     const target = usersList.find((u: any) => u.id === userId);
     if (target) {
@@ -1182,7 +1144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         companyInfo: target.companyInfo,
       };
       setUser(authenticatedUser);
-      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
+      sessionStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authenticatedUser));
     }
   };
 
@@ -1191,7 +1153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await supabase.auth.signOut();
     }
     setUser(null);
-    localStorage.removeItem(CURRENT_USER_KEY);
+    sessionStorage.removeItem(CURRENT_USER_KEY);
   };
 
   return (
