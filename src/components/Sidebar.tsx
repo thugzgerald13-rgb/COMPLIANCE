@@ -94,6 +94,8 @@ export function Sidebar({
   const desktopUserMenuRef = useRef<HTMLDivElement>(null);
   const mobileUserMenuRef = useRef<HTMLDivElement>(null);
   const collapsedMonthInputRef = useRef<HTMLInputElement>(null);
+  const desktopSidebarRef = useRef<HTMLDivElement>(null);
+  const mobileDrawerRef = useRef<HTMLDivElement>(null);
 
   const handleCollapsedPeriodClick = () => {
     if (collapsedMonthInputRef.current) {
@@ -111,24 +113,41 @@ export function Sidebar({
     }
   };
 
+  // Close sidebar/user menu when clicking anywhere on the page outside sidebar
   useEffect(() => {
-    if (!isUserMenuOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node;
+
+      // Close desktop user menu if open and clicked outside
       if (
-        (desktopUserMenuRef.current && desktopUserMenuRef.current.contains(target)) ||
-        (mobileUserMenuRef.current && mobileUserMenuRef.current.contains(target))
+        isUserMenuOpen &&
+        desktopUserMenuRef.current &&
+        !desktopUserMenuRef.current.contains(target) &&
+        mobileUserMenuRef.current &&
+        !mobileUserMenuRef.current.contains(target)
       ) {
-        return;
+        setIsUserMenuOpen(false);
       }
-      setIsUserMenuOpen(false);
+
+      // Collapse desktop sidebar if expanded and click is outside desktop sidebar
+      if (!isCollapsed && desktopSidebarRef.current && !desktopSidebarRef.current.contains(target)) {
+        setIsCollapsed(true);
+        setIsUserMenuOpen(false);
+      }
+
+      // Close mobile drawer if open and click is outside drawer content
+      if (isMobileOpen && mobileDrawerRef.current && !mobileDrawerRef.current.contains(target)) {
+        setIsMobileOpen(false);
+      }
     };
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isUserMenuOpen]);
+  }, [isCollapsed, isMobileOpen, isUserMenuOpen]);
 
   const handleNavClick = (view: 'dashboard' | 'clients' | 'forms' | 'calendar') => {
     onChangeView(view);
+    setIsCollapsed(true);
     setIsMobileOpen(false);
     setIsUserMenuOpen(false);
   };
@@ -171,7 +190,7 @@ export function Sidebar({
           />
 
           {/* Drawer Sidebar */}
-          <div className="relative w-72 max-w-[80vw] bg-slate-900 text-white h-full flex flex-col shadow-2xl z-10">
+          <div ref={mobileDrawerRef} className="relative w-72 max-w-[80vw] bg-slate-900 text-white h-full flex flex-col shadow-2xl z-10">
             <div className="p-4 flex items-center justify-between border-b border-slate-800">
               <div className="flex items-center space-x-3">
                 <FileText className="w-7 h-7 text-blue-400 shrink-0" />
@@ -428,7 +447,7 @@ export function Sidebar({
       )}
 
       {/* Desktop Permanent Sidebar */}
-      <div className={`hidden md:flex ${isCollapsed ? 'w-20' : 'w-64'} bg-slate-900 text-white h-full flex-shrink-0 flex-col transition-all duration-300 ease-in-out relative group`}>
+      <div ref={desktopSidebarRef} className={`hidden md:flex ${isCollapsed ? 'w-20' : 'w-64'} bg-slate-900 text-white h-full flex-shrink-0 flex-col transition-all duration-300 ease-in-out relative group`}>
         {/* Header */}
         <div className={`p-4 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} border-b border-slate-800`}>
           {!isCollapsed && (
@@ -500,10 +519,7 @@ export function Sidebar({
           </div>
 
           <button
-            onClick={() => {
-              onChangeView('dashboard');
-              setIsUserMenuOpen(false);
-            }}
+            onClick={() => handleNavClick('dashboard')}
             title={isCollapsed ? "Dashboard" : undefined}
             className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'space-x-3 px-3'} py-3 rounded-lg transition-colors cursor-pointer ${
               currentView === 'dashboard' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
@@ -514,10 +530,7 @@ export function Sidebar({
           </button>
 
           <button
-            onClick={() => {
-              onChangeView('calendar');
-              setIsUserMenuOpen(false);
-            }}
+            onClick={() => handleNavClick('calendar')}
             title={isCollapsed ? "Workload Calendar" : undefined}
             className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'space-x-3 px-3'} py-3 rounded-lg transition-colors cursor-pointer ${
               currentView === 'calendar' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
@@ -528,10 +541,7 @@ export function Sidebar({
           </button>
           
           <button
-            onClick={() => {
-              onChangeView('clients');
-              setIsUserMenuOpen(false);
-            }}
+            onClick={() => handleNavClick('clients')}
             title={isCollapsed ? "My Clients" : undefined}
             className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'space-x-3 px-3'} py-3 rounded-lg transition-colors cursor-pointer ${
               currentView === 'clients' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
@@ -542,10 +552,7 @@ export function Sidebar({
           </button>
 
           <button
-            onClick={() => {
-              onChangeView('forms');
-              setIsUserMenuOpen(false);
-            }}
+            onClick={() => handleNavClick('forms')}
             title={isCollapsed ? "Monitoring Reference" : undefined}
             className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'space-x-3 px-3'} py-3 rounded-lg transition-colors cursor-pointer ${
               currentView === 'forms' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
@@ -559,6 +566,7 @@ export function Sidebar({
             onClick={() => {
               setIsOfficerMessagingOpen(true);
               setIsUserMenuOpen(false);
+              setIsCollapsed(true);
             }}
             title={isCollapsed ? "Client Messages" : undefined}
             className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'space-x-3 px-3'} py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer`}

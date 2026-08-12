@@ -254,12 +254,14 @@ export function Dashboard({ clients, formReferences, selectedPeriod, onUpdateFor
     );
   };
 
+  const companyDisplayName = user?.companyInfo?.companyName || user?.name || 'Compliance Officer';
+
   return (
     <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <span>Dashboard Overview</span>
+            <span>{companyDisplayName} - Dashboard Overview</span>
           </h1>
           <p className="text-xs text-slate-600 dark:text-slate-300 font-medium mt-0.5">Click any Pending or In Processing stat card below to open its compliance references modal</p>
         </div>
