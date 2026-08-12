@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { ClientDashboardModeModal } from './ClientDashboardModeModal';
 import { ClientAccountantMessaging } from './ClientAccountantMessaging';
+import { BusinessSidebar, BusinessTab } from './BusinessSidebar';
 import { 
   Building2, 
   FileText, 
@@ -31,7 +32,11 @@ import {
   Trash2,
   SlidersHorizontal,
   Share2,
-  X
+  X,
+  UserCheck,
+  Phone,
+  MapPin,
+  Tag
 } from 'lucide-react';
 import { ShareClientPortalModal } from './ShareClientPortalModal';
 import { getFormsForClientAndPeriod, getEffectiveDeadline, getComplianceStatusInfo } from '../utils';
@@ -146,6 +151,9 @@ export function ClientPortalView({
   // Share Portal Modal state
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
+  // Active Business Account Tab
+  const [currentTab, setCurrentTab] = useState<BusinessTab>('overview');
+
   useEffect(() => {
     // If client user logged in for first time without selecting a dashboard setup mode, prompt modal
     if (!user?.clientDashboardMode) {
@@ -232,51 +240,55 @@ export function ClientPortalView({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+    <div className="flex flex-col md:flex-row h-screen h-[100dvh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200 overflow-hidden relative">
       
-      {/* Top Client Portal Bar */}
-      <header className="bg-slate-900 border-b border-slate-800 text-white px-4 sm:px-8 py-4 sticky top-0 z-30 shadow-xl">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          
-          <div className="flex items-center space-x-3 w-full sm:w-auto">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 border border-blue-400/30 flex items-center justify-center text-white font-black text-xl shadow-lg shrink-0">
-              <Building2 className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <h1 className="text-lg font-black tracking-tight text-white">{activeClient.name}</h1>
-                <span className="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-400/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                  Client Portal
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 flex flex-wrap items-center gap-2 mt-0.5">
-                <span>TIN: <strong className="text-slate-200 font-mono">{activeClient.tin}</strong></span>
-                <span>•</span>
-                <span>RDO: <strong className="text-slate-200">{activeClient.rdo}</strong> ({getRDOLocationDisplay(activeClient.rdo)})</span>
-                <span>•</span>
-                <span className="text-amber-400 font-medium">{activeClient.type} Taxpayer</span>
-              </p>
-            </div>
-          </div>
+      {/* Business Account Sidebar */}
+      <BusinessSidebar
+        currentTab={currentTab}
+        onChangeTab={setCurrentTab}
+        activeClient={activeClient}
+        selectedPeriod={selectedPeriod}
+        onChangePeriod={onChangePeriod}
+        onOpenManageForms={() => setIsManageFormsModalOpen(true)}
+        onOpenShareModal={() => setIsShareModalOpen(true)}
+        onOpenDashboardModeModal={() => setIsDashboardModeModalOpen(true)}
+        onSwitchBackToPractice={onSwitchBackToPractice}
+      />
 
-          {/* Quick Actions & Controls */}
-          <div className="flex items-center space-x-3 w-full sm:w-auto justify-end">
+      {/* Main Content Workspace */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+        
+        {/* Workspace Top Header Bar */}
+        <header className="bg-slate-900 border-b border-slate-800 text-white px-4 sm:px-6 py-3.5 sticky top-0 z-10 shadow-lg shrink-0">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
             
-            {/* Period Selector */}
-            <div className="flex items-center space-x-2 bg-slate-800/90 border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs">
-              <Calendar className="w-4 h-4 text-blue-400 shrink-0" />
-              <span className="text-slate-400 font-medium">Tax Period:</span>
-              <input
-                type="month"
-                value={selectedPeriod}
-                onChange={(e) => onChangePeriod(e.target.value)}
-                className="bg-transparent text-white font-bold focus:outline-none cursor-pointer text-xs"
-              />
+            <div className="flex items-center space-x-3 w-full sm:w-auto">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 border border-blue-400/30 flex items-center justify-center text-white font-black text-base shadow-md shrink-0">
+                <Building2 className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <h1 className="text-sm sm:text-base font-black tracking-tight text-white">{activeClient.name}</h1>
+                  <span className="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-400/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                    {currentTab === 'overview' && 'Tax Overview'}
+                    {currentTab === 'forms' && 'BIR Returns'}
+                    {currentTab === 'messaging' && 'CPA Chat'}
+                    {currentTab === 'settings' && 'Company Profile'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 flex flex-wrap items-center gap-2 mt-0.5">
+                  <span>TIN: <strong className="text-slate-200 font-mono">{activeClient.tin}</strong></span>
+                  <span>•</span>
+                  <span>RDO: <strong className="text-slate-200">{activeClient.rdo}</strong> ({getRDOLocationDisplay(activeClient.rdo)})</span>
+                </p>
+              </div>
             </div>
 
-            {/* Client Switcher for Super Admin / CPAs */}
-            {(isSuperAdmin || user?.role === 'Admin' || user?.role === 'Compliance Officer') && clients.length > 1 && (
-              <div className="relative">
+            {/* Quick Actions & Controls */}
+            <div className="flex items-center space-x-2.5 w-full sm:w-auto justify-end">
+              
+              {/* Client Switcher for Super Admin / CPAs */}
+              {(isSuperAdmin || user?.role === 'Admin' || user?.role === 'Compliance Officer') && clients.length > 1 && (
                 <select
                   value={activeClient.id}
                   onChange={(e) => setSelectedClientOverride(e.target.value)}
@@ -288,386 +300,554 @@ export function ClientPortalView({
                     </option>
                   ))}
                 </select>
-              </div>
-            )}
+              )}
 
-            {/* Share Portal Button */}
-            <button
-              onClick={() => setIsShareModalOpen(true)}
-              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center space-x-1.5 shadow-lg shadow-indigo-900/30"
-              title="Share this Client Portal with Business Owner by TIN #"
-            >
-              <Share2 className="w-3.5 h-3.5" />
-              <span>Share Portal</span>
-            </button>
-
-            {/* Messaging Quick Button */}
-            <button
-              onClick={() => setIsMessagingModalOpen(true)}
-              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center space-x-1.5 shadow-lg shadow-blue-900/30"
-              title="Open Client & Accountant Messaging Desk"
-            >
-              <MessageSquare className="w-3.5 h-3.5" />
-              <span>Messaging</span>
-            </button>
-
-            {/* Dashboard Mode Switcher */}
-            <button
-              onClick={() => setIsDashboardModeModalOpen(true)}
-              className={`px-3 py-1.5 border rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center space-x-1.5 ${
-                user?.clientDashboardMode === 'business_owner'
-                  ? 'bg-amber-500/20 border-amber-500/40 text-amber-300 hover:bg-amber-500/30'
-                  : 'bg-blue-500/20 border-blue-500/40 text-blue-300 hover:bg-blue-500/30'
-              }`}
-              title="Click to reconfigure your taxpayer dashboard setup mode"
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">
-                {user?.clientDashboardMode === 'business_owner' ? 'Business Owner Mode' : 'Shared Accountant Portal'}
-              </span>
-            </button>
-
-            {/* Return to Practice View (for Admins) */}
-            {(isSuperAdmin || onSwitchBackToPractice) && (
+              {/* Share Portal Button */}
               <button
-                onClick={onSwitchBackToPractice}
-                className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center space-x-1"
-                title="Switch back to Full Accountant Practice Dashboard"
+                onClick={() => setIsShareModalOpen(true)}
+                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center space-x-1.5 shadow-md shadow-indigo-900/30"
+                title="Share this Client Portal with Business Owner by TIN #"
               >
-                <Crown className="w-3.5 h-3.5 fill-amber-400" />
-                <span className="hidden md:inline">Practice View</span>
+                <Share2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Share Portal</span>
               </button>
-            )}
 
-            {/* Theme Toggle */}
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
-              title="Toggle Theme"
-            >
-              {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-300" />}
-            </button>
+              {/* Dashboard Mode Switcher */}
+              <button
+                onClick={() => setIsDashboardModeModalOpen(true)}
+                className={`px-3 py-1.5 border rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center space-x-1.5 ${
+                  user?.clientDashboardMode === 'business_owner'
+                    ? 'bg-amber-500/20 border-amber-500/40 text-amber-300 hover:bg-amber-500/30'
+                    : 'bg-blue-500/20 border-blue-500/40 text-blue-300 hover:bg-blue-500/30'
+                }`}
+                title="Click to reconfigure your taxpayer dashboard setup mode"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">
+                  {user?.clientDashboardMode === 'business_owner' ? 'Business Mode' : 'Shared Accountant'}
+                </span>
+              </button>
 
-            {/* Logout */}
-            <button
-              onClick={logout}
-              className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center space-x-1.5"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>Sign Out</span>
-            </button>
+              {/* Return to Practice View (for Admins) */}
+              {(isSuperAdmin || onSwitchBackToPractice) && (
+                <button
+                  onClick={onSwitchBackToPractice}
+                  className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center space-x-1"
+                  title="Switch back to Full Accountant Practice Dashboard"
+                >
+                  <Crown className="w-3.5 h-3.5 fill-amber-400" />
+                  <span className="hidden lg:inline">Practice View</span>
+                </button>
+              )}
+            </div>
+
           </div>
+        </header>
 
-        </div>
-      </header>
-
-      {/* Main Client Portal Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
-        
-        {/* Welcome & Status Summary Banner */}
-        <div className="bg-gradient-to-r from-blue-900/90 via-slate-900 to-indigo-950/90 text-white rounded-3xl p-6 sm:p-8 border border-blue-500/30 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+        {/* Scrollable Main Content Workspace */}
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6">
           
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-2 max-w-2xl">
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="inline-flex items-center space-x-2 bg-blue-500/20 border border-blue-400/30 px-3 py-1 rounded-full text-blue-300 text-xs font-bold">
-                  <ShieldCheck className="w-4 h-4 text-blue-400" />
-                  <span>Verified BIR Taxpayer Account Portal</span>
+          {/* Toast Notification */}
+          {assignmentSuccessToast && (
+            <div className="bg-emerald-600 text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow-lg flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex items-center space-x-2">
+                <Check className="w-4 h-4" />
+                <span>{assignmentSuccessToast}</span>
+              </div>
+              <button onClick={() => setAssignmentSuccessToast(null)} className="text-white hover:text-slate-200 cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* TAB 1: TAX OVERVIEW */}
+          {currentTab === 'overview' && (
+            <div className="space-y-6">
+              {/* Welcome & Status Summary Banner */}
+              <div className="bg-gradient-to-r from-blue-900/90 via-slate-900 to-indigo-950/90 text-white rounded-3xl p-6 sm:p-8 border border-blue-500/30 shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+                
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div className="space-y-2 max-w-2xl">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="inline-flex items-center space-x-2 bg-blue-500/20 border border-blue-400/30 px-3 py-1 rounded-full text-blue-300 text-xs font-bold">
+                        <ShieldCheck className="w-4 h-4 text-blue-400" />
+                        <span>Verified BIR Taxpayer Account Portal</span>
+                      </div>
+
+                      {(user?.isSyncedWithAccountant || user?.syncedAccountantEmail) && (
+                        <div className="inline-flex items-center space-x-1.5 bg-emerald-500/20 border border-emerald-400/40 px-3 py-1 rounded-full text-emerald-300 text-xs font-bold">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <span>Compliance Firm: <strong>{user?.syncedAccountantName || user?.syncedAccountantEmail}</strong></span>
+                        </div>
+                      )}
+                    </div>
+                    <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                      Tax Compliance Overview — [{selectedPeriod}]
+                    </h2>
+                    <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                      Welcome to your business tax compliance hub. Below is your active BIR tax filing status, total payables, eFPS confirmation references, and CPA advisory communications for [{selectedPeriod}].
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-900/80 backdrop-blur-md p-4 rounded-2xl border border-slate-800 text-right shrink-0">
+                    <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold block">Total Tax Payable</span>
+                    <span className="text-2xl font-black text-emerald-400 font-mono">
+                      ₱{totalPayable.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                    <span className="text-[10px] text-slate-400 block mt-0.5"> Across {activeForms.length} active tax returns</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Counter Metrics */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                <div 
+                  onClick={() => setCurrentTab('forms')} 
+                  className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center space-x-4 cursor-pointer hover:border-blue-500/50 transition-all"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0">
+                    <FileText className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <span className="text-2xl font-black text-slate-900 dark:text-white">{activeForms.length}</span>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Total BIR Forms Due</p>
+                  </div>
                 </div>
 
-                {(user?.isSyncedWithAccountant || user?.syncedAccountantEmail) && (
-                  <div className="inline-flex items-center space-x-1.5 bg-emerald-500/20 border border-emerald-400/40 px-3 py-1 rounded-full text-emerald-300 text-xs font-bold">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span>Compliance Firm: <strong>{user?.syncedAccountantName || user?.syncedAccountantEmail}</strong></span>
+                <div 
+                  onClick={() => setCurrentTab('forms')} 
+                  className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center space-x-4 cursor-pointer hover:border-amber-500/50 transition-all"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center shrink-0">
+                    <Clock className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <span className="text-2xl font-black text-amber-500">{pendingCount}</span>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Pending Filing / Payment</p>
+                  </div>
+                </div>
+
+                <div 
+                  onClick={() => setCurrentTab('forms')} 
+                  className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center space-x-4 cursor-pointer hover:border-blue-500/50 transition-all"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20 flex items-center justify-center shrink-0">
+                    <FileCheck className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <span className="text-2xl font-black text-blue-500">{processingCount}</span>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">In Processing</p>
+                  </div>
+                </div>
+
+                <div 
+                  onClick={() => setCurrentTab('forms')} 
+                  className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center space-x-4 cursor-pointer hover:border-emerald-500/50 transition-all"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <span className="text-2xl font-black text-emerald-500">{filedCount}</span>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Filed & Paid Compliant</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* BIR Forms Quick Summary */}
+              <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                  <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-blue-500" />
+                    <span>Current Period Tax Obligations [{selectedPeriod}]</span>
+                  </h3>
+                  <button
+                    onClick={() => setCurrentTab('forms')}
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>View All Returns & Upload Receipts</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {activeForms.length === 0 ? (
+                  <div className="p-6 text-center text-slate-500 text-xs">
+                    No active tax returns for [{selectedPeriod}]. Click "Self-Assign BIR Forms" to add obligations.
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+                    {activeForms.slice(0, 5).map((form) => {
+                      const effectiveDeadline = form.deadline || getEffectiveDeadline(form, formReferences, selectedPeriod);
+                      const statusInfo = getComplianceStatusInfo(form, effectiveDeadline);
+
+                      return (
+                        <div key={form.id || form.code} className="py-3 flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <span className="px-2.5 py-1 rounded-lg bg-blue-600/10 text-blue-600 font-mono font-bold text-xs">
+                              {form.code}
+                            </span>
+                            <div>
+                              <p className="font-bold text-slate-900 dark:text-white">{form.description}</p>
+                              <p className="text-[11px] text-slate-400">Deadline: {effectiveDeadline}</p>
+                            </div>
+                          </div>
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${statusInfo.color}`}>
+                            {statusInfo.label}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
-              <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                Tax Compliance Status — [{selectedPeriod}]
-              </h2>
-              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
-                Welcome to your client compliance hub. Below are your active BIR tax filing obligations, payment status, eFPS confirmation references, and direct CPA advisory communications for the selected period.
-              </p>
-            </div>
 
-            <div className="bg-slate-900/80 backdrop-blur-md p-4 rounded-2xl border border-slate-800 text-right shrink-0">
-              <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold block">Total Tax Payable</span>
-              <span className="text-2xl font-black text-emerald-400 font-mono">
-                ₱{totalPayable.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-              <span className="text-[10px] text-slate-400 block mt-0.5"> Across {activeForms.length} active tax returns</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Status Counter Metrics */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center space-x-4">
-            <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0">
-              <FileText className="w-6 h-6" />
-            </div>
-            <div>
-              <span className="text-2xl font-black text-slate-900 dark:text-white">{activeForms.length}</span>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Total BIR Forms Due</p>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center space-x-4">
-            <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center shrink-0">
-              <Clock className="w-6 h-6" />
-            </div>
-            <div>
-              <span className="text-2xl font-black text-amber-500">{pendingCount}</span>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Pending Filing / Payment</p>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center space-x-4">
-            <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20 flex items-center justify-center shrink-0">
-              <FileCheck className="w-6 h-6" />
-            </div>
-            <div>
-              <span className="text-2xl font-black text-blue-500">{processingCount}</span>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">In Processing</p>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center space-x-4">
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center justify-center shrink-0">
-              <CheckCircle2 className="w-6 h-6" />
-            </div>
-            <div>
-              <span className="text-2xl font-black text-emerald-500">{filedCount}</span>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Filed & Paid Compliant</p>
-            </div>
-          </div>
-        </div>
-
-        {/* BIR Forms & Compliance Obligation List */}
-        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
-            <div>
-              <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-                <FileText className="w-5 h-5 text-blue-500" />
-                <span>BIR Tax Obligations & Filing Returns</span>
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Active tax compliance returns assigned to {activeClient.name} for period [{selectedPeriod}]
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                onClick={() => setIsManageFormsModalOpen(true)}
-                className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center space-x-1.5 shadow-sm"
-              >
-                <SlidersHorizontal className="w-3.5 h-3.5" />
-                <span>Self-Assign BIR Forms</span>
-              </button>
-
-              <button
-                onClick={() => window.print()}
-                className="px-3.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center space-x-1.5 border border-slate-200 dark:border-slate-700"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Print Compliance Certificate</span>
-              </button>
-            </div>
-          </div>
-
-          {activeForms.length === 0 ? (
-            <div className="p-8 text-center bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 space-y-3">
-              <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
-              <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">No Pending Obligations for [{selectedPeriod}]</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
-                No active tax returns are currently set for this period. You can self-assign any applicable BIR forms at any time.
-              </p>
-              <button
-                onClick={() => setIsManageFormsModalOpen(true)}
-                className="inline-flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Assign BIR Forms to My Profile</span>
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-4">
-              {activeForms.map((form) => {
-                const effectiveDeadline = form.deadline || getEffectiveDeadline(form, formReferences, selectedPeriod);
-                const statusInfo = getComplianceStatusInfo(form, effectiveDeadline);
-
-                return (
-                  <div 
-                    key={form.id || form.code}
-                    className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-blue-500/40 bg-slate-50/50 dark:bg-slate-800/30 transition-all space-y-4"
-                  >
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                      
-                      <div className="flex items-start space-x-3">
-                        <div className="px-3 py-2 rounded-xl bg-blue-600/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 font-mono font-black text-sm shrink-0">
-                          {form.code}
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-extrabold text-slate-900 dark:text-white">{form.description}</h4>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
-                            <span>Deadline: <strong className="text-slate-800 dark:text-slate-200 font-mono">{effectiveDeadline}</strong></span>
-                            <span>•</span>
-                            <span>Assigned Period: <strong className="text-slate-800 dark:text-slate-200">{form.assignedPeriod || selectedPeriod}</strong></span>
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-2 shrink-0 self-end sm:self-center">
-                        {/* Status Badge */}
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center space-x-1.5 ${statusInfo.color}`}>
-                          <span>{statusInfo.label}</span>
-                        </span>
-
-                        {/* Amount Badge */}
-                        <div className="px-3 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-mono font-bold text-xs">
-                          {form.amount ? `₱${form.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : 'W/O Payable'}
-                        </div>
-
-                        {/* Unassign obligation button */}
-                        {onRemoveFormFromClient && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (window.confirm(`Unassign BIR ${form.code} from your compliance profile?`)) {
-                                onRemoveFormFromClient(activeClient.id, form.id, form.code);
-                                setAssignmentSuccessToast(`Unassigned BIR Form ${form.code}`);
-                                setTimeout(() => setAssignmentSuccessToast(null), 3000);
-                              }
-                            }}
-                            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
-                            title="Unassign form obligation"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-
-                    </div>
-
-                    {/* Extended Details & References */}
-                    <div className="pt-3 border-t border-slate-200/80 dark:border-slate-700/60 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                      
-                      {/* Reference No */}
-                      <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                        <div>
-                          <span className="text-[10px] uppercase font-bold text-slate-400 block">eFPS / Filing Ref No.</span>
-                          <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                            {form.referenceNo || 'Awaiting Filing'}
-                          </span>
-                        </div>
-                        {form.referenceNo && (
-                          <button
-                            onClick={() => handleCopyText(form.referenceNo!, form.code + '-ref')}
-                            className="p-1 text-slate-400 hover:text-blue-500 transition-colors cursor-pointer"
-                            title="Copy Reference Number"
-                          >
-                            {copiedField === form.code + '-ref' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Confirmation No */}
-                      <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                        <div>
-                          <span className="text-[10px] uppercase font-bold text-slate-400 block">BIR Confirmation Code</span>
-                          <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                            {form.confirmationNo || 'Pending Confirmation'}
-                          </span>
-                        </div>
-                        {form.confirmationNo && (
-                          <button
-                            onClick={() => handleCopyText(form.confirmationNo!, form.code + '-conf')}
-                            className="p-1 text-slate-400 hover:text-blue-500 transition-colors cursor-pointer"
-                            title="Copy Confirmation Code"
-                          >
-                            {copiedField === form.code + '-conf' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Action / Payment Submission */}
-                      <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                        <div>
-                          <span className="text-[10px] uppercase font-bold text-slate-400 block">Client Action</span>
-                          <span className="font-bold text-slate-700 dark:text-slate-300">
-                            {form.status === 'Paid' ? 'Payment Verified' : form.status === 'Filed' ? 'Filing Complete' : 'Submit Bank Reference'}
-                          </span>
-                        </div>
-                        {form.status !== 'Paid' && form.status !== 'Filed' && (
-                          <button
-                            onClick={() => setPaymentReceiptForm(form)}
-                            className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg text-[11px] transition-colors cursor-pointer flex items-center space-x-1"
-                          >
-                            <CreditCard className="w-3 h-3" />
-                            <span>Send Receipt</span>
-                          </button>
-                        )}
-                      </div>
-
-                    </div>
-
-                    {form.notes && (
-                      <div className="p-2.5 bg-blue-50/50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 rounded-xl text-xs text-blue-900 dark:text-blue-300">
-                        <strong>CPA Note:</strong> {form.notes}
-                      </div>
-                    )}
+              {/* Assigned Tax Advisory Team */}
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
+                    <ShieldCheck className="w-5 h-5" />
                   </div>
-                );
-              })}
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">Assigned Compliance Advisory Firm</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">BIZ-COMPLY Certified Tax & Accounting Services</p>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-100 dark:border-slate-700/60 space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Lead CPA Officer:</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">Gerald (Developer CPA)</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Advisory Email:</span>
+                    <span className="font-mono text-blue-500 font-bold">compliance@bizcomply.ph</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Service SLA:</span>
+                    <span className="text-emerald-500 font-bold">Direct eFPS BIR Submission</span>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
-        </div>
 
-        {/* Contact Assigned CPA & Client Advisory Desk */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          
-          {/* Card 1: Assigned Tax Advisory Team */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
-                <ShieldCheck className="w-5 h-5" />
+          {/* TAB 2: BIR OBLIGATIONS & TAX RETURNS */}
+          {currentTab === 'forms' && (
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-blue-500" />
+                    <span>BIR Tax Obligations & Filing Returns</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Active tax compliance returns assigned to {activeClient.name} for period [{selectedPeriod}]
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setIsManageFormsModalOpen(true)}
+                    className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center space-x-1.5 shadow-sm"
+                  >
+                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                    <span>Self-Assign BIR Forms</span>
+                  </button>
+
+                  <button
+                    onClick={() => window.print()}
+                    className="px-3.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center space-x-1.5 border border-slate-200 dark:border-slate-700"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Print Compliance Certificate</span>
+                  </button>
+                </div>
               </div>
-              <div>
-                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">Assigned Compliance Advisory Firm</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">BIZ-COMPLY Certified Tax & Accounting Services</p>
+
+              {activeForms.length === 0 ? (
+                <div className="p-8 text-center bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 space-y-3">
+                  <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
+                  <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">No Pending Obligations for [{selectedPeriod}]</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+                    No active tax returns are currently set for this period. You can self-assign any applicable BIR forms at any time.
+                  </p>
+                  <button
+                    onClick={() => setIsManageFormsModalOpen(true)}
+                    className="inline-flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Assign BIR Forms to My Profile</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4">
+                  {activeForms.map((form) => {
+                    const effectiveDeadline = form.deadline || getEffectiveDeadline(form, formReferences, selectedPeriod);
+                    const statusInfo = getComplianceStatusInfo(form, effectiveDeadline);
+
+                    return (
+                      <div 
+                        key={form.id || form.code}
+                        className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-blue-500/40 bg-slate-50/50 dark:bg-slate-800/30 transition-all space-y-4"
+                      >
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                          
+                          <div className="flex items-start space-x-3">
+                            <div className="px-3 py-2 rounded-xl bg-blue-600/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 font-mono font-black text-sm shrink-0">
+                              {form.code}
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-extrabold text-slate-900 dark:text-white">{form.description}</h4>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
+                                <span>Deadline: <strong className="text-slate-800 dark:text-slate-200 font-mono">{effectiveDeadline}</strong></span>
+                                <span>•</span>
+                                <span>Assigned Period: <strong className="text-slate-800 dark:text-slate-200">{form.assignedPeriod || selectedPeriod}</strong></span>
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-2 shrink-0 self-end sm:self-center">
+                            {/* Status Badge */}
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center space-x-1.5 ${statusInfo.color}`}>
+                              <span>{statusInfo.label}</span>
+                            </span>
+
+                            {/* Amount Badge */}
+                            <div className="px-3 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-mono font-bold text-xs">
+                              {form.amount ? `₱${form.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : 'W/O Payable'}
+                            </div>
+
+                            {/* Unassign obligation button */}
+                            {onRemoveFormFromClient && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (window.confirm(`Unassign BIR ${form.code} from your compliance profile?`)) {
+                                    onRemoveFormFromClient(activeClient.id, form.id, form.code);
+                                    setAssignmentSuccessToast(`Unassigned BIR Form ${form.code}`);
+                                    setTimeout(() => setAssignmentSuccessToast(null), 3000);
+                                  }
+                                }}
+                                className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+                                title="Unassign form obligation"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+
+                        </div>
+
+                        {/* Extended Details & References */}
+                        <div className="pt-3 border-t border-slate-200/80 dark:border-slate-700/60 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                          
+                          {/* Reference No */}
+                          <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                            <div>
+                              <span className="text-[10px] uppercase font-bold text-slate-400 block">eFPS / Filing Ref No.</span>
+                              <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                                {form.referenceNo || 'Awaiting Filing'}
+                              </span>
+                            </div>
+                            {form.referenceNo && (
+                              <button
+                                onClick={() => handleCopyText(form.referenceNo!, form.code + '-ref')}
+                                className="p-1 text-slate-400 hover:text-blue-500 transition-colors cursor-pointer"
+                                title="Copy Reference Number"
+                              >
+                                {copiedField === form.code + '-ref' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Confirmation No */}
+                          <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                            <div>
+                              <span className="text-[10px] uppercase font-bold text-slate-400 block">BIR Confirmation Code</span>
+                              <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                                {form.confirmationNo || 'Pending Confirmation'}
+                              </span>
+                            </div>
+                            {form.confirmationNo && (
+                              <button
+                                onClick={() => handleCopyText(form.confirmationNo!, form.code + '-conf')}
+                                className="p-1 text-slate-400 hover:text-blue-500 transition-colors cursor-pointer"
+                                title="Copy Confirmation Code"
+                              >
+                                {copiedField === form.code + '-conf' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Action / Payment Submission */}
+                          <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                            <div>
+                              <span className="text-[10px] uppercase font-bold text-slate-400 block">Client Action</span>
+                              <span className="font-bold text-slate-700 dark:text-slate-300">
+                                {form.status === 'Paid' ? 'Payment Verified' : form.status === 'Filed' ? 'Filing Complete' : 'Submit Bank Reference'}
+                              </span>
+                            </div>
+                            {form.status !== 'Paid' && form.status !== 'Filed' && (
+                              <button
+                                onClick={() => setPaymentReceiptForm(form)}
+                                className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg text-[11px] transition-colors cursor-pointer flex items-center space-x-1"
+                              >
+                                <CreditCard className="w-3 h-3" />
+                                <span>Send Receipt</span>
+                              </button>
+                            )}
+                          </div>
+
+                        </div>
+
+                        {form.notes && (
+                          <div className="p-2.5 bg-blue-50/50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 rounded-xl text-xs text-blue-900 dark:text-blue-300">
+                            <strong>CPA Note:</strong> {form.notes}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 3: CPA MESSAGING DESK */}
+          {currentTab === 'messaging' && (
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-4">
+              <div className="flex items-center space-x-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
+                  <MessageSquare className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900 dark:text-white">CPA & Accountant Direct Messaging Desk</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Direct real-time communications with your assigned compliance advisory firm
+                  </p>
+                </div>
+              </div>
+
+              <ClientAccountantMessaging
+                clientEmail={activeClient.email || user?.email}
+                clientName={activeClient.name}
+                formCodes={activeForms.map(f => f.code)}
+                onOpenSyncModal={() => setIsDashboardModeModalOpen(true)}
+              />
+            </div>
+          )}
+
+          {/* TAB 4: COMPANY PROFILE & SETTINGS */}
+          {currentTab === 'settings' && (
+            <div className="space-y-6">
+              {/* Profile Overview Card */}
+              <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-6">
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center font-black text-xl shadow-md">
+                      <Building2 className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-black text-slate-900 dark:text-white">{activeClient.name}</h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Registered BIR Taxpayer Profile</p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setIsShareModalOpen(true)}
+                    className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center space-x-1.5 shadow-sm"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    <span>Share Portal by TIN</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 space-y-1">
+                    <span className="text-[10px] uppercase font-extrabold text-slate-400 tracking-wider block">Taxpayer Identification (TIN)</span>
+                    <span className="text-sm font-mono font-bold text-slate-900 dark:text-white">{activeClient.tin}</span>
+                  </div>
+
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 space-y-1">
+                    <span className="text-[10px] uppercase font-extrabold text-slate-400 tracking-wider block">Revenue District Office (RDO)</span>
+                    <span className="text-sm font-bold text-slate-900 dark:text-white">RDO {activeClient.rdo} — {getRDOLocationDisplay(activeClient.rdo)}</span>
+                  </div>
+
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 space-y-1">
+                    <span className="text-[10px] uppercase font-extrabold text-slate-400 tracking-wider block">Taxpayer Category</span>
+                    <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{activeClient.type} Taxpayer</span>
+                  </div>
+
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 space-y-1">
+                    <span className="text-[10px] uppercase font-extrabold text-slate-400 tracking-wider block">Registered Email</span>
+                    <span className="text-sm font-mono text-slate-800 dark:text-slate-200">{activeClient.email || user?.email}</span>
+                  </div>
+
+                  {activeClient.phone && (
+                    <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 space-y-1">
+                      <span className="text-[10px] uppercase font-extrabold text-slate-400 tracking-wider block flex items-center gap-1">
+                        <Phone className="w-3 h-3 text-slate-400" />
+                        Contact Phone
+                      </span>
+                      <span className="text-sm font-mono text-slate-800 dark:text-slate-200">{activeClient.phone}</span>
+                    </div>
+                  )}
+
+                  {activeClient.address && (
+                    <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 space-y-1 md:col-span-2">
+                      <span className="text-[10px] uppercase font-extrabold text-slate-400 tracking-wider block flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-slate-400" />
+                        Business Address
+                      </span>
+                      <span className="text-sm text-slate-800 dark:text-slate-200">{activeClient.address}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Accountant Firm Link & Mode Box */}
+              <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center shrink-0">
+                      <ShieldCheck className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">CPA Practice Link & Dashboard Setup</h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Configure how your portal syncs with your tax accountant</p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setIsDashboardModeModalOpen(true)}
+                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center space-x-1"
+                  >
+                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                    <span>Reconfigure Mode</span>
+                  </button>
+                </div>
+
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-100 dark:border-slate-700/60 text-xs space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Dashboard Mode:</span>
+                    <span className="font-bold text-amber-500">
+                      {user?.clientDashboardMode === 'business_owner' ? 'Business Owner Independent Mode' : 'Shared Accountant Portal Mode'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Sync Connection Status:</span>
+                    <span className={`font-bold ${user?.isSyncedWithAccountant || user?.syncedAccountantEmail ? 'text-emerald-500' : 'text-slate-400'}`}>
+                      {user?.isSyncedWithAccountant || user?.syncedAccountantEmail ? `Linked (${user?.syncedAccountantName || user?.syncedAccountantEmail})` : 'Not Linked to CPA Practice'}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
+          )}
 
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-100 dark:border-slate-700/60 space-y-2 text-xs">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Lead CPA Officer:</span>
-                <span className="font-bold text-slate-800 dark:text-slate-200">Gerald (Developer CPA)</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Advisory Email:</span>
-                <span className="font-mono text-blue-500 font-bold">compliance@bizcomply.ph</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Service SLA:</span>
-                <span className="text-emerald-500 font-bold">Direct eFPS BIR Submission</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 2: Messaging with Synced Accountant */}
-          <div className="md:col-span-2">
-            <ClientAccountantMessaging
-              clientEmail={activeClient.email || user?.email}
-              clientName={activeClient.name}
-              formCodes={activeForms.map(f => f.code)}
-              onOpenSyncModal={() => setIsDashboardModeModalOpen(true)}
-            />
-          </div>
-
-        </div>
-
-      </main>
+        </main>
+      </div>
 
       {/* Payment Reference Modal */}
       {paymentReceiptForm && (
