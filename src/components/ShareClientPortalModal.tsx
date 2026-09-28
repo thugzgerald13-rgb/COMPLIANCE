@@ -52,7 +52,7 @@ export function ShareClientPortalModal({
     return false;
   });
 
-  const portalUrl = `${window.location.origin}?tin=${encodeURIComponent(client.tin)}&client=${encodeURIComponent(client.id)}`;
+  const portalUrl = `${window.location.origin}${window.location.pathname}?tin=${encodeURIComponent(client.tin)}&client=${encodeURIComponent(client.id)}`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(portalUrl);
