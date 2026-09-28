@@ -1,94 +1,71 @@
-export type FormStatus = 'Pending' | 'Processing' | 'Filed' | 'Paid';
-
-export type TaxPayerType = 'Individual' | 'Corporate';
-
-export interface CompanyInfo {
-  companyName: string;
-  tin: string;
-  rdo?: string;
-  cpaLicenseNo?: string;
-  industry?: string;
-  address?: string;
-  phone?: string;
+export interface ComplianceClient {
+  id: string
+  created_by: string
+  name: string
+  email?: string
+  phone?: string
+  address?: string
+  tin?: string
+  business_type?: string
+  status: 'active' | 'inactive' | 'archived'
+  created_at: string
+  updated_at: string
 }
 
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  clientId?: string;
-  tin?: string;
-  clientDashboardMode?: 'shared_accountant' | 'business_owner';
-  accountType?: 'accountant' | 'business_owner';
-  companyInfo?: CompanyInfo;
-  syncedAccountantEmail?: string;
-  syncedAccountantName?: string;
-  isSyncedWithAccountant?: boolean;
+export interface ComplianceForm {
+  id: string
+  created_by: string
+  client_id?: string
+  form_type: string
+  form_name: string
+  status: 'draft' | 'pending' | 'submitted' | 'approved' | 'rejected'
+  period_start?: string
+  period_end?: string
+  submitted_at?: string
+  due_date?: string
+  data: Record<string, unknown>
+  notes?: string
+  created_at: string
+  updated_at: string
 }
 
-export interface ChatMessage {
-  id: string;
-  senderEmail: string;
-  senderName: string;
-  senderRole: string;
-  recipientEmail?: string;
-  clientEmail: string;
-  text: string;
-  formCode?: string;
-  timestamp: string;
+export interface ComplianceAccountant {
+  id: string
+  user_id: string
+  full_name: string
+  license_number?: string
+  role: 'accountant' | 'officer' | 'admin'
+  is_active: boolean
+  created_at: string
 }
 
-export interface BIRForm {
-  id: string;
-  code: string;
-  description: string;
-  status: FormStatus;
-  deadline?: string;
-  period?: string;
-  assignedPeriod?: string;
-  dateFiled?: string;
-  datePaid?: string;
-  taxStatus?: 'With Payable' | 'W/O Payable';
-  amount?: number;
-  referenceNo?: string;
-  confirmationNo?: string;
-  notes?: string;
+export interface ComplianceMessage {
+  id: string
+  sender_id: string
+  recipient_id?: string
+  client_id?: string
+  subject?: string
+  body: string
+  is_read: boolean
+  created_at: string
 }
 
-export interface FormReference {
-  code: string;
-  description: string;
-  frequency: string;
-  deadlineRule: string;
+export interface ComplianceNotification {
+  id: string
+  user_id: string
+  title: string
+  message?: string
+  link?: string
+  is_read: boolean
+  created_at: string
 }
 
-export interface Client {
-  id: string;
-  name: string;
-  tin: string;
-  rdo: string;
-  type: TaxPayerType;
-  email?: string;
-  phone?: string;
-  address?: string;
-  status?: string;
-  notifyEmail?: boolean;
-  notifyPhone?: boolean;
-  forms: BIRForm[];
-}
-
-export interface NotificationLog {
-  id: string;
-  clientId: string;
-  clientName: string;
-  clientEmail?: string;
-  formCode: string;
-  formDescription: string;
-  deadline: string;
-  type: 'Web Push';
-  status: 'Sent' | 'Delivered' | 'Failed';
-  timestamp: string;
-  message: string;
-  isOverdue?: boolean;
+export interface ComplianceLog {
+  id: string
+  user_id?: string
+  action: string
+  entity_type?: string
+  entity_id?: string
+  details?: Record<string, unknown>
+  created_at: string
 }
