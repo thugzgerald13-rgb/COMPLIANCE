@@ -1,11 +1,12 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  plugins: [react()],
-  base: '/compliance/', // ← Critical for subpath proxy
+  plugins: [react(), tailwindcss()],
+  base: '/compliance/',
   build: {
     outDir: 'dist',
-    chunkSizeWarningLimit: 1000 // Suppress chunk size warning
+    chunkSizeWarningLimit: 1000
   }
 })
